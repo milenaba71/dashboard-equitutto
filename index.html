@@ -108,7 +108,30 @@
   .modal-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; }
   .modal-btn:hover { opacity:.9; }
 
-  /* Form nuovo contatto */
+  /* Calendario */
+  .cal-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .cal-title { font-size:15px; font-weight:700; color:var(--accent); }
+  .cal-nav { display:flex; gap:6px; }
+  .cal-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--accent); font-weight:600; }
+  .cal-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .cal-day-name { text-align:center; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; padding:6px 0; }
+  .cal-day { min-height:72px; background:var(--surface2); border-radius:6px; padding:6px; position:relative; border:1px solid transparent; }
+  .cal-day.today { border-color:var(--accent); background:rgba(0,61,122,.06); }
+  .cal-day.other-month { opacity:.35; }
+  .cal-day-num { font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+  .cal-day.today .cal-day-num { color:var(--accent); }
+  .cal-event { font-size:10px; font-weight:600; padding:2px 5px; border-radius:4px; margin-bottom:2px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cal-event:hover { opacity:.8; }
+  .cal-event.app  { background:rgba(0,114,188,.15); color:#0072bc; }
+  .cal-event.att  { background:rgba(39,174,96,.15);  color:#27ae60; }
+  .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
+
+  /* Popup evento calendario */
+  .cal-popup { position:absolute; z-index:200; background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px 16px; min-width:220px; box-shadow:0 8px 24px rgba(0,0,0,.15); font-size:13px; top:100%; left:0; }
+  .cal-popup-nome { font-weight:700; color:var(--accent); margin-bottom:6px; }
+  .cal-popup-row { color:var(--muted); margin-bottom:3px; }
   .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
   .form-group { display:flex; flex-direction:column; gap:5px; }
@@ -123,6 +146,22 @@
   .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:4px; }
   .btn-primary:hover { opacity:.9; }
   .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* Pannello prodotti */
+  .prod-panel { background:var(--surface); border:1px solid var(--accent); border-radius:var(--r); padding:20px; margin-top:8px; box-shadow:0 4px 20px rgba(0,61,122,.15); }
+  .prod-panel-title { font-size:13px; font-weight:700; color:var(--accent); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  .prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; margin-bottom:14px; max-height:300px; overflow-y:auto; padding-right:4px; }
+  .prod-item { background:var(--surface2); border:2px solid var(--border); border-radius:8px; padding:10px 12px; cursor:pointer; transition:all .15s; position:relative; }
+  .prod-item:hover { border-color:var(--accent2); }
+  .prod-item.selected { border-color:var(--accent); background:rgba(0,114,188,.08); }
+  .prod-item.selected::after { content:'✓'; position:absolute; top:6px; right:8px; color:var(--accent); font-weight:700; font-size:14px; }
+  .prod-nome { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .prod-cat  { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .prod-prezzo { font-size:14px; font-weight:800; color:var(--accent); margin-top:5px; }
+  .prod-total-bar { background:rgba(0,61,122,.06); border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border:1px solid var(--border); }
+  .prod-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .prod-filter-btn { background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:4px 12px; font-size:11px; font-weight:600; cursor:pointer; color:var(--muted); transition:all .15s; }
+  .prod-filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
   .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
   .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
@@ -237,6 +276,7 @@ const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/
 
 let allMiei   = [];
 let activeKpi = null;
+let allProdotti = []; // cache prodotti negozio
 
 function showToast(msg, isError=false) {
   const t = $('toast');
@@ -450,6 +490,9 @@ function renderTable(lista) {
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
     const appunto  = r.fields['Preso appuntamento'] || '';
     const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
+    const prodProp = r.fields['prodott proposti'] || [];
+    const nProd    = Array.isArray(prodProp) ? prodProp.length : 0;
+    const valProd  = r.fields['Prezzo prodotti'] || 0;
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -494,6 +537,12 @@ function renderTable(lista) {
           ${appunto ? esc(appunto) : '<em style="opacity:.5;font-size:11px">+ set</em>'}
         </span>
       </td>
+      <td>
+        <button onclick="openProdottiPanel('${id}')"
+          style="background:${nProd>0?'rgba(0,114,188,.12)':'var(--surface2)'};border:1px solid ${nProd>0?'#0072bc':'var(--border)'};color:${nProd>0?'#0072bc':'var(--muted)'};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          🛒 ${nProd>0 ? `${nProd} prod · ${fmt(valProd)}` : '+ Proponi'}
+        </button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -509,6 +558,7 @@ function renderTable(lista) {
         <th>Note ✏️</th>
         <th>Scadenza</th>
         <th>Appuntamento</th>
+        <th>Prodotti 🛒</th>
       </tr>
       <tbody id="tbl-body">${rows}</tbody>
     </table>
@@ -537,18 +587,24 @@ async function loadData(utente) {
   try {
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
-    const [rubrica, obiettivi] = await Promise.all([
+    const [rubrica, obiettivi, prodotti] = await Promise.all([
       proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
-        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&maxRecords=3000'),
+        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
+        '&fields[]=prodott+proposti&fields[]=Prezzo+prodotti&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
+      proxyGet('tblAvm14RuhE0dWZg',
+        'fields[]=Nome+prodotto&fields[]=Prezzo+(%E2%82%AC)&fields[]=Categoria&maxRecords=100'),
     ]);
+
+    // Salva prodotti globalmente
+    allProdotti = prodotti;
 
     // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
@@ -651,6 +707,8 @@ async function loadData(utente) {
 
       <div class="drawer" id="drawer"></div>
 
+      <div id="cal-container">${buildCalendar(allMiei)}</div>
+
       ${obiettivo>0?`
       <div class="progress-card">
         <div class="progress-head">
@@ -687,8 +745,264 @@ async function loadData(utente) {
   }
 }
 
+// ── PANNELLO PRODOTTI ───────────────────────────────────────────
+const CAT_COLORS = {
+  'vendita dispositivi': '#0072bc',
+  'noleggio':            '#f0a500',
+  'accessori':           '#27ae60',
+  'calibrazione':        '#e67e22',
+  'corsi':               '#7c5cbf',
+  'assicurazione':       '#34c77b',
+  'altro':               '#6b7f96',
+};
+
+let prodPanelRecId   = null;
+let prodSelezione    = new Set(); // id prodotti selezionati
+let prodFilterActive = 'tutti';
+
+function openProdottiPanel(recId) {
+  // chiudi se già aperto sullo stesso record
+  const existing = document.getElementById('prod-panel-' + recId);
+  if (existing) { existing.remove(); return; }
+  // chiudi altri pannelli aperti
+  document.querySelectorAll('[id^="prod-panel-"]').forEach(p => p.remove());
+
+  prodPanelRecId = recId;
+  const rec      = allMiei.find(r => r.id === recId);
+  if (!rec) return;
+
+  // prodotti già proposti
+  const giaProposti = rec.fields['prodott proposti'] || [];
+  prodSelezione = new Set(Array.isArray(giaProposti) ? giaProposti.map(p=>p.id) : []);
+  prodFilterActive = 'tutti';
+
+  // trova la riga della tabella e inserisce il pannello dopo
+  const btn = document.querySelector(`button[onclick="openProdottiPanel('${recId}')"]`);
+  if (!btn) return;
+  const tr = btn.closest('tr');
+  if (!tr) return;
+
+  const panel = document.createElement('tr');
+  panel.id = 'prod-panel-' + recId;
+  const td = document.createElement('td');
+  td.colSpan = 9;
+  td.innerHTML = renderProdPanel(rec);
+  panel.appendChild(td);
+  tr.insertAdjacentElement('afterend', panel);
+}
+
+function renderProdPanel(rec) {
+  const categorie = ['tutti', ...new Set(allProdotti.map(p => (p.fields['Categoria']?.name||'altro')))];
+  const filterBtns = categorie.map(c =>
+    `<button class="prod-filter-btn ${c===prodFilterActive?'active':''}"
+      onclick="filterProdotti('${rec.id}','${c}')">${c}</button>`
+  ).join('');
+
+  const filtered = prodFilterActive === 'tutti'
+    ? allProdotti
+    : allProdotti.filter(p => (p.fields['Categoria']?.name||'altro') === prodFilterActive);
+
+  const items = filtered.map(p => {
+    const sel  = prodSelezione.has(p.id);
+    const cat  = p.fields['Categoria']?.name || 'altro';
+    const col  = CAT_COLORS[cat] || '#6b7f96';
+    const prez = p.fields['Prezzo (€)'] || 0;
+    return `<div class="prod-item ${sel?'selected':''}" onclick="toggleProdotto('${rec.id}','${p.id}')">
+      <div class="prod-nome">${esc(p.fields['Nome prodotto']||'—')}</div>
+      <div class="prod-cat" style="color:${col}">${cat}</div>
+      <div class="prod-prezzo">€ ${prez.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+    </div>`;
+  }).join('');
+
+  const totale = allProdotti.filter(p=>prodSelezione.has(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+  const nSel   = prodSelezione.size;
+
+  return `<div class="prod-panel">
+    <div class="prod-panel-title">
+      <span>🛒 Prodotti proposti a <strong>${esc(rec.fields['Nome e cognome']||'')}</strong></span>
+      <button onclick="document.getElementById('prod-panel-${rec.id}').remove()"
+        style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div class="prod-filter">${filterBtns}</div>
+    <div class="prod-grid">${items || '<div class="empty">Nessun prodotto</div>'}</div>
+    <div class="prod-total-bar">
+      <div>
+        <div style="font-size:12px;color:var(--muted)">Totale proposta</div>
+        <div style="font-size:22px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:var(--muted)">${nSel} prodotti selezionati</div>
+        <button onclick="salvaProdotti('${rec.id}')"
+          style="margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
+          💾 Salva su Airtable
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function filterProdotti(recId, cat) {
+  prodFilterActive = cat;
+  const rec = allMiei.find(r => r.id === recId);
+  if (!rec) return;
+  const panel = document.getElementById('prod-panel-' + recId);
+  if (panel) panel.querySelector('td').innerHTML = renderProdPanel(rec);
+}
+
+function toggleProdotto(recId, prodId) {
+  if (prodSelezione.has(prodId)) prodSelezione.delete(prodId);
+  else prodSelezione.add(prodId);
+  const rec = allMiei.find(r => r.id === recId);
+  if (!rec) return;
+  const panel = document.getElementById('prod-panel-' + recId);
+  if (panel) panel.querySelector('td').innerHTML = renderProdPanel(rec);
+}
+
+async function salvaProdotti(recId) {
+  const rec = allMiei.find(r => r.id === recId);
+  if (!rec) return;
+  const ids = [...prodSelezione];
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, {
+      'prodott proposti': ids.map(id => ({ id }))
+    });
+    // aggiorna cache locale
+    const prodSelezionati = allProdotti.filter(p => ids.includes(p.id));
+    rec.fields['prodott proposti'] = prodSelezionati.map(p => ({ id: p.id, name: p.fields['Nome prodotto'] }));
+    rec.fields['Prezzo prodotti']  = prodSelezionati.reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+    showToast('✅ Prodotti salvati su Airtable!');
+    document.getElementById('prod-panel-' + recId)?.remove();
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore salvataggio prodotti', true);
+  }
+}
+
+// ── CALENDARIO ─────────────────────────────────────────────────
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function buildCalendar(eventsData) {
+  const MESI_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                   'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const GIORNI  = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+  const oggi    = new Date(); oggi.setHours(0,0,0,0);
+  const primo   = new Date(calYear, calMonth, 1);
+  const ultimo  = new Date(calYear, calMonth+1, 0);
+
+  // giorno settimana del primo (0=Dom → convertiamo a Lun=0)
+  let startDow = primo.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  // mappa eventi per data YYYY-MM-DD
+  const evMap = {};
+  eventsData.forEach(r => {
+    const d1 = r.fields['Datavisita'];
+    const d2 = r.fields['DATA ATTIVITA'];
+    const d3 = r.fields['data scadenza noleggio'];
+    const nome = r.fields['Nome e cognome'] || '—';
+    const stato = r.fields['Status'] || '';
+    const add = (iso, tipo) => {
+      if (!iso) return;
+      const key = iso.substring(0,10);
+      if (!evMap[key]) evMap[key] = [];
+      evMap[key].push({ nome, stato, tipo, iso });
+    };
+    add(d1, 'app');
+    add(d2, 'att');
+    add(d3, 'scad');
+  });
+
+  // celle
+  const cells = [];
+  // giorni mese precedente
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for (let i = startDow-1; i >= 0; i--) {
+    cells.push({ day: prevLast-i, cur: false });
+  }
+  // giorni mese corrente
+  for (let d = 1; d <= ultimo.getDate(); d++) {
+    cells.push({ day: d, cur: true });
+  }
+  // giorni mese successivo
+  let next = 1;
+  while (cells.length % 7 !== 0) { cells.push({ day: next++, cur: false }); }
+
+  const headerRow = GIORNI.map(g => `<div class="cal-day-name">${g}</div>`).join('');
+
+  const dayRows = cells.map(c => {
+    const isToday = c.cur && new Date(calYear, calMonth, c.day).getTime() === oggi.getTime();
+    const key = c.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}` : '';
+    const evs = evMap[key] || [];
+    const evHtml = evs.slice(0,3).map(ev => {
+      const label = ev.tipo==='app' ? '📅' : ev.tipo==='scad' ? '⚠️' : '✅';
+      return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)}"
+        onclick="showCalPopup(event,'${esc(ev.nome)}','${esc(ev.stato)}','${ev.tipo}','${ev.iso}')">
+        ${label} ${esc(ev.nome.split(' ')[0])}
+      </div>`;
+    }).join('');
+    const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
+    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}">
+      <div class="cal-day-num">${c.day}</div>
+      ${evHtml}${more}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="cal-card">
+      <div class="cal-header">
+        <div class="cal-title">📅 ${MESI_IT[calMonth]} ${calYear}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
+            <span><span style="color:#0072bc">📅</span> Visita</span>
+            <span><span style="color:#27ae60">✅</span> Attività</span>
+            <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
+          </div>
+          <div class="cal-nav">
+            <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
+            <button class="cal-btn" onclick="changeMonth(0)">Oggi</button>
+            <button class="cal-btn" onclick="changeMonth(1)">›</button>
+          </div>
+        </div>
+      </div>
+      <div class="cal-grid">
+        ${headerRow}
+        ${dayRows}
+      </div>
+    </div>`;
+}
+
+function changeMonth(dir) {
+  if (dir === 0) {
+    calYear  = new Date().getFullYear();
+    calMonth = new Date().getMonth();
+  } else {
+    calMonth += dir;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+  }
+  const calEl = document.getElementById('cal-container');
+  if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+}
+
+function showCalPopup(e, nome, stato, tipo, iso) {
+  e.stopPropagation();
+  document.querySelectorAll('.cal-popup').forEach(p => p.remove());
+  const tipoLabel = tipo==='app' ? 'Data visita' : tipo==='scad' ? 'Scadenza noleggio' : 'Ultima attività';
+  const data = iso ? new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const popup = document.createElement('div');
+  popup.className = 'cal-popup';
+  popup.innerHTML = `
+    <div class="cal-popup-nome">👤 ${nome}</div>
+    <div class="cal-popup-row">📌 ${stato}</div>
+    <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>`;
+  e.target.closest('.cal-event').style.position = 'relative';
+  e.target.closest('.cal-event').appendChild(popup);
+  setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
+}
+
 function buildDonut(slices, total) {
-  if(!total) return '<div class="empty">Nessun dato</div>';
   const R=50,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
   let off=0,paths='';
   slices.forEach(s=>{
