@@ -96,6 +96,17 @@
 
   .tel-link { color:var(--accent); text-decoration:none; }
   .tel-link:hover { text-decoration:underline; }
+  .btn-wa { background:#25D366; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px; white-space:nowrap; }
+  .btn-wa:hover { background:#1ebe5d; }
+
+  /* Modal Safari warning */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .modal-box { background:#fff; border-radius:16px; padding:32px; max-width:380px; width:100%; text-align:center; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .modal-icon { font-size:48px; margin-bottom:12px; }
+  .modal-title { font-size:18px; font-weight:800; color:var(--accent); margin-bottom:8px; }
+  .modal-msg { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:20px; }
+  .modal-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; }
+  .modal-btn:hover { opacity:.9; }
 
   .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
   .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
@@ -175,18 +186,20 @@
 const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
 const TABLE_RUBRICA = 'tbllNx7iSqpAtbQde';
 
+// Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
 const TOKEN_MAP = {
-  'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       mail:'milena.baroni71@gmail.com' },
-  '9WZxEAPd_IHj-qMH8lRSnw': { nome:'Milena',              mail:'milena.baroni@equistasi.com' },
-  'W_0Jmv-Q2HAzz5y2eG-ncw': { nome:'Andrea Filippi',      mail:'ffmedicali@gmail.com' },
-  'HJU8VtX1SrrHef7cC3znRQ': { nome:'Giacomo Frassica',    mail:'giacomo.frassica@equistasi.com' },
-  'okN6y20sU0K93vCUmP00Mw': { nome:'Stefano Marcandalli', mail:'stefano@equistasi.com' },
-  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Chiara',              mail:'servizi@equistasi.com' },
-  'Y1kTz-Z37STfXCcBuX6umQ': { nome:'Marco Costantini',    mail:'mcostantini1965@gmail.com' },
-  'LxbWQVdg_kRd-Dn1hsK5yA': { nome:'Francesca',           mail:'francesca@mycroclean.com' },
-  'P1qQL-NIJcEs1a0hRCfTyw': { nome:'Francesca Tiglio',    mail:'assistenza@equistasi.com' },
-  'M3jlO0U72vG_TMDqLtrrYQ': { nome:'Paola',               mail:'consulenza@equistasi.com' },
-  'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Sonia Calimandri',    mail:'sonia.calimandri@gmail.com' },
+  'W_0Jmv-Q2HAzz5y2eG-ncw': { nome:'Andrea Filippi',      equipoint:['FFM DI ANDREA FILIPPI'] },
+  'HJU8VtX1SrrHef7cC3znRQ': { nome:'Giacomo Frassica',    equipoint:['GIACOMO FRASSICA'] },
+  'okN6y20sU0K93vCUmP00Mw': { nome:'Stefano Marcandalli', equipoint:['MARCANDALLI STEFANO'] },
+  'Y1kTz-Z37STfXCcBuX6umQ': { nome:'Marco Costantini',    equipoint:['Marco Costantini'] },
+  'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Bernardino Cicconi',  equipoint:['BERNARDINO CICCONI'] },
+  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Stefano Ferrari',     equipoint:['STEFANO FERRARI'] },
+  '9WZxEAPd_IHj-qMH8lRSnw': { nome:'Haleh Sadeghi',       equipoint:['sadeghi Haleh'] },
+  'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       equipoint:['Milena'] },
+  'M3jlO0U72vG_TMDqLtrrYQ': { nome:'Paola Zerla',         equipoint:['Paola'] },
+  'P1qQL-NIJcEs1a0hRCfTyw': { nome:'Iris',                equipoint:['Iris'] },
+  'LxbWQVdg_kRd-Dn1hsK5yA': { nome:'Stella',              equipoint:['stella'] },
+  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Equigirls',           equipoint:['EQUIGIRLS 24-3000'] },
 };
 
 const STATUS_OPTIONS = [
@@ -237,11 +250,34 @@ document.addEventListener('click', function(e) {
     const recId   = editEl.dataset.id;
     const field   = editEl.dataset.field;
     const current = editEl.dataset.value || '';
-    td.innerHTML = `
-      <input class="edit-input" id="ei-${recId}" value="${esc(current)}">
-      <button class="btn-save"   data-save="${recId}" data-field="${field}">Salva</button>
-      <button class="btn-cancel" data-cancel="1">Annulla</button>`;
-    td.querySelector('.edit-input').focus();
+    const isNote  = field === 'Notes';
+
+    if (isNote) {
+      td.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:280px">
+          <textarea class="edit-textarea" id="ei-${recId}" rows="5"
+            style="background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;color:var(--text);font-size:13px;outline:none;resize:vertical;width:100%;line-height:1.6;font-family:inherit"
+            placeholder="Scrivi una nota…">${esc(current)}</textarea>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn-save" data-save="${recId}" data-field="${field}" data-textarea="1">💾 Salva</button>
+            <button class="btn-cancel" data-cancel="1">Annulla</button>
+            <button id="mic-${recId}" onclick="startDictation('${recId}')"
+              style="margin-left:auto;background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px">
+              🎤 Detta
+            </button>
+          </div>
+          <div id="mic-status-${recId}" style="font-size:11px;color:var(--muted);min-height:16px"></div>
+        </div>`;
+      td.querySelector('textarea').focus();
+    } else {
+      td.innerHTML = `
+        <input class="edit-input" id="ei-${recId}" value="${esc(current)}">
+        <div style="margin-top:6px;display:flex;gap:4px">
+          <button class="btn-save" data-save="${recId}" data-field="${field}">Salva</button>
+          <button class="btn-cancel" data-cancel="1">Annulla</button>
+        </div>`;
+      td.querySelector('.edit-input').focus();
+    }
     return;
   }
 
@@ -263,12 +299,22 @@ document.addEventListener('click', function(e) {
   // Click su Salva
   const saveBtn = e.target.closest('[data-save]');
   if (saveBtn) {
-    const recId  = saveBtn.dataset.save;
-    const field  = saveBtn.dataset.field;
-    const isSelct= saveBtn.dataset.select === '1';
-    const el     = isSelct ? $(`es-${recId}`) : $(`ei-${recId}`);
-    const value  = el ? el.value.trim() : '';
-    const td     = saveBtn.closest('td');
+    const recId    = saveBtn.dataset.save;
+    const field    = saveBtn.dataset.field;
+    const isSelect = saveBtn.dataset.select === '1';
+    const isTextarea = saveBtn.dataset.textarea === '1';
+    let el, value;
+    if (isSelect) {
+      el = $(`es-${recId}`);
+      value = el ? el.value.trim() : '';
+    } else if (isTextarea) {
+      el = $(`ei-${recId}`);
+      value = el ? el.value : '';
+    } else {
+      el = $(`ei-${recId}`);
+      value = el ? el.value.trim() : '';
+    }
+    const td = saveBtn.closest('td');
     td.style.opacity = '.5';
     proxyPatch(TABLE_RUBRICA, recId, { [field]: value })
       .then(() => {
@@ -373,7 +419,13 @@ function renderTable(lista) {
       </td>
       <td>
         ${tel
-          ? `<a class="tel-link" href="tel:${esc(tel)}">📞 ${esc(tel)}</a>`
+          ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+               <a class="tel-link" href="tel:${esc(tel)}">📞 ${esc(tel)}</a>
+               <a class="btn-wa" href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank" title="Apri WhatsApp">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.553 4.103 1.518 5.83L0 24l6.335-1.518A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.575-.5-5.065-1.373l-.363-.215-3.761.901.916-3.648-.236-.374A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                 WhatsApp
+               </a>
+             </div>`
           : `<span class="editable" style="color:var(--muted);font-size:12px"
                data-edit="1" data-id="${id}" data-field="recapito telefonico" data-value=""
                title="Clicca per aggiungere">+ aggiungi</span>`}
@@ -425,7 +477,6 @@ async function init() {
 async function loadData(utente) {
   const main = $('main');
   try {
-    const mail      = utente.mail.toLowerCase();
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
     const [rubrica, obiettivi] = await Promise.all([
@@ -434,17 +485,18 @@ async function loadData(utente) {
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
-        '&fields[]=recapito+telefonico&fields[]=Notes&fields[]=Assignee&maxRecords=3000'),
+        '&fields[]=recapito+telefonico&fields[]=Notes&fields[]=Codice+Equipoint&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
     ]);
 
+    // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
-      const a = r.fields['Assignee'];
-      if (!a) return false;
-      if (Array.isArray(a)) return a.some(u=>(u.email||'').toLowerCase()===mail);
-      return (a.email||'').toLowerCase()===mail;
+      const codice = r.fields['Codice Equipoint'];
+      if (!codice) return false;
+      const val = typeof codice === 'object' ? codice.name : codice;
+      return utente.equipoint.some(eq => eq.toLowerCase() === val.toLowerCase());
     });
 
     const oggi  = new Date(); oggi.setHours(0,0,0,0);
@@ -577,6 +629,91 @@ function buildDonut(slices, total) {
     off+=frac;
   });
   return `<svg width="120" height="120" style="flex-shrink:0"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e8eef5" stroke-width="${sw}"/>${paths}<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#003d7a" font-size="20" font-weight="800">${total}</text></svg>`;
+}
+
+// ── Modal Safari warning ────────────────────────────────────────
+function showSafariWarning() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'safari-modal';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-icon">🦁</div>
+      <div class="modal-title">Safari non supporta la dettatura</div>
+      <div class="modal-msg">
+        Il riconoscimento vocale non funziona su <strong>Safari</strong>.<br><br>
+        Per usare la dettatura apri questa pagina con:<br>
+        <strong>Chrome</strong> 🌐 oppure <strong>Edge</strong> 🔷
+      </div>
+      <button class="modal-btn" onclick="document.getElementById('safari-modal').remove()">Ho capito</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
+// ── Dettatura vocale ───────────────────────────────────────────
+let recognition = null;
+
+function startDictation(recId) {
+  // Controlla Safari prima di tutto
+  if (isSafari()) {
+    showSafariWarning();
+    return;
+  }
+
+  const btn    = document.getElementById(`mic-${recId}`);
+  const status = document.getElementById(`mic-status-${recId}`);
+  const ta     = document.getElementById(`ei-${recId}`);
+  if (!ta) return;
+
+  if (recognition) { recognition.stop(); return; }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showSafariWarning();
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = 'it-IT';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  const baseText = ta.value;
+
+  recognition.onstart = () => {
+    if (btn) { btn.style.background='#ef4444'; btn.innerHTML='⏹ Ferma'; }
+    if (status) { status.textContent='🎙 In ascolto… parla ora'; status.style.color='#ef4444'; }
+  };
+
+  recognition.onresult = (e) => {
+    let interim='', final='';
+    for (let i=e.resultIndex; i<e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) ta.value = (baseText + (baseText?' ':'')+final);
+    if (status) status.textContent = interim ? `💬 "${interim}"` : '🎙 In ascolto…';
+  };
+
+  recognition.onend = () => {
+    recognition = null;
+    if (btn) { btn.style.background='var(--accent2)'; btn.innerHTML='🎤 Detta'; }
+    if (status) { status.textContent='✅ Completato'; status.style.color='var(--green)'; }
+    setTimeout(()=>{ if(status) status.textContent=''; }, 3000);
+  };
+
+  recognition.onerror = (e) => {
+    recognition = null;
+    if (btn) { btn.style.background='var(--accent2)'; btn.innerHTML='🎤 Detta'; }
+    if (status) status.textContent = e.error==='not-allowed' ? '❌ Microfono negato — controlla i permessi' : `❌ ${e.error}`;
+  };
+
+  recognition.start();
 }
 
 init();
