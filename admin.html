@@ -120,6 +120,29 @@
 
   .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
   .toast.show { opacity:1; transform:translateY(0); }
+  .toast.error { background:var(--red); }
+
+  /* Editing inline */
+  .edit-inp { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:12px; outline:none; width:100%; }
+  .edit-sel { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:12px; outline:none; width:100%; }
+  .edit-ta  { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:6px 8px; color:var(--text); font-size:12px; outline:none; width:100%; resize:vertical; min-height:60px; font-family:inherit; }
+  .btn-save   { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; margin-top:4px; margin-right:4px; }
+  .btn-cancel { background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; color:var(--muted); margin-top:4px; }
+  .editable { cursor:pointer; border-radius:4px; padding:2px 4px; }
+  .editable:hover { background:var(--surface2); outline:1px dashed var(--border); }
+
+  /* Modal nuovo contatto */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal-box { background:#fff; border-radius:16px; padding:28px; max-width:540px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group label { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; }
+  .form-group input, .form-group select, .form-group textarea { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; font-family:inherit; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent); }
+  .form-full { grid-column:1/-1; }
+  .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:8px; }
+  .btn-primary:disabled { opacity:.5; }
 
   @media(max-width:600px){ .main { padding:16px; } .link-row { grid-template-columns:1fr; } }
 </style>
@@ -204,9 +227,27 @@ const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 const fmt = n => '€ ' + Math.round(n||0).toLocaleString('it-IT');
 const col = p => p>=100?'#27ae60':p>=50?'#e67e22':'#e74c3c';
 
-function showToast(msg) {
-  const t=$('toast'); t.textContent=msg; t.className='toast show';
+function showToast(msg, isError=false) {
+  const t=$('toast'); t.textContent=msg; t.className='toast'+(isError?' error':'')+' show';
   setTimeout(()=>t.className='toast',3000);
+}
+
+async function proxyPatch(table, recordId, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
+}
+
+async function proxyPost(table, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}`;
+  const res = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
 }
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -431,7 +472,13 @@ function renderRubrica() {
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title">👥 Tutti i contatti (${allRubrica.length.toLocaleString('it-IT')})</div>
-        <div style="font-size:13px;color:var(--muted)" id="rubrica-count"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:13px;color:var(--muted)" id="rubrica-count"></div>
+          <button onclick="openNewContactModal()"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">
+            ➕ Nuovo contatto
+          </button>
+        </div>
       </div>
       <div class="filter-bar">
         <input class="search-inp" id="rb-search" placeholder="🔍 Cerca nome, telefono, note…" oninput="filterRubrica()">
@@ -450,18 +497,86 @@ function renderRubrica() {
         <table class="data-table" id="rb-table">
           <thead><tr>
             <th onclick="sortRubrica('Nome e cognome')">Nome ↕</th>
-            <th onclick="sortRubrica('Codice Equipoint')">Commerciale ↕</th>
-            <th onclick="sortRubrica('Status')">Stato ↕</th>
-            <th>Telefono</th>
+            <th>Commerciale ✏️</th>
+            <th>Stato ✏️</th>
+            <th>Telefono ✏️</th>
             <th onclick="sortRubrica('DATA DI CREAZIONE DATO')">Creato ↕</th>
             <th onclick="sortRubrica('DATA ATTIVITA')">Ultima att. ↕</th>
-            <th>Note</th>
+            <th>Note ✏️</th>
           </tr></thead>
           <tbody id="rb-body"></tbody>
         </table>
       </div>
     </div>`;
   filterRubrica();
+}
+
+// Gestione click editing
+document.addEventListener('click', function(e) {
+  // Badge stato cliccabile
+  const statEl = e.target.closest('[data-edit-stato]');
+  if (statEl) {
+    const td    = statEl.closest('td');
+    const recId = statEl.dataset.id;
+    const cur   = statEl.dataset.value||'';
+    const STATI = ['DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO','INVIATO LINK PER APPUNTAMENTO','CAPARRA','VENDUTO','NOLEGGIATO','NON VUOLE ESSERE RICONTATTATO','NON INTER.PREZZO ALTO','NON ADATTO AL DISPOSITIVO','NUMERO ERRATO','NO RECAPITO TELEFONICO','RECUPERATO','RINNOVO NOLEGGIO'];
+    td.innerHTML = `<select class="edit-sel" id="es-${recId}">${STATI.map(s=>`<option ${s===cur?'selected':''}>${esc(s)}</option>`).join('')}</select>
+      <div><button class="btn-save" onclick="saveAdminField('${recId}','Status',document.getElementById('es-${recId}').value)">Salva</button>
+      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
+    return;
+  }
+  // Commerciale cliccabile
+  const commEl = e.target.closest('[data-edit-comm]');
+  if (commEl) {
+    const td    = commEl.closest('td');
+    const recId = commEl.dataset.id;
+    const cur   = commEl.dataset.value||'';
+    const opts  = Object.keys(COMMERCIALI).map(n=>{
+      const eq = COMMERCIALI[n].equipoint[0];
+      return `<option value="${esc(eq)}" ${eq===cur?'selected':''}>${esc(n)}</option>`;
+    }).join('');
+    td.innerHTML = `<select class="edit-sel" id="ec-${recId}"><option value="">— Nessuno —</option>${opts}</select>
+      <div><button class="btn-save" onclick="saveAdminField('${recId}','Codice Equipoint',document.getElementById('ec-${recId}').value)">Salva</button>
+      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
+    return;
+  }
+  // Tel cliccabile
+  const telEl = e.target.closest('[data-edit-tel]');
+  if (telEl) {
+    const td    = telEl.closest('td');
+    const recId = telEl.dataset.id;
+    const cur   = telEl.dataset.value||'';
+    td.innerHTML = `<input class="edit-inp" id="et-${recId}" value="${esc(cur)}" placeholder="+39…">
+      <div><button class="btn-save" onclick="saveAdminField('${recId}','recapito telefonico',document.getElementById('et-${recId}').value)">Salva</button>
+      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
+    td.querySelector('input').focus();
+    return;
+  }
+  // Note cliccabile
+  const noteEl = e.target.closest('[data-edit-note]');
+  if (noteEl) {
+    const td    = noteEl.closest('td');
+    const recId = noteEl.dataset.id;
+    const cur   = noteEl.dataset.value||'';
+    td.innerHTML = `<textarea class="edit-ta" id="en-${recId}">${esc(cur)}</textarea>
+      <div><button class="btn-save" onclick="saveAdminField('${recId}','Notes',document.getElementById('en-${recId}').value)">Salva</button>
+      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
+    td.querySelector('textarea').focus();
+    return;
+  }
+});
+
+async function saveAdminField(recId, field, value) {
+  try {
+    await proxyPatch('tbllNx7iSqpAtbQde', recId, { [field]: value });
+    // aggiorna cache
+    const rec = allRubrica.find(r=>r.id===recId);
+    if (rec) rec.fields[field] = value;
+    showToast('✅ Salvato!');
+    filterRubrica();
+  } catch(e) {
+    showToast('❌ Errore salvataggio', true);
+  }
 }
 
 function filterRubrica() {
@@ -495,7 +610,8 @@ function filterRubrica() {
   });
 
   sortRubrica(sortField, true);
-  $('rubrica-count').textContent = `${rubricaFiltrata.length.toLocaleString('it-IT')} risultati`;
+  const cnt = $('rubrica-count');
+  if (cnt) cnt.textContent = `${rubricaFiltrata.length.toLocaleString('it-IT')} risultati`;
 }
 
 function sortRubrica(field, keepDir=false) {
@@ -506,38 +622,147 @@ function sortRubrica(field, keepDir=false) {
     const vb = b.fields[field]||b.createdTime||'';
     return sortDir * String(va).localeCompare(String(vb));
   });
-  const oggi  = new Date(); oggi.setHours(0,0,0,0);
-  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
 
   const rows = rubricaFiltrata.slice(0,500).map(r => {
-    const codice = r.fields['Codice Equipoint'];
-    const val    = typeof codice==='object' ? (codice?.name||'') : (codice||'');
+    const codice   = r.fields['Codice Equipoint'];
+    const val      = typeof codice==='object' ? (codice?.name||'') : (codice||'');
     const nomeComm = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
     const commIdx  = nomeComm ? Object.keys(COMMERCIALI).indexOf(nomeComm) : -1;
-    const stato = r.fields['Status']||'—';
-    const statoUp = stato.toUpperCase();
-    const bCls = statoUp.includes('VENDUTO') ? 'badge-green'
+    const stato    = r.fields['Status']||'—';
+    const statoUp  = stato.toUpperCase();
+    const bCls     = statoUp.includes('VENDUTO') ? 'badge-green'
       : statoUp.includes('TRATTATIVA') ? 'badge-gold'
       : statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA') ? 'badge-orange'
       : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
       : 'badge-blue';
-    const creaz = r.fields['DATA DI CREAZIONE DATO']||r.createdTime ? new Date(r.fields['DATA DI CREAZIONE DATO']||r.createdTime).toLocaleDateString('it-IT') : '—';
+    const creaz = r.fields['DATA DI CREAZIONE DATO']||r.createdTime
+      ? new Date(r.fields['DATA DI CREAZIONE DATO']||r.createdTime).toLocaleDateString('it-IT') : '—';
     const att   = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
     const tel   = r.fields['recapito telefonico']||'';
     const note  = r.fields['Notes']||'';
+    const commEq = COMMERCIALI[nomeComm]?.equipoint[0]||'';
+
     return `<tr>
       <td><div class="nome-cell">${esc(r.fields['Nome e cognome']||'—')}</div><div class="sub-cell">${esc(r.fields['Tipologia cliente']||'')}</div></td>
-      <td>${nomeComm ? `<span class="commerciale-tag" style="color:${COMM_COLORS[commIdx]};border-color:${COMM_COLORS[commIdx]}20;background:${COMM_COLORS[commIdx]}10">${esc(nomeComm.split(' ')[0])}</span>` : '<span style="color:var(--muted);font-size:11px">—</span>'}</td>
-      <td><span class="badge ${bCls}">${esc(stato)}</span></td>
-      <td style="font-size:12px">${tel ? `<a href="tel:${esc(tel)}" style="color:var(--accent2);text-decoration:none">📞 ${esc(tel)}</a>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>
+        <span class="editable commerciale-tag" data-edit-comm="1" data-id="${r.id}" data-value="${esc(commEq)}"
+          style="color:${COMM_COLORS[commIdx]||'var(--muted)'};border-color:${COMM_COLORS[commIdx]||'var(--border)'}30;background:${COMM_COLORS[commIdx]||'#eee'}15"
+          title="Clicca per cambiare">
+          ${nomeComm ? esc(nomeComm.split(' ')[0]) : '+ assegna'}
+        </span>
+      </td>
+      <td>
+        <span class="badge ${bCls} editable" data-edit-stato="1" data-id="${r.id}" data-value="${esc(stato)}"
+          title="Clicca per modificare">${esc(stato)}</span>
+      </td>
+      <td style="font-size:12px">
+        <span class="editable" data-edit-tel="1" data-id="${r.id}" data-value="${esc(tel)}" title="Clicca per modificare">
+          ${tel ? `📞 ${esc(tel)}` : '<span style="color:var(--muted)">+ aggiungi</span>'}
+        </span>
+      </td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${creaz}</td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${att}</td>
-      <td style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(note)}">${esc(note.substring(0,60))||'—'}</td>
+      <td style="max-width:200px">
+        <span class="editable" data-edit-note="1" data-id="${r.id}" data-value="${esc(note)}"
+          style="font-size:11px;color:var(--muted);display:block;white-space:pre-wrap;word-break:break-word;line-height:1.4"
+          title="Clicca per modificare">
+          ${note ? esc(note.substring(0,80))+(note.length>80?'…':'') : '<em>+ nota</em>'}
+        </span>
+      </td>
     </tr>`;
   }).join('');
 
   const tbody = $('rb-body');
   if (tbody) tbody.innerHTML = rows || '<tr><td colspan="7" class="empty">Nessun risultato</td></tr>';
+}
+
+// ── Nuovo contatto (admin) ────────────────────────────────────
+function openNewContactModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'nc-modal';
+  const commOpts = Object.entries(COMMERCIALI).map(([n,v])=>`<option value="${esc(v.equipoint[0])}">${esc(n)}</option>`).join('');
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:18px;font-weight:800;color:var(--accent)">➕ Nuovo contatto</div>
+        <button onclick="document.getElementById('nc-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nome e Cognome *</label>
+          <input id="nc-nome" type="text" placeholder="Mario Rossi" required>
+        </div>
+        <div class="form-group">
+          <label>Assegna a commerciale</label>
+          <select id="nc-comm"><option value="">— Nessuno —</option>${commOpts}</select>
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input id="nc-tel" type="tel" placeholder="+39 333…">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input id="nc-email" type="email" placeholder="email@esempio.it">
+        </div>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="nc-stato">
+            ${['DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO','VENDUTO','NOLEGGIATO'].map(s=>`<option>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipologia cliente</label>
+          <input id="nc-tipo" type="text" placeholder="Paziente, Medico…">
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="nc-note" rows="3" placeholder="Aggiungi una nota…"></textarea>
+        </div>
+      </div>
+      <div id="nc-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="nc-save" onclick="saveNewContactAdmin()">💾 Salva su Airtable</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('nc-nome').focus();
+}
+
+async function saveNewContactAdmin() {
+  const nome  = document.getElementById('nc-nome')?.value.trim();
+  const comm  = document.getElementById('nc-comm')?.value;
+  const tel   = document.getElementById('nc-tel')?.value.trim();
+  const email = document.getElementById('nc-email')?.value.trim();
+  const stato = document.getElementById('nc-stato')?.value;
+  const tipo  = document.getElementById('nc-tipo')?.value.trim();
+  const note  = document.getElementById('nc-note')?.value.trim();
+  const errEl = document.getElementById('nc-err');
+  const btn   = document.getElementById('nc-save');
+
+  if (!nome) { errEl.textContent='⚠️ Nome obbligatorio'; errEl.style.display='block'; return; }
+
+  btn.disabled=true; btn.textContent='⏳ Salvataggio…'; errEl.style.display='none';
+
+  const fields = { 'Nome e cognome': nome };
+  if (comm)  fields['Codice Equipoint'] = comm;
+  if (tel)   fields['recapito telefonico'] = tel;
+  if (email) fields['E-Mail'] = email;
+  if (stato) fields['Status'] = stato;
+  if (tipo)  fields['Tipologia cliente'] = tipo;
+  if (note)  fields['Notes'] = note;
+
+  try {
+    const data = await proxyPost('tbllNx7iSqpAtbQde', fields);
+    if (data.id) {
+      allRubrica.unshift({ id:data.id, createdTime:new Date().toISOString(), fields });
+      document.getElementById('nc-modal').remove();
+      showToast('✅ Contatto aggiunto!');
+      renderRubrica();
+    } else throw new Error(data.error?.message||'Errore');
+  } catch(e) {
+    btn.disabled=false; btn.textContent='💾 Salva su Airtable';
+    errEl.textContent='❌ '+e.message; errEl.style.display='block';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
