@@ -370,11 +370,11 @@ function renderTable(lista) {
                title="Clicca per aggiungere">+ aggiungi</span>`}
       </td>
       <td style="color:var(--muted);font-size:12px">${data}</td>
-      <td>
-        <span class="editable" style="font-size:12px;color:var(--muted);max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+      <td style="max-width:220px">
+        <span class="editable" style="font-size:12px;color:var(--muted);display:block;white-space:pre-wrap;word-break:break-word;line-height:1.5;text-align:justify"
           data-edit="1" data-id="${id}" data-field="Notes" data-value="${esc(note)}"
-          title="${esc(note)||'Clicca per aggiungere nota'}">
-          ${note ? esc(note.substring(0,35))+(note.length>35?'…':'') : '+ nota'}
+          title="Clicca per modificare">
+          ${note ? esc(note) : '<em style="opacity:.5">+ aggiungi nota</em>'}
         </span>
       </td>
       <td style="font-size:11px;color:var(--orange)">${scad ? '📦 '+scad : ''}</td>
