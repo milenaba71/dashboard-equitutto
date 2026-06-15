@@ -38,7 +38,6 @@
   .welcome h1 { font-size:24px; font-weight:800; letter-spacing:-.5px; }
   .welcome p { color:var(--muted); font-size:14px; margin-top:4px; }
 
-  /* KPI */
   .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
   .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; cursor:pointer; transition:transform .15s,box-shadow .15s; }
   .kpi:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.3); }
@@ -55,7 +54,6 @@
   .kpi-lbl { font-size:12px; color:var(--muted); margin-top:5px; }
   .kpi-hint { font-size:10px; color:var(--accent); margin-top:6px; opacity:.7; }
 
-  /* DRAWER */
   .drawer { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; overflow:hidden; max-height:0; transition:max-height .4s cubic-bezier(.4,0,.2,1); }
   .drawer.open { max-height:3000px; }
   .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
@@ -68,44 +66,34 @@
   .search-bar:focus { border-color:var(--accent); }
   .search-bar::placeholder { color:var(--muted); }
 
-  /* Tabella contatti */
   .contact-table { width:100%; border-collapse:collapse; }
   .contact-table th { text-align:left; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; padding-bottom:10px; border-bottom:1px solid var(--border); }
-  .contact-table td { padding:10px 4px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .contact-table td { padding:10px 6px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
   .contact-table tr:last-child td { border-bottom:none; }
   .c-nome { font-weight:600; }
   .c-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
 
-  /* Badge */
-  .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; cursor:default; }
+  .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; }
   .badge-red    { background:rgba(239,68,68,.15);  color:var(--red); }
   .badge-orange { background:rgba(245,158,11,.15); color:var(--orange); }
   .badge-green  { background:rgba(52,199,123,.15); color:var(--green); }
   .badge-blue   { background:rgba(79,142,247,.15); color:var(--accent); }
-  .badge-purple { background:rgba(124,92,191,.15); color:var(--accent2); }
 
-  /* Celle editabili */
-  .editable { cursor:pointer; border-radius:6px; padding:4px 8px; transition:background .15s; display:inline-block; min-width:60px; }
-  .editable:hover { background:var(--surface2); }
-  .editable:hover::after { content:' ✏️'; font-size:10px; opacity:.6; }
-  .edit-input { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:4px 8px; color:var(--text); font-size:13px; outline:none; width:100%; }
-  .edit-select { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:4px 8px; color:var(--text); font-size:13px; outline:none; }
+  .editable { cursor:pointer; border-radius:6px; padding:4px 8px; transition:background .15s; display:inline-block; }
+  .editable:hover { background:var(--surface2); outline:1px dashed var(--border); }
 
-  /* Bottone salva */
-  .btn-save { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px; transition:opacity .2s; }
-  .btn-save:hover { opacity:.85; }
-  .btn-cancel { background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; margin-left:4px; }
+  .edit-input  { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:13px; outline:none; width:100%; margin-bottom:6px; }
+  .edit-select { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:13px; outline:none; width:100%; margin-bottom:6px; }
+  .btn-save   { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:4px; }
+  .btn-cancel { background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; }
 
-  /* Toast notifica */
-  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
   .toast.show { opacity:1; transform:translateY(0); }
   .toast.error { background:var(--red); }
 
-  /* Tel link */
   .tel-link { color:var(--accent); text-decoration:none; }
   .tel-link:hover { text-decoration:underline; }
 
-  /* Progress */
   .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; }
   .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
   .progress-head h3 { font-size:15px; font-weight:700; }
@@ -142,7 +130,6 @@
 
   .footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0 8px; }
   .empty  { text-align:center; color:var(--muted); font-size:13px; padding:20px 0; }
-  .saving { opacity:.5; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -173,7 +160,6 @@
   </div>
 </div>
 
-<!-- Toast notifica -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -194,7 +180,6 @@ const TOKEN_MAP = {
   'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Sonia Calimandri',    mail:'sonia.calimandri@gmail.com' },
 };
 
-// Opzioni status disponibili in Airtable
 const STATUS_OPTIONS = [
   'Da chiamare','Ricontattare','Follow up','Appuntamento fissato',
   'Proposta inviata','Vendita','Non interessato','Perso'
@@ -205,19 +190,18 @@ const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
 const pct  = (a,b) => b>0 ? Math.min(Math.round(a/b*100),100) : 0;
 const pctR = (a,b) => b>0 ? Math.round(a/b*100) : 0;
 const col  = p => p>=100 ? '#34c77b' : p>=50 ? '#f59e0b' : '#ef4444';
+const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 let allMiei   = [];
 let activeKpi = null;
 
-// ── Toast ──────────────────────────────────────────────────────
 function showToast(msg, isError=false) {
   const t = $('toast');
   t.textContent = msg;
-  t.className   = 'toast' + (isError?' error':'') + ' show';
-  setTimeout(() => t.className = 'toast', 3000);
+  t.className = 'toast' + (isError?' error':'') + ' show';
+  setTimeout(() => t.className='toast', 3000);
 }
 
-// ── Proxy ──────────────────────────────────────────────────────
 async function proxyGet(table, qs='') {
   const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
   const res = await fetch(url);
@@ -235,79 +219,73 @@ async function proxyPatch(table, recordId, fields) {
   return res.json();
 }
 
-// ── Salva campo su Airtable ────────────────────────────────────
-async function saveField(recordId, fieldName, value, cellEl) {
-  cellEl.classList.add('saving');
-  try {
-    await proxyPatch(TABLE_RUBRICA, recordId, { [fieldName]: value });
-    // aggiorna cache locale
-    const rec = allMiei.find(r => r.id === recordId);
-    if (rec) rec.fields[fieldName] = value;
-    showToast('✅ Salvato su Airtable!');
-  } catch(e) {
-    showToast('❌ Errore nel salvataggio', true);
+// ── Editing tramite data attributes (niente apostrofi nel JS inline) ──
+document.addEventListener('click', function(e) {
+  // Click su cella editabile testo
+  const editEl = e.target.closest('[data-edit]');
+  if (editEl) {
+    const td      = editEl.closest('td');
+    const recId   = editEl.dataset.id;
+    const field   = editEl.dataset.field;
+    const current = editEl.dataset.value || '';
+    td.innerHTML = `
+      <input class="edit-input" id="ei-${recId}" value="${esc(current)}">
+      <button class="btn-save"   data-save="${recId}" data-field="${field}">Salva</button>
+      <button class="btn-cancel" data-cancel="1">Annulla</button>`;
+    td.querySelector('.edit-input').focus();
+    return;
   }
-  cellEl.classList.remove('saving');
-}
 
-// ── Rendi una cella editabile (testo) ─────────────────────────
-function makeEditable(cellEl, recordId, fieldName, currentValue) {
-  cellEl.innerHTML = `
-    <input class="edit-input" value="${currentValue||''}" id="inp-${recordId}-${fieldName}">
-    <div style="margin-top:6px;display:flex;gap:4px">
-      <button class="btn-save" onclick="confirmEdit('${recordId}','${fieldName}')">Salva</button>
-      <button class="btn-cancel" onclick="cancelEdit('${recordId}','${fieldName}','${currentValue||''}')">Annulla</button>
-    </div>`;
-  document.getElementById(`inp-${recordId}-${fieldName}`).focus();
-}
+  // Click su badge stato editabile
+  const statEl = e.target.closest('[data-stato]');
+  if (statEl) {
+    const td      = statEl.closest('td');
+    const recId   = statEl.dataset.id;
+    const field   = statEl.dataset.field;
+    const current = statEl.dataset.value || '';
+    const opts    = STATUS_OPTIONS.map(o => `<option ${o===current?'selected':''}>${esc(o)}</option>`).join('');
+    td.innerHTML = `
+      <select class="edit-select" id="es-${recId}">${opts}</select>
+      <button class="btn-save"   data-save="${recId}" data-field="${field}" data-select="1">Salva</button>
+      <button class="btn-cancel" data-cancel="1">Annulla</button>`;
+    return;
+  }
 
-// ── Rendi una cella editabile (select stato) ───────────────────
-function makeSelectEditable(cellEl, recordId, fieldName, currentValue) {
-  const opts = STATUS_OPTIONS.map(o =>
-    `<option value="${o}" ${o===currentValue?'selected':''}>${o}</option>`
-  ).join('');
-  cellEl.innerHTML = `
-    <select class="edit-select" id="sel-${recordId}-${fieldName}">${opts}</select>
-    <div style="margin-top:6px;display:flex;gap:4px">
-      <button class="btn-save" onclick="confirmSelect('${recordId}','${fieldName}')">Salva</button>
-      <button class="btn-cancel" onclick="refreshDrawer()">Annulla</button>
-    </div>`;
-}
+  // Click su Salva
+  const saveBtn = e.target.closest('[data-save]');
+  if (saveBtn) {
+    const recId  = saveBtn.dataset.save;
+    const field  = saveBtn.dataset.field;
+    const isSelct= saveBtn.dataset.select === '1';
+    const el     = isSelct ? $(`es-${recId}`) : $(`ei-${recId}`);
+    const value  = el ? el.value.trim() : '';
+    const td     = saveBtn.closest('td');
+    td.style.opacity = '.5';
+    proxyPatch(TABLE_RUBRICA, recId, { [field]: value })
+      .then(() => {
+        const rec = allMiei.find(r => r.id === recId);
+        if (rec) rec.fields[field] = value;
+        showToast('✅ Salvato su Airtable!');
+        refreshDrawer();
+      })
+      .catch(() => { showToast('❌ Errore nel salvataggio', true); refreshDrawer(); });
+    return;
+  }
 
-async function confirmEdit(recordId, fieldName) {
-  const inp   = document.getElementById(`inp-${recordId}-${fieldName}`);
-  const value = inp ? inp.value.trim() : '';
-  const cellEl = inp ? inp.closest('td') : null;
-  if (!cellEl) return;
-  await saveField(recordId, fieldName, value, cellEl);
-  refreshDrawer();
-}
-
-async function confirmSelect(recordId, fieldName) {
-  const sel   = document.getElementById(`sel-${recordId}-${fieldName}`);
-  const value = sel ? sel.value : '';
-  const cellEl = sel ? sel.closest('td') : null;
-  if (!cellEl) return;
-  await saveField(recordId, fieldName, value, cellEl);
-  refreshDrawer();
-}
-
-function cancelEdit(recordId, fieldName, original) {
-  refreshDrawer();
-}
+  // Click su Annulla
+  if (e.target.closest('[data-cancel]')) {
+    refreshDrawer();
+  }
+});
 
 // ── Drawer ─────────────────────────────────────────────────────
-function openDrawer(tipo, titolo, lista, colore) {
+function openDrawer(tipo, titolo, colore) {
   if (activeKpi === tipo) { closeDrawer(); return; }
   activeKpi = tipo;
   document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
   const kpiEl = $('kpi-' + tipo);
   if (kpiEl) kpiEl.classList.add('active');
-  renderDrawer(titolo, lista, colore);
-  setTimeout(() => $('drawer').scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
-}
-
-function renderDrawer(titolo, lista, colore) {
+  const lista = getListaByTipo(tipo);
   const drawer = $('drawer');
   drawer.classList.add('open');
   drawer.innerHTML = `
@@ -320,18 +298,10 @@ function renderDrawer(titolo, lista, colore) {
       <button class="drawer-close" onclick="closeDrawer()">✕</button>
     </div>
     <div class="drawer-body">
-      <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)" id="drawer-search">
+      <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)">
       <div id="drawer-table">${renderTable(lista)}</div>
     </div>`;
-}
-
-function refreshDrawer() {
-  if (!activeKpi) return;
-  const lista = getListaByTipo(activeKpi);
-  const tbl   = $('drawer-table');
-  if (tbl) tbl.innerHTML = renderTable(lista);
-  const cnt = $('drawer-count');
-  if (cnt) cnt.textContent = lista.length + ' contatti';
+  setTimeout(() => drawer.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
 }
 
 function closeDrawer() {
@@ -340,11 +310,20 @@ function closeDrawer() {
   activeKpi = null;
 }
 
+function refreshDrawer() {
+  if (!activeKpi) return;
+  const lista = getListaByTipo(activeKpi);
+  const tbl = $('drawer-table');
+  if (tbl) tbl.innerHTML = renderTable(lista);
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = lista.length + ' contatti';
+}
+
 function filterDrawer(q) {
-  const lista = getListaByTipo(activeKpi).filter(r => {
-    const s = JSON.stringify(r.fields).toLowerCase();
-    return s.includes(q.toLowerCase());
-  });
+  const ql = q.toLowerCase();
+  const lista = getListaByTipo(activeKpi).filter(r =>
+    JSON.stringify(r.fields).toLowerCase().includes(ql)
+  );
   $('drawer-table').innerHTML = renderTable(lista);
   $('drawer-count').textContent = lista.length + ' contatti';
 }
@@ -366,45 +345,39 @@ function getListaByTipo(tipo) {
 function renderTable(lista) {
   if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
   const rows = lista.map(r => {
-    const id    = r.id;
-    const nome  = r.fields['Nome e cognome'] || '—';
-    const stato = r.fields['Status'] || '—';
-    const tel   = r.fields['recapito telefonico'] || '';
-    const note  = r.fields['Notes'] || '';
-    const data  = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
-    const scad  = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
-    const venduto = !!r.fields['Data Vendita'];
-    const badgeCls = venduto ? 'badge-green' : stato.toLowerCase().includes('ricontatt')||stato.toLowerCase().includes('follow') ? 'badge-orange' : 'badge-blue';
+    const id     = r.id;
+    const nome   = esc(r.fields['Nome e cognome'] || '—');
+    const stato  = r.fields['Status'] || '—';
+    const tel    = r.fields['recapito telefonico'] || '';
+    const note   = r.fields['Notes'] || '';
+    const data   = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const scad   = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+    const venduto= !!r.fields['Data Vendita'];
+    const bCls   = venduto ? 'badge-green' : stato.toLowerCase().includes('ricontatt')||stato.toLowerCase().includes('follow') ? 'badge-orange' : 'badge-blue';
 
     return `<tr>
+      <td><div class="c-nome">${nome}</div><div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div></td>
       <td>
-        <div class="c-nome">${nome}</div>
-        <div class="c-sub">${r.fields['Tipologia cliente']||''}</div>
-      </td>
-      <td>
-        <span class="badge ${badgeCls} editable"
-          onclick="makeSelectEditable(this.closest('td'),'${id}','Status','${stato}')"
-          title="Clicca per modificare stato">
-          ${stato}
-        </span>
+        <span class="badge ${bCls} editable"
+          data-stato="1" data-id="${id}" data-field="Status" data-value="${esc(stato)}"
+          title="Clicca per modificare">${esc(stato)}</span>
       </td>
       <td>
         ${tel
-          ? `<a class="tel-link" href="tel:${tel}">📞 ${tel}</a>`
-          : `<span class="editable" style="color:var(--muted)"
-               onclick="makeEditable(this.closest('td'),'${id}','recapito telefonico','')"
-               title="Clicca per aggiungere telefono">+ aggiungi</span>`
-        }
+          ? `<a class="tel-link" href="tel:${esc(tel)}">📞 ${esc(tel)}</a>`
+          : `<span class="editable" style="color:var(--muted);font-size:12px"
+               data-edit="1" data-id="${id}" data-field="recapito telefonico" data-value=""
+               title="Clicca per aggiungere">+ aggiungi</span>`}
       </td>
       <td style="color:var(--muted);font-size:12px">${data}</td>
       <td>
-        <span class="editable" style="font-size:12px;color:var(--muted);max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-          onclick="makeEditable(this.closest('td'),'${id}','Notes','${note.replace(/'/g,'\\'')}')"
-          title="${note||'Clicca per aggiungere nota'}">
-          ${note ? note.substring(0,40)+(note.length>40?'…':'') : '+ nota'}
+        <span class="editable" style="font-size:12px;color:var(--muted);max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          data-edit="1" data-id="${id}" data-field="Notes" data-value="${esc(note)}"
+          title="${esc(note)||'Clicca per aggiungere nota'}">
+          ${note ? esc(note.substring(0,35))+(note.length>35?'…':'') : '+ nota'}
         </span>
       </td>
-      ${scad ? `<td style="font-size:11px;color:var(--orange)">📦 ${scad}</td>` : '<td></td>'}
+      <td style="font-size:11px;color:var(--orange)">${scad ? '📦 '+scad : ''}</td>
     </tr>`;
   }).join('');
 
@@ -412,10 +385,10 @@ function renderTable(lista) {
     <table class="contact-table">
       <tr>
         <th>Nome</th>
-        <th>Stato <span style="opacity:.5;font-size:10px">✏️</span></th>
-        <th>Telefono <span style="opacity:.5;font-size:10px">✏️</span></th>
+        <th>Stato ✏️</th>
+        <th>Telefono ✏️</th>
         <th>Ultima attività</th>
-        <th>Note <span style="opacity:.5;font-size:10px">✏️</span></th>
+        <th>Note ✏️</th>
         <th>Scadenza</th>
       </tr>
       ${rows}
@@ -424,9 +397,10 @@ function renderTable(lista) {
 }
 
 // ── INIT ───────────────────────────────────────────────────────
+function getToken() { return new URLSearchParams(window.location.search).get('token') || ''; }
+
 async function init() {
-  const token  = getToken();
-  const utente = TOKEN_MAP[token];
+  const utente = TOKEN_MAP[getToken()];
   if (!utente) {
     $('loading-screen').style.display = 'none';
     $('error-screen').style.display   = 'flex';
@@ -434,14 +408,9 @@ async function init() {
   }
   $('loading-screen').style.display = 'none';
   $('dashboard').style.display      = 'block';
-  const ini = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  $('av').textContent = ini;
+  $('av').textContent = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   $('un').textContent = utente.nome.split(' ')[0];
   await loadData(utente);
-}
-
-function getToken() {
-  return new URLSearchParams(window.location.search).get('token') || '';
 }
 
 async function loadData(utente) {
@@ -472,13 +441,6 @@ async function loadData(utente) {
     const oggi  = new Date(); oggi.setHours(0,0,0,0);
     const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
 
-    const totContatti    = allMiei.length;
-    const daRicontattare = getListaByTipo('ricontattare').length;
-    const appuntamenti   = getListaByTipo('appuntamenti').length;
-    const vendite        = getListaByTipo('vendite').length;
-    const noleggiAttivi  = getListaByTipo('noleggi');
-    const noleggiScad    = getListaByTipo('scadenze');
-
     const obj26 = obiettivi.filter(r => {
       const mese=(r.fields['MESE']||'').toUpperCase();
       const comm=r.fields['Name (from Commerciale)'];
@@ -508,27 +470,26 @@ async function loadData(utente) {
     const recenti=[...allMiei].filter(r=>r.fields['DATA ATTIVITA'])
       .sort((a,b)=>new Date(b.fields['DATA ATTIVITA'])-new Date(a.fields['DATA ATTIVITA'])).slice(0,7);
 
-    const donut=buildDonut(statTop,totContatti);
+    const noleggiScad = getListaByTipo('scadenze');
 
-    const noleggiHTML=noleggiScad.length
+    const noleggiHTML = noleggiScad.length
       ? noleggiScad.slice(0,6).map(r=>{
           const sc=new Date(r.fields['data scadenza noleggio']);
           const diff=Math.round((sc-oggi)/86400000);
           const cls=diff<=7?'badge-red':diff<=15?'badge-orange':'badge-green';
-          const lbl=diff===0?'Oggi':diff<0?'Scaduto':`${diff}gg`;
-          return `<div class="row-item"><div><div class="row-nome">${r.fields['Nome e cognome']||'—'}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${lbl}</span></div>`;
+          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${diff<=0?'Scaduto':diff+'gg'}</span></div>`;
         }).join('')
       : '<div class="empty">Nessun noleggio in scadenza ✓</div>';
 
-    const recentiHTML=recenti.length
+    const recentiHTML = recenti.length
       ? recenti.map(r=>{
           const d=new Date(r.fields['DATA ATTIVITA']);
           const venduto=!!r.fields['Data Vendita'];
-          return `<div class="row-item"><div><div class="row-nome">${r.fields['Nome e cognome']||'—'}</div><div class="row-sub">${r.fields['Status']||'—'} · ${d.toLocaleDateString('it-IT')}</div></div><span class="badge ${venduto?'badge-green':'badge-blue'}">${venduto?'Vendita':'Aperto'}</span></div>`;
+          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${esc(r.fields['Status']||'—')} · ${d.toLocaleDateString('it-IT')}</div></div><span class="badge ${venduto?'badge-green':'badge-blue'}">${venduto?'Vendita':'Aperto'}</span></div>`;
         }).join('')
       : '<div class="empty">Nessun contatto recente</div>';
 
-    const mesiHTML=MESI.filter(m=>mesiMap[m]).length
+    const mesiHTML = MESI.filter(m=>mesiMap[m]).length
       ? `<table class="mesi-table"><tr><th>Mese</th><th>Fatturato</th><th>Obiettivo</th><th>%</th><th></th></tr>
           ${MESI.filter(m=>mesiMap[m]).map(m=>{
             const {f,o}=mesiMap[m]; const p=pctR(f,o),c=col(p);
@@ -536,40 +497,55 @@ async function loadData(utente) {
           }).join('')}</table>`
       : '<div class="empty">Nessun obiettivo 2026</div>';
 
+    const donut = buildDonut(statTop, allMiei.length);
+
     main.innerHTML = `
       <div class="welcome">
-        <h1>Ciao, ${utente.nome.split(' ')[0]} 👋</h1>
+        <h1>Ciao, ${esc(utente.nome.split(' ')[0])} 👋</h1>
         <p>Riepilogo al ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})} · Clicca sui KPI per vedere e modificare i contatti</p>
       </div>
 
       <div class="kpi-grid">
-        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti',allMiei,'#4f8ef7')">
-          <div class="kpi-ico">👥</div><div class="kpi-val">${totContatti}</div><div class="kpi-lbl">Contatti totali</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare',getListaByTipo('ricontattare'),'#f59e0b')">
-          <div class="kpi-ico">📞</div><div class="kpi-val">${daRicontattare}</div><div class="kpi-lbl">Da ricontattare</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti presi',getListaByTipo('appuntamenti'),'#7c5cbf')">
-          <div class="kpi-ico">📅</div><div class="kpi-val">${appuntamenti}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse',getListaByTipo('vendite'),'#34c77b')">
-          <div class="kpi-ico">💰</div><div class="kpi-val">${vendite}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi gold"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi',getListaByTipo('noleggi'),'#f0a500')">
-          <div class="kpi-ico">📦</div><div class="kpi-val">${noleggiAttivi.length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi red"    id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg',getListaByTipo('scadenze'),'#ef4444')">
+        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti','#4f8ef7')">
+          <div class="kpi-ico">👥</div><div class="kpi-val">${allMiei.length}</div><div class="kpi-lbl">Contatti totali</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare','#f59e0b')">
+          <div class="kpi-ico">📞</div><div class="kpi-val">${getListaByTipo('ricontattare').length}</div><div class="kpi-lbl">Da ricontattare</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti','#7c5cbf')">
+          <div class="kpi-ico">📅</div><div class="kpi-val">${getListaByTipo('appuntamenti').length}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse','#34c77b')">
+          <div class="kpi-ico">💰</div><div class="kpi-val">${getListaByTipo('vendite').length}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi gold"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi','#f0a500')">
+          <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi red"    id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#ef4444')">
           <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
       </div>
 
       <div class="drawer" id="drawer"></div>
 
-      ${obiettivo>0?`<div class="progress-card"><div class="progress-head"><div><h3>Obiettivo Fatturato 2026</h3><p>${fmt(fatturato)} su ${fmt(obiettivo)}</p></div><div class="progress-pct" style="color:${col(percFattR)}">${percFattR}%</div></div><div class="track"><div class="fill" style="width:0%;background:${col(percFattR)}" data-w="${percFatt}"></div></div></div>`:''}
+      ${obiettivo>0?`
+      <div class="progress-card">
+        <div class="progress-head">
+          <div><h3>Obiettivo Fatturato 2026</h3><p>${fmt(fatturato)} su ${fmt(obiettivo)}</p></div>
+          <div class="progress-pct" style="color:${col(percFattR)}">${percFattR}%</div>
+        </div>
+        <div class="track"><div class="fill" style="width:0%;background:${col(percFattR)}" data-w="${percFatt}"></div></div>
+      </div>`:''}
 
       <div class="two-col">
-        <div class="panel"><div class="panel-title">Stato contatti</div><div class="donut-wrap">${donut}<div class="legend">${statTop.map(s=>`<div class="leg-row"><div class="leg-dot" style="background:${s.c}"></div><span class="leg-lbl">${s.l}</span><span class="leg-val">${s.v}</span></div>`).join('')}</div></div></div>
+        <div class="panel"><div class="panel-title">Stato contatti</div>
+          <div class="donut-wrap">${donut}
+            <div class="legend">${statTop.map(s=>`<div class="leg-row"><div class="leg-dot" style="background:${s.c}"></div><span class="leg-lbl">${esc(s.l)}</span><span class="leg-val">${s.v}</span></div>`).join('')}</div>
+          </div>
+        </div>
         <div class="panel"><div class="panel-title">Noleggi in scadenza (30gg)</div><div class="row-list">${noleggiHTML}</div></div>
       </div>
+
       <div class="two-col">
         <div class="panel"><div class="panel-title">Obiettivi per mese · 2026</div>${mesiHTML}</div>
         <div class="panel"><div class="panel-title">Ultimi contatti</div><div class="row-list">${recentiHTML}</div></div>
       </div>
-      <div class="footer">EQUITUTTO Dashboard · I campi con ✏️ sono modificabili · si aggiornano subito su Airtable</div>
+
+      <div class="footer">EQUITUTTO Dashboard · Clicca su Stato, Telefono o Note per modificarli · si salvano su Airtable</div>
     `;
 
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -577,12 +553,12 @@ async function loadData(utente) {
     }));
 
   } catch(e) {
-    main.innerHTML=`<div class="empty" style="padding:60px">⚠️ Errore: ${e.message}</div>`;
+    main.innerHTML = `<div class="empty" style="padding:60px">⚠️ Errore: ${e.message}</div>`;
     console.error(e);
   }
 }
 
-function buildDonut(slices,total) {
+function buildDonut(slices, total) {
   if(!total) return '<div class="empty">Nessun dato</div>';
   const R=50,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
   let off=0,paths='';
