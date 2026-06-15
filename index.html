@@ -388,29 +388,50 @@ function getListaByTipo(tipo) {
   const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
   switch(tipo) {
     case 'contatti':     return allMiei;
-    case 'ricontattare': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toLowerCase(); return s.includes('ricontatt')||s.includes('follow')||s==='da chiamare'; });
+    case 'ricontattare': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA RISPOSTO'); });
+    case 'trattativa':   return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
     case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
-    case 'vendite':      return allMiei.filter(r=>r.fields['Data Vendita']);
+    case 'vendite':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
     case 'noleggi':      return allMiei.filter(r=>{ const s=r.fields['STATO NOLEGGIO']; if(!s) return false; const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); return t.includes('attiv')||t.includes('corso'); });
     case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
+    case 'persi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON VUOLE')||s.includes('NON INTER')||s.includes('NON ADATTO')||s.includes('NUMERO ERRATO'); });
     default: return [];
   }
 }
 
 function renderTable(lista) {
   if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
-  const rows = lista.map(r => {
-    const id     = r.id;
-    const nome   = esc(r.fields['Nome e cognome'] || '—');
-    const stato  = r.fields['Status'] || '—';
-    const tel    = r.fields['recapito telefonico'] || '';
-    const note   = r.fields['Notes'] || '';
-    const data   = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
-    const scad   = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
-    const venduto= !!r.fields['Data Vendita'];
-    const bCls   = venduto ? 'badge-green' : stato.toLowerCase().includes('ricontatt')||stato.toLowerCase().includes('follow') ? 'badge-orange' : 'badge-blue';
 
-    return `<tr>
+  // Barra filtri data
+  const filterBar = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:12px 16px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
+      <span style="font-size:12px;font-weight:700;color:var(--accent)">📅 Filtra per data creazione:</span>
+      <input type="date" id="filter-da" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()" placeholder="Dal">
+      <span style="font-size:12px;color:var(--muted)">→</span>
+      <input type="date" id="filter-a" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()" placeholder="Al">
+      <button onclick="clearDateFilter()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer">✕ Cancella</button>
+      <span id="filter-count" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+    </div>`;
+
+  const rows = lista.map(r => {
+    const id       = r.id;
+    const nome     = esc(r.fields['Nome e cognome'] || '—');
+    const stato    = r.fields['Status'] || '—';
+    const tel      = r.fields['recapito telefonico'] || '';
+    const note     = r.fields['Notes'] || '';
+    const dataAtt  = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const dataCreaz= r.fields['DATA DI CREAZIONE DATO'] ? new Date(r.fields['DATA DI CREAZIONE DATO']).toLocaleDateString('it-IT') : (r.createdTime ? new Date(r.createdTime).toLocaleDateString('it-IT') : '—');
+    const dataCreazISO = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
+    const scad     = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+    const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
+    const statoUp  = (r.fields['Status']||'').toUpperCase();
+    const bCls     = venduto ? 'badge-green'
+      : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
+      : statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA') ? 'badge-blue'
+      : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
+      : 'badge-blue';
+
+    return `<tr data-creaz="${dataCreazISO}">
       <td><div class="c-nome">${nome}</div><div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div></td>
       <td>
         <span class="badge ${bCls} editable"
@@ -423,38 +444,42 @@ function renderTable(lista) {
                <a class="tel-link" href="tel:${esc(tel)}">📞 ${esc(tel)}</a>
                <a class="btn-wa" href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank" title="Apri WhatsApp">
                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.553 4.103 1.518 5.83L0 24l6.335-1.518A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.575-.5-5.065-1.373l-.363-.215-3.761.901.916-3.648-.236-.374A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-                 WhatsApp
+                 WA
                </a>
              </div>`
           : `<span class="editable" style="color:var(--muted);font-size:12px"
                data-edit="1" data-id="${id}" data-field="recapito telefonico" data-value=""
                title="Clicca per aggiungere">+ aggiungi</span>`}
       </td>
-      <td style="color:var(--muted);font-size:12px">${data}</td>
-      <td style="max-width:220px">
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataCreaz}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataAtt}</td>
+      <td style="max-width:200px">
         <span class="editable" style="font-size:12px;color:var(--muted);display:block;white-space:pre-wrap;word-break:break-word;line-height:1.5;text-align:justify"
           data-edit="1" data-id="${id}" data-field="Notes" data-value="${esc(note)}"
           title="Clicca per modificare">
-          ${note ? esc(note) : '<em style="opacity:.5">+ aggiungi nota</em>'}
+          ${note ? esc(note) : '<em style="opacity:.5">+ nota</em>'}
         </span>
       </td>
-      <td style="font-size:11px;color:var(--orange)">${scad ? '📦 '+scad : ''}</td>
+      <td style="font-size:11px;color:var(--orange);white-space:nowrap">${scad ? '📦 '+scad : ''}</td>
     </tr>`;
   }).join('');
 
   return `<div style="overflow-x:auto">
-    <table class="contact-table">
+    ${filterBar}
+    <table class="contact-table" id="contact-tbl">
       <tr>
         <th>Nome</th>
         <th>Stato ✏️</th>
         <th>Telefono ✏️</th>
-        <th>Ultima attività</th>
+        <th style="cursor:pointer" onclick="sortByDate('creaz')">Data creazione ↕</th>
+        <th style="cursor:pointer" onclick="sortByDate('att')">Ultima attività ↕</th>
         <th>Note ✏️</th>
         <th>Scadenza</th>
       </tr>
-      ${rows}
+      <tbody id="tbl-body">${rows}</tbody>
     </table>
   </div>`;
+}
 }
 
 // ── INIT ───────────────────────────────────────────────────────
@@ -485,7 +510,8 @@ async function loadData(utente) {
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
-        '&fields[]=recapito+telefonico&fields[]=Notes&fields[]=Codice+Equipoint&maxRecords=3000'),
+        '&fields[]=recapito+telefonico&fields[]=Notes' +
+        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -567,17 +593,21 @@ async function loadData(utente) {
       </div>
 
       <div class="kpi-grid">
-        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti','#4f8ef7')">
+        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti','#003d7a')">
           <div class="kpi-ico">👥</div><div class="kpi-val">${allMiei.length}</div><div class="kpi-lbl">Contatti totali</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare','#f59e0b')">
+        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare','#e67e22')">
           <div class="kpi-ico">📞</div><div class="kpi-val">${getListaByTipo('ricontattare').length}</div><div class="kpi-lbl">Da ricontattare</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti','#7c5cbf')">
+        <div class="kpi gold"   id="kpi-trattativa"   onclick="openDrawer('trattativa','Trattativa in corso','#f0a500')">
+          <div class="kpi-ico">🤝</div><div class="kpi-val">${getListaByTipo('trattativa').length}</div><div class="kpi-lbl">Trattativa in corso</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti','#0072bc')">
           <div class="kpi-ico">📅</div><div class="kpi-val">${getListaByTipo('appuntamenti').length}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse','#34c77b')">
+        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse','#27ae60')">
           <div class="kpi-ico">💰</div><div class="kpi-val">${getListaByTipo('vendite').length}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi gold"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi','#f0a500')">
+        <div class="kpi red"    id="kpi-persi"        onclick="openDrawer('persi','Contatti persi','#e74c3c')">
+          <div class="kpi-ico">❌</div><div class="kpi-val">${getListaByTipo('persi').length}</div><div class="kpi-lbl">Non interessati</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi','#003d7a')" style="--kpi-before:#0072bc">
           <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi red"    id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#ef4444')">
+        <div class="kpi orange" id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')">
           <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
       </div>
 
@@ -629,6 +659,50 @@ function buildDonut(slices, total) {
     off+=frac;
   });
   return `<svg width="120" height="120" style="flex-shrink:0"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e8eef5" stroke-width="${sw}"/>${paths}<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#003d7a" font-size="20" font-weight="800">${total}</text></svg>`;
+}
+
+// ── Filtro data ────────────────────────────────────────────────
+function applyDateFilter() {
+  const da  = document.getElementById('filter-da')?.value;
+  const a   = document.getElementById('filter-a')?.value;
+  const cnt = document.getElementById('filter-count');
+  const tbl = document.getElementById('tbl-body');
+  if (!tbl) return;
+  let visible = 0;
+  tbl.querySelectorAll('tr').forEach(row => {
+    const iso = row.dataset.creaz || '';
+    const d   = iso ? new Date(iso) : null;
+    let show  = true;
+    if (da && d && d < new Date(da)) show = false;
+    if (a  && d && d > new Date(a+'T23:59:59')) show = false;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  if (cnt) cnt.textContent = (da||a) ? `${visible} risultati` : '';
+}
+
+function clearDateFilter() {
+  const da = document.getElementById('filter-da');
+  const a  = document.getElementById('filter-a');
+  const cnt= document.getElementById('filter-count');
+  if (da) da.value='';
+  if (a)  a.value='';
+  if (cnt) cnt.textContent='';
+  document.getElementById('tbl-body')?.querySelectorAll('tr').forEach(r=>r.style.display='');
+}
+
+let sortDir = 1;
+function sortByDate(tipo) {
+  const tbl = document.getElementById('tbl-body');
+  if (!tbl) return;
+  const rows = Array.from(tbl.querySelectorAll('tr'));
+  rows.sort((a,b) => {
+    const da = tipo==='creaz' ? new Date(a.dataset.creaz||0) : new Date(a.dataset.att||0);
+    const db = tipo==='creaz' ? new Date(b.dataset.creaz||0) : new Date(b.dataset.att||0);
+    return sortDir * (da-db);
+  });
+  sortDir *= -1;
+  rows.forEach(r => tbl.appendChild(r));
 }
 
 // ── Modal Safari warning ────────────────────────────────────────
