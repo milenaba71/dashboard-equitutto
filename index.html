@@ -745,6 +745,21 @@ async function loadData(utente) {
   }
 }
 
+// ── LINK STRIPE ────────────────────────────────────────────────
+const STRIPE_LINKS = {
+  'KITNOLO 10GG':              { url:'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h', label:'Noleggio 10gg' },
+  'KITNOLO 30GG':              { url:'https://buy.stripe.com/dRmcN5fXw09aaqM02fafS0e', label:'Noleggio 30gg' },
+  'KITNOLO 41GG':              { url:'https://buy.stripe.com/28E4gzcLk6xy6aw5mzafS0f', label:'Noleggio 41gg' },
+  'KITNOLO 60GG':              { url:'https://buy.stripe.com/eVqeVddPo5tudCY9CPafS0i', label:'Noleggio 60gg' },
+  'KITNOLO 90GG':              { url:'https://buy.stripe.com/9B6cN5bHgg888iEdT5afS0j', label:'Noleggio 90gg' },
+  'KIT SILICON 3 DISPOSITIVI': { url:'https://buy.stripe.com/bJefZhaDc3lm6awbKXafS0k', label:'Kit Silicon' },
+  'KIT GEL 3 DISPOSITIVI':     { url:'https://buy.stripe.com/dRm6oH12C2hieH23erafS0l', label:'Kit Gel' },
+  'SILICON SINGOLO':           { url:'https://buy.stripe.com/fZuaEX7r03lm56s7uHafS0m', label:'Jolly Silicon' },
+  'GEL SINGOLO':               { url:'https://buy.stripe.com/aFaaEX9z87BC7eAbKXafS0n', label:'Jolly Gel' },
+  'CALIBRAZIONE':              { url:'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o', label:'Calibrazione' },
+  'DISPOSITIVO NOLO SMARRITO': { url:'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p', label:'Smarrimento' },
+};
+
 // ── PANNELLO PRODOTTI ───────────────────────────────────────────
 const CAT_COLORS = {
   'vendita dispositivi': '#0072bc',
@@ -803,16 +818,60 @@ function renderProdPanel(rec) {
     : allProdotti.filter(p => (p.fields['Categoria']?.name||'altro') === prodFilterActive);
 
   const items = filtered.map(p => {
-    const sel  = prodSelezione.has(p.id);
-    const cat  = p.fields['Categoria']?.name || 'altro';
-    const col  = CAT_COLORS[cat] || '#6b7f96';
-    const prez = p.fields['Prezzo (€)'] || 0;
+    const sel   = prodSelezione.has(p.id);
+    const cat   = p.fields['Categoria']?.name || 'altro';
+    const col   = CAT_COLORS[cat] || '#6b7f96';
+    const prez  = p.fields['Prezzo (€)'] || 0;
+    const nome  = p.fields['Nome prodotto'] || '—';
+    const stripe = STRIPE_LINKS[nome.trim().toUpperCase()] || null;
     return `<div class="prod-item ${sel?'selected':''}" onclick="toggleProdotto('${rec.id}','${p.id}')">
-      <div class="prod-nome">${esc(p.fields['Nome prodotto']||'—')}</div>
+      <div class="prod-nome">${esc(nome)}</div>
       <div class="prod-cat" style="color:${col}">${cat}</div>
       <div class="prod-prezzo">€ ${prez.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+      ${stripe ? `<div style="margin-top:6px" onclick="event.stopPropagation()">
+        <a href="${stripe.url}" target="_blank"
+          style="font-size:10px;font-weight:700;color:#635bff;text-decoration:none;background:rgba(99,91,255,.1);padding:3px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:4px">
+          💳 Link pagamento
+        </a>
+      </div>` : ''}
     </div>`;
   }).join('');
+
+  // Link Stripe dei prodotti selezionati
+  const linkSelezionati = allProdotti
+    .filter(p => prodSelezione.has(p.id))
+    .map(p => {
+      const nome   = (p.fields['Nome prodotto']||'').trim().toUpperCase();
+      const stripe = STRIPE_LINKS[nome];
+      return stripe ? { nome: p.fields['Nome prodotto'], ...stripe } : null;
+    })
+    .filter(Boolean);
+
+  const linksHTML = linkSelezionati.length ? `
+    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">
+        💳 Link di pagamento da inviare al cliente
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${linkSelezionati.map(l => `
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.06);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#635bff">${esc(l.nome)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-all">${l.url}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+              <button onclick="navigator.clipboard.writeText('${l.url}').then(()=>showToast('✅ Link copiato!'))"
+                style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">
+                📋 Copia
+              </button>
+              <a href="https://wa.me/?text=${encodeURIComponent('Ciao! Ecco il link per procedere con ' + l.nome + ': ' + l.url)}" target="_blank"
+                style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
+                WA
+              </a>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
 
   const totale = allProdotti.filter(p=>prodSelezione.has(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
   const nSel   = prodSelezione.size;
@@ -838,6 +897,7 @@ function renderProdPanel(rec) {
         </button>
       </div>
     </div>
+    ${linksHTML}
   </div>`;
 }
 
