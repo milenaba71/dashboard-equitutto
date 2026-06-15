@@ -108,6 +108,22 @@
   .modal-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; }
   .modal-btn:hover { opacity:.9; }
 
+  /* Form nuovo contatto */
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group label { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:9px 12px; color:var(--text); font-size:13px; outline:none; font-family:inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent); }
+  .form-group textarea { resize:vertical; min-height:70px; }
+  .form-full { grid-column:1/-1; }
+  .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:4px; }
+  .btn-primary:hover { opacity:.9; }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+
   .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
   .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
   .progress-head h3 { font-size:15px; font-weight:700; color:var(--accent); }
@@ -203,9 +219,14 @@ const TOKEN_MAP = {
 };
 
 const STATUS_OPTIONS = [
-  'Da chiamare','Ricontattare','Follow up','Appuntamento fissato',
-  'Proposta inviata','Vendita','Non interessato','Perso'
+  'DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO',
+  'INVIATO LINK PER APPUNTAMENTO','CAPARRA','VENDUTO','NOLEGGIATO',
+  'NON VUOLE ESSERE RICONTATTATO','NON INTER.PREZZO ALTO',
+  'NON ADATTO AL DISPOSITIVO','NUMERO ERRATO','NO RECAPITO TELEFONICO',
+  'RECUPERATO','RINNOVO NOLEGGIO','CALIBRAZIONE','web','passato a terzi','deceduto'
 ];
+
+const APPUNTAMENTO_OPTIONS = ['SI','NO','DA FISSARE','FISSATO','RIMANDATO','FATTO'];
 
 const $ = id => document.getElementById(id);
 const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
@@ -288,11 +309,14 @@ document.addEventListener('click', function(e) {
     const recId   = statEl.dataset.id;
     const field   = statEl.dataset.field;
     const current = statEl.dataset.value || '';
-    const opts    = STATUS_OPTIONS.map(o => `<option ${o===current?'selected':''}>${esc(o)}</option>`).join('');
+    const optsArr = field === 'Preso appuntamento' ? APPUNTAMENTO_OPTIONS : STATUS_OPTIONS;
+    const opts    = optsArr.map(o => `<option ${o===current?'selected':''}>${esc(o)}</option>`).join('');
     td.innerHTML = `
       <select class="edit-select" id="es-${recId}">${opts}</select>
-      <button class="btn-save"   data-save="${recId}" data-field="${field}" data-select="1">Salva</button>
-      <button class="btn-cancel" data-cancel="1">Annulla</button>`;
+      <div style="margin-top:6px;display:flex;gap:4px">
+        <button class="btn-save" data-save="${recId}" data-field="${field}" data-select="1">Salva</button>
+        <button class="btn-cancel" data-cancel="1">Annulla</button>
+      </div>`;
     return;
   }
 
@@ -424,6 +448,8 @@ function renderTable(lista) {
     const dataCreazISO = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
     const scad     = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
+    const appunto  = r.fields['Preso appuntamento'] || '';
+    const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -461,6 +487,13 @@ function renderTable(lista) {
         </span>
       </td>
       <td style="font-size:11px;color:var(--orange);white-space:nowrap">${scad ? '📦 '+scad : ''}</td>
+      <td>
+        <span class="badge ${appCls} editable"
+          data-stato="1" data-id="${id}" data-field="Preso appuntamento" data-value="${esc(appunto)}"
+          title="Clicca per modificare">
+          ${appunto ? esc(appunto) : '<em style="opacity:.5;font-size:11px">+ set</em>'}
+        </span>
+      </td>
     </tr>`;
   }).join('');
 
@@ -475,6 +508,7 @@ function renderTable(lista) {
         <th style="cursor:pointer" onclick="sortByDate('att')">Ultima attività ↕</th>
         <th>Note ✏️</th>
         <th>Scadenza</th>
+        <th>Appuntamento</th>
       </tr>
       <tbody id="tbl-body">${rows}</tbody>
     </table>
@@ -586,9 +620,14 @@ async function loadData(utente) {
     const donut = buildDonut(statTop, allMiei.length);
 
     main.innerHTML = `
-      <div class="welcome">
-        <h1>Ciao, ${esc(utente.nome.split(' ')[0])} 👋</h1>
-        <p>Riepilogo al ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})} · Clicca sui KPI per vedere e modificare i contatti</p>
+      <div class="welcome" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1>Ciao, ${esc(utente.nome.split(' ')[0])} 👋</h1>
+          <p>Riepilogo al ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})} · Clicca sui KPI per vedere e modificare i contatti</p>
+        </div>
+        <button onclick="openNewContactModal()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,61,122,.2)">
+          ➕ Nuovo contatto
+        </button>
       </div>
 
       <div class="kpi-grid">
@@ -702,6 +741,132 @@ function sortByDate(tipo) {
   });
   sortDir *= -1;
   rows.forEach(r => tbl.appendChild(r));
+}
+
+// ── Nuovo contatto ─────────────────────────────────────────────
+function openNewContactModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'new-contact-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div class="modal-icon" style="font-size:28px;margin:0">➕</div>
+          <div class="modal-title" style="margin:4px 0 0">Nuovo contatto</div>
+        </div>
+        <button onclick="document.getElementById('new-contact-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nome e Cognome *</label>
+          <input id="nc-nome" type="text" placeholder="Es. Mario Rossi" required>
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input id="nc-tel" type="tel" placeholder="+39 333 1234567">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input id="nc-email" type="email" placeholder="email@esempio.it">
+        </div>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="nc-stato">
+            ${STATUS_OPTIONS.map(o=>`<option>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipologia cliente</label>
+          <input id="nc-tipo" type="text" placeholder="Es. Paziente, Medico…">
+        </div>
+        <div class="form-group">
+          <label>Regione</label>
+          <input id="nc-regione" type="text" placeholder="Es. Lombardia">
+        </div>
+        <div class="form-group">
+          <label>Preso appuntamento</label>
+          <select id="nc-app">
+            <option value="">—</option>
+            ${APPUNTAMENTO_OPTIONS.map(o=>`<option>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="nc-note" placeholder="Aggiungi una nota…"></textarea>
+        </div>
+      </div>
+      <div id="nc-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="nc-btn" onclick="saveNewContact()">💾 Salva contatto su Airtable</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('nc-nome').focus();
+}
+
+async function saveNewContact() {
+  const nome   = document.getElementById('nc-nome')?.value.trim();
+  const tel    = document.getElementById('nc-tel')?.value.trim();
+  const email  = document.getElementById('nc-email')?.value.trim();
+  const stato  = document.getElementById('nc-stato')?.value;
+  const tipo   = document.getElementById('nc-tipo')?.value.trim();
+  const reg    = document.getElementById('nc-regione')?.value.trim();
+  const app    = document.getElementById('nc-app')?.value;
+  const note   = document.getElementById('nc-note')?.value.trim();
+  const errEl  = document.getElementById('nc-error');
+  const btn    = document.getElementById('nc-btn');
+
+  if (!nome) {
+    errEl.textContent = '⚠️ Il nome è obbligatorio';
+    errEl.style.display = 'block';
+    document.getElementById('nc-nome').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvataggio…';
+  errEl.style.display = 'none';
+
+  const fields = { 'Nome e cognome': nome };
+  if (tel)   fields['recapito telefonico'] = tel;
+  if (email) fields['E-Mail'] = email;
+  if (stato) fields['Status'] = stato;
+  if (tipo)  fields['Tipologia cliente'] = tipo;
+  if (reg)   fields['Regione'] = reg;
+  if (app)   fields['Preso appuntamento'] = app;
+  if (note)  fields['Notes'] = note;
+
+  // Aggiungi automaticamente il codice Equipoint dell'utente corrente
+  const utente = TOKEN_MAP[getToken()];
+  if (utente?.equipoint?.[0]) {
+    fields['Codice Equipoint'] = utente.equipoint[0];
+  }
+
+  try {
+    const url = `${PROXY}?table=${encodeURIComponent(TABLE_RUBRICA)}&action=create`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+
+    if (data.id) {
+      // Aggiunge alla cache locale
+      allMiei.push({ id: data.id, createdTime: new Date().toISOString(), fields: { ...fields, ...data.fields } });
+      document.getElementById('new-contact-modal').remove();
+      showToast('✅ Contatto aggiunto su Airtable!');
+      refreshDrawer();
+    } else {
+      throw new Error(data.error?.message || 'Errore sconosciuto');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '💾 Salva contatto su Airtable';
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+  }
 }
 
 // ── Modal Safari warning ────────────────────────────────────────
