@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EQUISTASI · Admin Dashboard</title>
+<style>
+  :root {
+    --bg:#f0f4f8; --surface:#fff; --surface2:#e8eef5; --border:#d0dae8;
+    --accent:#003d7a; --accent2:#0072bc; --green:#27ae60; --orange:#e67e22;
+    --red:#e74c3c; --gold:#f0a500; --text:#1a2a3a; --muted:#6b7f96;
+    --r:12px; --r-sm:8px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; min-height:100vh; }
+
+  /* LOGIN */
+  #login { display:flex; align-items:center; justify-content:center; min-height:100vh; background:radial-gradient(ellipse at 60% 20%,#1e3a6e 0%,#0f1825 70%); }
+  .login-box { background:#fff; border-radius:20px; padding:48px 40px; width:100%; max-width:420px; box-shadow:0 32px 64px rgba(0,0,0,.4); }
+  .login-logo { text-align:center; margin-bottom:32px; }
+  .login-logo .brand { font-size:26px; font-weight:800; color:var(--accent); }
+  .login-logo .sub { font-size:13px; color:var(--muted); margin-top:4px; }
+  .login-logo .badge { display:inline-block; background:rgba(231,76,60,.1); color:var(--red); font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; margin-top:8px; }
+  .inp { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:15px; color:var(--text); outline:none; margin-bottom:14px; }
+  .inp:focus { border-color:var(--accent); }
+  .btn-login { width:100%; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn-login:hover { opacity:.9; }
+  .login-err { background:rgba(231,76,60,.1); border:1px solid rgba(231,76,60,.3); color:var(--red); border-radius:8px; padding:10px 14px; font-size:13px; margin-top:12px; display:none; }
+
+  /* APP */
+  #app { display:none; }
+  .topbar { background:var(--accent); height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,.2); }
+  .topbar-brand { color:#fff; font-size:18px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .topbar-brand .admin-badge { background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .btn-logout { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; }
+
+  .main { max-width:1400px; margin:0 auto; padding:28px 24px; }
+
+  /* TABS */
+  .tabs { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:4px; margin-bottom:24px; flex-wrap:wrap; }
+  .tab { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); transition:all .15s; border:none; background:none; }
+  .tab.active { background:var(--accent); color:#fff; }
+  .tab:hover:not(.active) { background:var(--surface2); color:var(--accent); }
+
+  /* KPI GRID */
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; }
+  .kpi::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; border-radius:var(--r) var(--r) 0 0; }
+  .kpi.blue::before   { background:var(--accent); }
+  .kpi.green::before  { background:var(--green); }
+  .kpi.orange::before { background:var(--orange); }
+  .kpi.gold::before   { background:var(--gold); }
+  .kpi.red::before    { background:var(--red); }
+  .kpi-ico { font-size:20px; margin-bottom:8px; }
+  .kpi-val { font-size:28px; font-weight:800; letter-spacing:-1px; color:var(--accent); }
+  .kpi-lbl { font-size:12px; color:var(--muted); margin-top:4px; }
+
+  /* CLASSIFICA */
+  .rank-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:24px; }
+  .rank-header { padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:space-between; }
+  .rank-title { font-size:14px; font-weight:700; color:var(--accent); }
+  .rank-table { width:100%; border-collapse:collapse; }
+  .rank-table th { text-align:left; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding:12px 22px; border-bottom:2px solid var(--accent); }
+  .rank-table td { padding:13px 22px; font-size:13px; border-bottom:1px solid var(--border); }
+  .rank-table tr:last-child td { border-bottom:none; }
+  .rank-table tr:hover td { background:var(--surface2); }
+  .rank-num { font-weight:800; color:var(--accent); font-size:16px; }
+  .rank-nome { font-weight:700; }
+  .progress-mini { height:8px; background:var(--surface2); border-radius:100px; overflow:hidden; min-width:80px; }
+  .progress-mini-fill { height:100%; border-radius:100px; }
+
+  /* RUBRICA ADMIN */
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; }
+  .panel-header { padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .panel-title { font-size:14px; font-weight:700; color:var(--accent); }
+  .panel-body { padding:0; }
+
+  .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:14px 22px; border-bottom:1px solid var(--border); }
+  .search-inp { flex:1; min-width:200px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; color:var(--text); outline:none; }
+  .search-inp:focus { border-color:var(--accent); }
+  .sel-filter { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--text); outline:none; cursor:pointer; }
+
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table th { text-align:left; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding:10px 16px; border-bottom:2px solid var(--accent); white-space:nowrap; position:sticky; top:64px; background:var(--surface); z-index:10; cursor:pointer; user-select:none; }
+  .data-table th:hover { color:var(--accent2); }
+  .data-table td { padding:10px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .data-table tr:hover td { background:var(--surface2); }
+  .data-table tr:last-child td { border-bottom:none; }
+  .nome-cell { font-weight:700; color:var(--accent); }
+  .sub-cell  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; white-space:nowrap; }
+  .badge-blue   { background:rgba(0,61,122,.1);    color:var(--accent); }
+  .badge-green  { background:rgba(39,174,96,.12);  color:var(--green); }
+  .badge-orange { background:rgba(230,126,34,.12); color:var(--orange); }
+  .badge-red    { background:rgba(231,76,60,.12);  color:var(--red); }
+  .badge-gold   { background:rgba(240,165,0,.12);  color:var(--gold); }
+
+  .commerciale-tag { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; border:1px solid; white-space:nowrap; }
+
+  .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:60px auto; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .empty { text-align:center; color:var(--muted); padding:40px; font-size:14px; }
+
+  /* LINK UTENTI */
+  .link-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:0; overflow:hidden; margin-bottom:24px; }
+  .link-row { display:grid; grid-template-columns:160px 1fr auto; align-items:center; gap:16px; padding:14px 22px; border-bottom:1px solid var(--border); font-size:13px; }
+  .link-row:last-child { border-bottom:none; }
+  .link-row:hover { background:var(--surface2); }
+  .link-url { font-family:monospace; font-size:11px; color:var(--accent2); word-break:break-all; }
+  .btn-copy { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; color:var(--accent); white-space:nowrap; }
+  .btn-copy:hover { border-color:var(--accent); }
+  .btn-copy.copied { border-color:var(--green); color:var(--green); }
+
+  /* ATTIVITÀ */
+  .att-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+  @media(max-width:700px){ .att-grid { grid-template-columns:1fr; } }
+
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+
+  @media(max-width:600px){ .main { padding:16px; } .link-row { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">Equistasi®</div>
+      <div class="sub">Pannello Amministratore</div>
+      <div class="badge">🔐 Accesso riservato</div>
+    </div>
+    <input class="inp" type="password" id="inp-token" placeholder="Inserisci il token admin…" autocomplete="off">
+    <button class="btn-login" onclick="doLogin()">Accedi</button>
+    <div class="login-err" id="login-err">Token non valido</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">
+      Equistasi® <span class="admin-badge">ADMIN</span>
+    </div>
+    <div class="topbar-right">
+      <span style="color:rgba(255,255,255,.6);font-size:13px" id="last-update"></span>
+      <button class="btn-logout" onclick="location.reload()">🔄 Aggiorna</button>
+      <button class="btn-logout" onclick="doLogout()">Esci</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
+      <button class="tab" onclick="showTab('classifica')">🏆 Classifica</button>
+      <button class="tab" onclick="showTab('rubrica')">👥 Tutti i contatti</button>
+      <button class="tab" onclick="showTab('links')">🔗 Link utenti</button>
+    </div>
+
+    <div id="tab-overview"><div class="spinner"></div></div>
+    <div id="tab-classifica" style="display:none"></div>
+    <div id="tab-rubrica"    style="display:none"></div>
+    <div id="tab-links"      style="display:none"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════════
+const PROXY       = 'https://equitutto-proxy.equistasi.workers.dev';
+const ADMIN_TOKEN = 'z2PrzMEdYTm1f6Otlf0aS4l2nLcANM45';
+const BASE_URL    = 'https://milenaba71.github.io/dashboard-equitutto/';
+
+const COMMERCIALI = {
+  'Marco Costantini':    { token:'Y1kTz-Z37STfXCcBuX6umQ',  equipoint:['Marco Costantini'] },
+  'Giacomo Frassica':    { token:'HJU8VtX1SrrHef7cC3znRQ',  equipoint:['GIACOMO FRASSICA'] },
+  'Stefano Marcandalli': { token:'okN6y20sU0K93vCUmP00Mw',  equipoint:['MARCANDALLI STEFANO'] },
+  'Andrea Filippi':      { token:'W_0Jmv-Q2HAzz5y2eG-ncw',  equipoint:['FFM DI ANDREA FILIPPI'] },
+  'Haleh Sadeghi':       { token:'9WZxEAPd_IHj-qMH8lRSnw',  equipoint:['sadeghi Haleh'] },
+  'Milena Baroni':       { token:'US0Jm8nK3EWK5GsgZ9hu2Q',  equipoint:['Milena'] },
+  'Paola Zerla':         { token:'M3jlO0U72vG_TMDqLtrrYQ',  equipoint:['Paola'] },
+  'Bernardino Cicconi':  { token:'MJ7EcrQhIlsQdXHp23Y1VQ',  equipoint:['BERNARDINO CICCONI'] },
+  'Stefano Ferrari':     { token:'oMcHTvGoYN99xpjeeKFl3g',   equipoint:['STEFANO FERRARI'] },
+  'Iris':                { token:'P1qQL-NIJcEs1a0hRCfTyw',   equipoint:['Iris'] },
+  'Stella':              { token:'LxbWQVdg_kRd-Dn1hsK5yA',   equipoint:['stella'] },
+};
+
+const COMM_COLORS = [
+  '#003d7a','#0072bc','#27ae60','#e67e22','#e74c3c',
+  '#f0a500','#7c5cbf','#14b8a6','#db2777','#64748b','#0891b2'
+];
+
+// ── helpers ──────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt = n => '€ ' + Math.round(n||0).toLocaleString('it-IT');
+const col = p => p>=100?'#27ae60':p>=50?'#e67e22':'#e74c3c';
+
+function showToast(msg) {
+  const t=$('toast'); t.textContent=msg; t.className='toast show';
+  setTimeout(()=>t.className='toast',3000);
+}
+
+// ── Auth ─────────────────────────────────────────────────────
+function doLogin() {
+  const val = $('inp-token').value.trim();
+  if (val !== ADMIN_TOKEN) {
+    $('login-err').style.display='block'; return;
+  }
+  sessionStorage.setItem('eq_admin','1');
+  $('login').style.display = 'none';
+  $('app').style.display   = 'block';
+  loadAll();
+}
+
+function doLogout() {
+  sessionStorage.removeItem('eq_admin');
+  location.reload();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Enter' && $('login').style.display!=='none') doLogin();
+});
+
+// ── Proxy ────────────────────────────────────────────────────
+async function proxyGet(table, qs='') {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
+  const res = await fetch(url);
+  const d   = await res.json();
+  return d.records || [];
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+function showTab(name) {
+  ['overview','classifica','rubrica','links'].forEach(t => {
+    $('tab-'+t).style.display = t===name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((btn,i) => {
+    btn.classList.toggle('active', ['overview','classifica','rubrica','links'][i]===name);
+  });
+}
+
+// ── DATI GLOBALI ─────────────────────────────────────────────
+let allRubrica   = [];
+let allObiettivi = [];
+
+async function loadAll() {
+  [allRubrica, allObiettivi] = await Promise.all([
+    proxyGet('tbllNx7iSqpAtbQde',
+      'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
+      '&fields[]=Codice+Equipoint&fields[]=Preso+appuntamento' +
+      '&fields[]=Data+Vendita&fields[]=data+scadenza+noleggio' +
+      '&fields[]=STATO+NOLEGGIO&fields[]=DATA+ATTIVITA' +
+      '&fields[]=Valore+raggiunto&fields[]=recapito+telefonico' +
+      '&fields[]=Notes&fields[]=DATA+DI+CREAZIONE+DATO&maxRecords=5000'),
+    proxyGet('tblTAA7KFUVtcPnZt',
+      'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
+      '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
+  ]);
+
+  $('last-update').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT');
+
+  renderOverview();
+  renderClassifica();
+  renderRubrica();
+  renderLinks();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════════════════════════════════════
+function renderOverview() {
+  const oggi  = new Date(); oggi.setHours(0,0,0,0);
+  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
+
+  const totContatti   = allRubrica.length;
+  const totVendite    = allRubrica.filter(r=>{const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita'];}).length;
+  const totNoleggi    = allRubrica.filter(r=>{const s=r.fields['STATO NOLEGGIO']; if(!s) return false; const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); return t.includes('attiv')||t.includes('corso');}).length;
+  const totScadenze   = allRubrica.filter(r=>{const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30;}).length;
+  const totTrattative = allRubrica.filter(r=>(r.fields['Status']||'').toUpperCase().includes('TRATTATIVA')).length;
+
+  const fatt2026 = allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26') && (r.fields['Tipo Obiettivo']?.name||'')!=='Calibrazione')
+    .reduce((s,r)=>s+(r.fields['Valore Raggiunto']||0),0);
+  const obj2026  = allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26') && (r.fields['Valore Obiettivo']||0)>0 && (r.fields['Tipo Obiettivo']?.name||'')!=='Calibrazione')
+    .reduce((s,r)=>s+(r.fields['Valore Obiettivo']||0),0);
+  const perc = obj2026>0 ? Math.round(fatt2026/obj2026*100) : 0;
+
+  // Contatti per commerciale
+  const perComm = {};
+  Object.keys(COMMERCIALI).forEach(nome => perComm[nome] = { tot:0, vendite:0, trattative:0, ricontattare:0 });
+  allRubrica.forEach(r => {
+    const codice = r.fields['Codice Equipoint'];
+    const val    = typeof codice==='object' ? codice?.name : codice;
+    if (!val) return;
+    const nome = Object.keys(COMMERCIALI).find(n => COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
+    if (!nome) return;
+    perComm[nome].tot++;
+    const s = (r.fields['Status']||'').toUpperCase();
+    if (s.includes('VENDUTO')||r.fields['Data Vendita']) perComm[nome].vendite++;
+    if (s.includes('TRATTATIVA')) perComm[nome].trattative++;
+    if (s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA')) perComm[nome].ricontattare++;
+  });
+
+  const commRows = Object.entries(perComm)
+    .sort((a,b)=>b[1].vendite-a[1].vendite)
+    .map(([nome,v],i)=>`
+      <tr>
+        <td><span style="background:${COMM_COLORS[i]};color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px">${nome.split(' ')[0]}</span></td>
+        <td class="rank-num">${v.tot}</td>
+        <td><span class="badge badge-green">${v.vendite}</span></td>
+        <td><span class="badge badge-gold">${v.trattative}</span></td>
+        <td><span class="badge badge-orange">${v.ricontattare}</span></td>
+      </tr>`).join('');
+
+  $('tab-overview').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi blue">  <div class="kpi-ico">👥</div><div class="kpi-val">${totContatti.toLocaleString('it-IT')}</div><div class="kpi-lbl">Contatti totali</div></div>
+      <div class="kpi green"> <div class="kpi-ico">💰</div><div class="kpi-val">${totVendite}</div><div class="kpi-lbl">Vendite totali</div></div>
+      <div class="kpi gold">  <div class="kpi-ico">🤝</div><div class="kpi-val">${totTrattative}</div><div class="kpi-lbl">Trattative in corso</div></div>
+      <div class="kpi orange"><div class="kpi-ico">📦</div><div class="kpi-val">${totNoleggi}</div><div class="kpi-lbl">Noleggi attivi</div></div>
+      <div class="kpi red">   <div class="kpi-ico">⚠️</div><div class="kpi-val">${totScadenze}</div><div class="kpi-lbl">Scadono 30gg</div></div>
+      <div class="kpi blue">  <div class="kpi-ico">💶</div><div class="kpi-val">${fmt(fatt2026)}</div><div class="kpi-lbl">Fatturato 2026</div></div>
+    </div>
+
+    <!-- Barra obiettivo globale -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--accent)">Obiettivo Team 2026</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:3px">${fmt(fatt2026)} su ${fmt(obj2026)}</div>
+        </div>
+        <div style="font-size:32px;font-weight:800;color:${col(perc)}">${perc}%</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:100px;height:14px;overflow:hidden">
+        <div style="width:${Math.min(perc,100)}%;height:100%;background:${col(perc)};border-radius:100px;transition:width 1s ease"></div>
+      </div>
+    </div>
+
+    <!-- Contatti per commerciale -->
+    <div class="rank-card">
+      <div class="rank-header"><div class="rank-title">👥 Contatti per commerciale</div></div>
+      <table class="rank-table">
+        <tr><th>Commerciale</th><th>Totale</th><th>Vendite</th><th>Trattative</th><th>Da ricontattare</th></tr>
+        ${commRows}
+      </table>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLASSIFICA
+// ══════════════════════════════════════════════════════════════
+function renderClassifica() {
+  const MESI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+  const nomi = Object.keys(COMMERCIALI);
+
+  const perNome = {};
+  nomi.forEach(n => perNome[n] = { fatt:0, obj:0 });
+
+  allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26')).forEach(r => {
+    const mese = (r.fields['MESE']||'').toUpperCase();
+    const comm = r.fields['Name (from Commerciale)'];
+    const arr  = comm ? (Array.isArray(comm)?comm:[comm]) : [];
+    const nome = nomi.find(n => arr.some(c=>c.toUpperCase().includes(n.split(' ')[0].toUpperCase())) || MESI.some(m=>mese.includes(m)&&mese.includes(n.split(' ')[0].toUpperCase())));
+    if (!nome) return;
+    perNome[nome].fatt += r.fields['Valore Raggiunto']||0;
+    if ((r.fields['Valore Obiettivo']||0)>0) perNome[nome].obj += r.fields['Valore Obiettivo']||0;
+  });
+
+  const sorted = Object.entries(perNome).filter(([,v])=>v.obj>0||v.fatt>0).sort((a,b)=>b[1].fatt-a[1].fatt);
+  const medals = ['🥇','🥈','🥉'];
+
+  const rows = sorted.map(([nome,v],i) => {
+    const perc = v.obj>0 ? Math.round(v.fatt/v.obj*100) : 0;
+    const c    = col(perc);
+    return `<tr>
+      <td style="font-size:18px">${medals[i]||i+1}</td>
+      <td><div class="rank-nome">${esc(nome)}</div></td>
+      <td style="font-weight:800;color:var(--accent)">${fmt(v.fatt)}</td>
+      <td style="color:var(--muted)">${fmt(v.obj)}</td>
+      <td style="font-weight:700;color:${c}">${perc}%</td>
+      <td>
+        <div class="progress-mini" style="width:120px">
+          <div class="progress-mini-fill" style="width:${Math.min(perc,100)}%;background:${c}"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const totFatt = sorted.reduce((s,[,v])=>s+v.fatt,0);
+  const totObj  = sorted.reduce((s,[,v])=>s+v.obj,0);
+
+  $('tab-classifica').innerHTML = `
+    <div class="rank-card">
+      <div class="rank-header">
+        <div class="rank-title">🏆 Classifica Fatturato 2026</div>
+        <div style="font-size:13px;color:var(--muted)">Team: ${fmt(totFatt)} / ${fmt(totObj)}</div>
+      </div>
+      <table class="rank-table">
+        <tr><th>#</th><th>Commerciale</th><th>Fatturato</th><th>Obiettivo</th><th>%</th><th>Avanzamento</th></tr>
+        ${rows}
+        <tr style="background:var(--accent)">
+          <td></td>
+          <td style="font-weight:700;color:#fff">TOTALE TEAM</td>
+          <td style="font-weight:800;color:#fff">${fmt(totFatt)}</td>
+          <td style="color:rgba(255,255,255,.7)">${fmt(totObj)}</td>
+          <td style="font-weight:800;color:#fff">${totObj>0?Math.round(totFatt/totObj*100):0}%</td>
+          <td></td>
+        </tr>
+      </table>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RUBRICA COMPLETA
+// ══════════════════════════════════════════════════════════════
+let rubricaFiltrata = [];
+let sortField = 'DATA DI CREAZIONE DATO';
+let sortDir   = -1;
+
+function renderRubrica() {
+  rubricaFiltrata = [...allRubrica];
+  $('tab-rubrica').innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">👥 Tutti i contatti (${allRubrica.length.toLocaleString('it-IT')})</div>
+        <div style="font-size:13px;color:var(--muted)" id="rubrica-count"></div>
+      </div>
+      <div class="filter-bar">
+        <input class="search-inp" id="rb-search" placeholder="🔍 Cerca nome, telefono, note…" oninput="filterRubrica()">
+        <select class="sel-filter" id="rb-comm" onchange="filterRubrica()">
+          <option value="">Tutti i commerciali</option>
+          ${Object.keys(COMMERCIALI).map(n=>`<option>${esc(n)}</option>`).join('')}
+        </select>
+        <select class="sel-filter" id="rb-stato" onchange="filterRubrica()">
+          <option value="">Tutti gli stati</option>
+          ${[...new Set(allRubrica.map(r=>r.fields['Status']).filter(Boolean))].sort().map(s=>`<option>${esc(s)}</option>`).join('')}
+        </select>
+        <input type="date" class="sel-filter" id="rb-da" onchange="filterRubrica()" title="Dal">
+        <input type="date" class="sel-filter" id="rb-a"  onchange="filterRubrica()" title="Al">
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="rb-table">
+          <thead><tr>
+            <th onclick="sortRubrica('Nome e cognome')">Nome ↕</th>
+            <th onclick="sortRubrica('Codice Equipoint')">Commerciale ↕</th>
+            <th onclick="sortRubrica('Status')">Stato ↕</th>
+            <th>Telefono</th>
+            <th onclick="sortRubrica('DATA DI CREAZIONE DATO')">Creato ↕</th>
+            <th onclick="sortRubrica('DATA ATTIVITA')">Ultima att. ↕</th>
+            <th>Note</th>
+          </tr></thead>
+          <tbody id="rb-body"></tbody>
+        </table>
+      </div>
+    </div>`;
+  filterRubrica();
+}
+
+function filterRubrica() {
+  const q     = ($('rb-search')?.value||'').toLowerCase();
+  const comm  = ($('rb-comm')?.value||'').toLowerCase();
+  const stato = ($('rb-stato')?.value||'').toLowerCase();
+  const da    = $('rb-da')?.value;
+  const a     = $('rb-a')?.value;
+
+  rubricaFiltrata = allRubrica.filter(r => {
+    if (q) {
+      const hay = (r.fields['Nome e cognome']||'')+(r.fields['recapito telefonico']||'')+(r.fields['Notes']||'');
+      if (!hay.toLowerCase().includes(q)) return false;
+    }
+    if (comm) {
+      const codice = r.fields['Codice Equipoint'];
+      const val = typeof codice==='object' ? (codice?.name||'') : (codice||'');
+      const nome = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
+      if (!nome || nome.toLowerCase()!==comm) return false;
+    }
+    if (stato) {
+      if ((r.fields['Status']||'').toLowerCase()!==stato) return false;
+    }
+    if (da||a) {
+      const iso = r.fields['DATA DI CREAZIONE DATO']||r.createdTime||'';
+      const d   = iso ? new Date(iso) : null;
+      if (da && d && d < new Date(da)) return false;
+      if (a  && d && d > new Date(a+'T23:59:59')) return false;
+    }
+    return true;
+  });
+
+  sortRubrica(sortField, true);
+  $('rubrica-count').textContent = `${rubricaFiltrata.length.toLocaleString('it-IT')} risultati`;
+}
+
+function sortRubrica(field, keepDir=false) {
+  if (!keepDir) sortDir = sortField===field ? -sortDir : -1;
+  sortField = field;
+  rubricaFiltrata.sort((a,b)=>{
+    const va = a.fields[field]||a.createdTime||'';
+    const vb = b.fields[field]||b.createdTime||'';
+    return sortDir * String(va).localeCompare(String(vb));
+  });
+  const oggi  = new Date(); oggi.setHours(0,0,0,0);
+  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
+
+  const rows = rubricaFiltrata.slice(0,500).map(r => {
+    const codice = r.fields['Codice Equipoint'];
+    const val    = typeof codice==='object' ? (codice?.name||'') : (codice||'');
+    const nomeComm = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
+    const commIdx  = nomeComm ? Object.keys(COMMERCIALI).indexOf(nomeComm) : -1;
+    const stato = r.fields['Status']||'—';
+    const statoUp = stato.toUpperCase();
+    const bCls = statoUp.includes('VENDUTO') ? 'badge-green'
+      : statoUp.includes('TRATTATIVA') ? 'badge-gold'
+      : statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA') ? 'badge-orange'
+      : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
+      : 'badge-blue';
+    const creaz = r.fields['DATA DI CREAZIONE DATO']||r.createdTime ? new Date(r.fields['DATA DI CREAZIONE DATO']||r.createdTime).toLocaleDateString('it-IT') : '—';
+    const att   = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const tel   = r.fields['recapito telefonico']||'';
+    const note  = r.fields['Notes']||'';
+    return `<tr>
+      <td><div class="nome-cell">${esc(r.fields['Nome e cognome']||'—')}</div><div class="sub-cell">${esc(r.fields['Tipologia cliente']||'')}</div></td>
+      <td>${nomeComm ? `<span class="commerciale-tag" style="color:${COMM_COLORS[commIdx]};border-color:${COMM_COLORS[commIdx]}20;background:${COMM_COLORS[commIdx]}10">${esc(nomeComm.split(' ')[0])}</span>` : '<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+      <td><span class="badge ${bCls}">${esc(stato)}</span></td>
+      <td style="font-size:12px">${tel ? `<a href="tel:${esc(tel)}" style="color:var(--accent2);text-decoration:none">📞 ${esc(tel)}</a>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${creaz}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${att}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(note)}">${esc(note.substring(0,60))||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const tbody = $('rb-body');
+  if (tbody) tbody.innerHTML = rows || '<tr><td colspan="7" class="empty">Nessun risultato</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LINK UTENTI
+// ══════════════════════════════════════════════════════════════
+function renderLinks() {
+  const rows = Object.entries(COMMERCIALI).map(([nome, info]) => {
+    const link = `${BASE_URL}?token=${info.token}`;
+    return `<div class="link-row">
+      <div style="font-weight:700;color:var(--accent)">${esc(nome)}</div>
+      <div class="link-url">${esc(link)}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-copy" id="copy-${info.token}"
+          onclick="copyLink('${link}','${info.token}')">📋 Copia</button>
+        <a href="https://wa.me/?text=${encodeURIComponent('Ciao '+nome.split(' ')[0]+'! Ecco il link della tua dashboard personale: '+link)}"
+          target="_blank"
+          style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
+          WA
+        </a>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('tab-links').innerHTML = `
+    <div class="link-card">
+      <div class="rank-header">
+        <div class="rank-title">🔗 Link dashboard per ogni commerciale</div>
+        <div style="font-size:13px;color:var(--muted)">Invia via WhatsApp o copia il link</div>
+      </div>
+      ${rows}
+    </div>`;
+}
+
+function copyLink(url, token) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = $('copy-'+token);
+    if (btn) { btn.textContent='✅ Copiato'; btn.classList.add('copied'); }
+    showToast('✅ Link copiato!');
+    setTimeout(()=>{ if(btn){btn.textContent='📋 Copia';btn.classList.remove('copied');} },2500);
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+if (sessionStorage.getItem('eq_admin')==='1') {
+  $('login').style.display = 'none';
+  $('app').style.display   = 'block';
+  loadAll();
+}
+</script>
+</body>
+</html>
