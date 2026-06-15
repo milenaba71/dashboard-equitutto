@@ -38,9 +38,12 @@
   .welcome h1 { font-size:24px; font-weight:800; letter-spacing:-.5px; }
   .welcome p { color:var(--muted); font-size:14px; margin-top:4px; }
 
+  /* KPI */
   .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
-  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; }
-  .kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:var(--r) var(--r) 0 0; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; cursor:pointer; transition:transform .15s,box-shadow .15s; }
+  .kpi:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.3); }
+  .kpi.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(79,142,247,.3); }
+  .kpi::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; border-radius:var(--r) var(--r) 0 0; }
   .kpi.blue::before   { background:var(--accent); }
   .kpi.green::before  { background:var(--green); }
   .kpi.orange::before { background:var(--orange); }
@@ -50,14 +53,66 @@
   .kpi-ico { font-size:20px; margin-bottom:10px; }
   .kpi-val { font-size:30px; font-weight:800; letter-spacing:-1px; line-height:1; }
   .kpi-lbl { font-size:12px; color:var(--muted); margin-top:5px; }
+  .kpi-hint { font-size:10px; color:var(--accent); margin-top:6px; opacity:.7; }
 
+  /* DRAWER */
+  .drawer { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; overflow:hidden; max-height:0; transition:max-height .4s cubic-bezier(.4,0,.2,1); }
+  .drawer.open { max-height:3000px; }
+  .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+  .drawer-title { font-size:14px; font-weight:700; }
+  .drawer-count { font-size:12px; color:var(--muted); margin-left:8px; }
+  .drawer-close { background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:4px; }
+  .drawer-close:hover { color:var(--text); }
+  .drawer-body { padding:16px 22px; }
+  .search-bar { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:9px 14px; color:var(--text); font-size:13px; outline:none; margin-bottom:14px; }
+  .search-bar:focus { border-color:var(--accent); }
+  .search-bar::placeholder { color:var(--muted); }
+
+  /* Tabella contatti */
+  .contact-table { width:100%; border-collapse:collapse; }
+  .contact-table th { text-align:left; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .contact-table td { padding:10px 4px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .contact-table tr:last-child td { border-bottom:none; }
+  .c-nome { font-weight:600; }
+  .c-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* Badge */
+  .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; cursor:default; }
+  .badge-red    { background:rgba(239,68,68,.15);  color:var(--red); }
+  .badge-orange { background:rgba(245,158,11,.15); color:var(--orange); }
+  .badge-green  { background:rgba(52,199,123,.15); color:var(--green); }
+  .badge-blue   { background:rgba(79,142,247,.15); color:var(--accent); }
+  .badge-purple { background:rgba(124,92,191,.15); color:var(--accent2); }
+
+  /* Celle editabili */
+  .editable { cursor:pointer; border-radius:6px; padding:4px 8px; transition:background .15s; display:inline-block; min-width:60px; }
+  .editable:hover { background:var(--surface2); }
+  .editable:hover::after { content:' ✏️'; font-size:10px; opacity:.6; }
+  .edit-input { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:4px 8px; color:var(--text); font-size:13px; outline:none; width:100%; }
+  .edit-select { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:4px 8px; color:var(--text); font-size:13px; outline:none; }
+
+  /* Bottone salva */
+  .btn-save { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px; transition:opacity .2s; }
+  .btn-save:hover { opacity:.85; }
+  .btn-cancel { background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; margin-left:4px; }
+
+  /* Toast notifica */
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.error { background:var(--red); }
+
+  /* Tel link */
+  .tel-link { color:var(--accent); text-decoration:none; }
+  .tel-link:hover { text-decoration:underline; }
+
+  /* Progress */
   .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; }
   .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
   .progress-head h3 { font-size:15px; font-weight:700; }
   .progress-head p { font-size:13px; color:var(--muted); margin-top:3px; }
   .progress-pct { font-size:32px; font-weight:800; }
   .track { background:var(--surface2); border-radius:100px; height:12px; overflow:hidden; }
-  .fill { height:100%; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+  .fill  { height:100%; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
 
   .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
   @media(max-width:680px){ .two-col { grid-template-columns:1fr; } }
@@ -74,12 +129,7 @@
   .row-list { display:flex; flex-direction:column; gap:9px; }
   .row-item { background:var(--surface2); border-radius:var(--r-sm); padding:11px 14px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
   .row-nome { font-weight:600; }
-  .row-sub { font-size:11px; color:var(--muted); margin-top:2px; }
-  .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; }
-  .badge-red    { background:rgba(239,68,68,.15);  color:var(--red); }
-  .badge-orange { background:rgba(245,158,11,.15); color:var(--orange); }
-  .badge-green  { background:rgba(52,199,123,.15); color:var(--green); }
-  .badge-blue   { background:rgba(79,142,247,.15); color:var(--accent); }
+  .row-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
 
   .mesi-table { width:100%; border-collapse:collapse; }
   .mesi-table th { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; padding-bottom:10px; border-bottom:1px solid var(--border); text-align:left; }
@@ -87,18 +137,19 @@
   .mesi-table td { padding:10px 0; font-size:13px; border-bottom:1px solid var(--border); }
   .mesi-table tr:last-child td { border-bottom:none; }
   .mesi-table .r { text-align:right; font-weight:600; }
-  .mini-bar { width:70px; height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-left:auto; }
+  .mini-bar  { width:70px; height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-left:auto; }
   .mini-fill { height:100%; border-radius:100px; }
 
   .footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0 8px; }
-  .empty { text-align:center; color:var(--muted); font-size:13px; padding:20px 0; }
+  .empty  { text-align:center; color:var(--muted); font-size:13px; padding:20px 0; }
+  .saving { opacity:.5; pointer-events:none; }
 </style>
 </head>
 <body>
 
 <div id="loading-screen">
   <div class="spinner"></div>
-  <div class="loading-text">Verifica accesso…</div>
+  <div class="loading-text">Caricamento…</div>
 </div>
 
 <div id="error-screen">
@@ -122,11 +173,12 @@
   </div>
 </div>
 
+<!-- Toast notifica -->
+<div class="toast" id="toast"></div>
+
 <script>
-// ══════════════════════════════════════════════════
-// PROXY — nessuna API key qui, è al sicuro su Cloudflare
-// ══════════════════════════════════════════════════
 const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
+const TABLE_RUBRICA = 'tbllNx7iSqpAtbQde';
 
 const TOKEN_MAP = {
   'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       mail:'milena.baroni71@gmail.com' },
@@ -142,23 +194,236 @@ const TOKEN_MAP = {
   'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Sonia Calimandri',    mail:'sonia.calimandri@gmail.com' },
 };
 
+// Opzioni status disponibili in Airtable
+const STATUS_OPTIONS = [
+  'Da chiamare','Ricontattare','Follow up','Appuntamento fissato',
+  'Proposta inviata','Vendita','Non interessato','Perso'
+];
+
 const $ = id => document.getElementById(id);
 const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
 const pct  = (a,b) => b>0 ? Math.min(Math.round(a/b*100),100) : 0;
 const pctR = (a,b) => b>0 ? Math.round(a/b*100) : 0;
 const col  = p => p>=100 ? '#34c77b' : p>=50 ? '#f59e0b' : '#ef4444';
 
-async function proxy(table, qs='') {
-  const url  = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
-  const res  = await fetch(url);
-  const data = await res.json();
-  return data.records || [];
+let allMiei   = [];
+let activeKpi = null;
+
+// ── Toast ──────────────────────────────────────────────────────
+function showToast(msg, isError=false) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError?' error':'') + ' show';
+  setTimeout(() => t.className = 'toast', 3000);
 }
 
-function getToken() {
-  return new URLSearchParams(window.location.search).get('token') || '';
+// ── Proxy ──────────────────────────────────────────────────────
+async function proxyGet(table, qs='') {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
+  const res = await fetch(url);
+  const d   = await res.json();
+  return d.records || [];
 }
 
+async function proxyPatch(table, recordId, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
+}
+
+// ── Salva campo su Airtable ────────────────────────────────────
+async function saveField(recordId, fieldName, value, cellEl) {
+  cellEl.classList.add('saving');
+  try {
+    await proxyPatch(TABLE_RUBRICA, recordId, { [fieldName]: value });
+    // aggiorna cache locale
+    const rec = allMiei.find(r => r.id === recordId);
+    if (rec) rec.fields[fieldName] = value;
+    showToast('✅ Salvato su Airtable!');
+  } catch(e) {
+    showToast('❌ Errore nel salvataggio', true);
+  }
+  cellEl.classList.remove('saving');
+}
+
+// ── Rendi una cella editabile (testo) ─────────────────────────
+function makeEditable(cellEl, recordId, fieldName, currentValue) {
+  cellEl.innerHTML = `
+    <input class="edit-input" value="${currentValue||''}" id="inp-${recordId}-${fieldName}">
+    <div style="margin-top:6px;display:flex;gap:4px">
+      <button class="btn-save" onclick="confirmEdit('${recordId}','${fieldName}')">Salva</button>
+      <button class="btn-cancel" onclick="cancelEdit('${recordId}','${fieldName}','${currentValue||''}')">Annulla</button>
+    </div>`;
+  document.getElementById(`inp-${recordId}-${fieldName}`).focus();
+}
+
+// ── Rendi una cella editabile (select stato) ───────────────────
+function makeSelectEditable(cellEl, recordId, fieldName, currentValue) {
+  const opts = STATUS_OPTIONS.map(o =>
+    `<option value="${o}" ${o===currentValue?'selected':''}>${o}</option>`
+  ).join('');
+  cellEl.innerHTML = `
+    <select class="edit-select" id="sel-${recordId}-${fieldName}">${opts}</select>
+    <div style="margin-top:6px;display:flex;gap:4px">
+      <button class="btn-save" onclick="confirmSelect('${recordId}','${fieldName}')">Salva</button>
+      <button class="btn-cancel" onclick="refreshDrawer()">Annulla</button>
+    </div>`;
+}
+
+async function confirmEdit(recordId, fieldName) {
+  const inp   = document.getElementById(`inp-${recordId}-${fieldName}`);
+  const value = inp ? inp.value.trim() : '';
+  const cellEl = inp ? inp.closest('td') : null;
+  if (!cellEl) return;
+  await saveField(recordId, fieldName, value, cellEl);
+  refreshDrawer();
+}
+
+async function confirmSelect(recordId, fieldName) {
+  const sel   = document.getElementById(`sel-${recordId}-${fieldName}`);
+  const value = sel ? sel.value : '';
+  const cellEl = sel ? sel.closest('td') : null;
+  if (!cellEl) return;
+  await saveField(recordId, fieldName, value, cellEl);
+  refreshDrawer();
+}
+
+function cancelEdit(recordId, fieldName, original) {
+  refreshDrawer();
+}
+
+// ── Drawer ─────────────────────────────────────────────────────
+function openDrawer(tipo, titolo, lista, colore) {
+  if (activeKpi === tipo) { closeDrawer(); return; }
+  activeKpi = tipo;
+  document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
+  const kpiEl = $('kpi-' + tipo);
+  if (kpiEl) kpiEl.classList.add('active');
+  renderDrawer(titolo, lista, colore);
+  setTimeout(() => $('drawer').scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+}
+
+function renderDrawer(titolo, lista, colore) {
+  const drawer = $('drawer');
+  drawer.classList.add('open');
+  drawer.innerHTML = `
+    <div class="drawer-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${colore}"></div>
+        <span class="drawer-title">${titolo}</span>
+        <span class="drawer-count" id="drawer-count">${lista.length} contatti</span>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)" id="drawer-search">
+      <div id="drawer-table">${renderTable(lista)}</div>
+    </div>`;
+}
+
+function refreshDrawer() {
+  if (!activeKpi) return;
+  const lista = getListaByTipo(activeKpi);
+  const tbl   = $('drawer-table');
+  if (tbl) tbl.innerHTML = renderTable(lista);
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = lista.length + ' contatti';
+}
+
+function closeDrawer() {
+  $('drawer').classList.remove('open');
+  document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
+  activeKpi = null;
+}
+
+function filterDrawer(q) {
+  const lista = getListaByTipo(activeKpi).filter(r => {
+    const s = JSON.stringify(r.fields).toLowerCase();
+    return s.includes(q.toLowerCase());
+  });
+  $('drawer-table').innerHTML = renderTable(lista);
+  $('drawer-count').textContent = lista.length + ' contatti';
+}
+
+function getListaByTipo(tipo) {
+  const oggi  = new Date(); oggi.setHours(0,0,0,0);
+  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
+  switch(tipo) {
+    case 'contatti':     return allMiei;
+    case 'ricontattare': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toLowerCase(); return s.includes('ricontatt')||s.includes('follow')||s==='da chiamare'; });
+    case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
+    case 'vendite':      return allMiei.filter(r=>r.fields['Data Vendita']);
+    case 'noleggi':      return allMiei.filter(r=>{ const s=r.fields['STATO NOLEGGIO']; if(!s) return false; const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); return t.includes('attiv')||t.includes('corso'); });
+    case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
+    default: return [];
+  }
+}
+
+function renderTable(lista) {
+  if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
+  const rows = lista.map(r => {
+    const id    = r.id;
+    const nome  = r.fields['Nome e cognome'] || '—';
+    const stato = r.fields['Status'] || '—';
+    const tel   = r.fields['recapito telefonico'] || '';
+    const note  = r.fields['Notes'] || '';
+    const data  = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const scad  = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+    const venduto = !!r.fields['Data Vendita'];
+    const badgeCls = venduto ? 'badge-green' : stato.toLowerCase().includes('ricontatt')||stato.toLowerCase().includes('follow') ? 'badge-orange' : 'badge-blue';
+
+    return `<tr>
+      <td>
+        <div class="c-nome">${nome}</div>
+        <div class="c-sub">${r.fields['Tipologia cliente']||''}</div>
+      </td>
+      <td>
+        <span class="badge ${badgeCls} editable"
+          onclick="makeSelectEditable(this.closest('td'),'${id}','Status','${stato}')"
+          title="Clicca per modificare stato">
+          ${stato}
+        </span>
+      </td>
+      <td>
+        ${tel
+          ? `<a class="tel-link" href="tel:${tel}">📞 ${tel}</a>`
+          : `<span class="editable" style="color:var(--muted)"
+               onclick="makeEditable(this.closest('td'),'${id}','recapito telefonico','')"
+               title="Clicca per aggiungere telefono">+ aggiungi</span>`
+        }
+      </td>
+      <td style="color:var(--muted);font-size:12px">${data}</td>
+      <td>
+        <span class="editable" style="font-size:12px;color:var(--muted);max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          onclick="makeEditable(this.closest('td'),'${id}','Notes','${note.replace(/'/g,'\\'')}')"
+          title="${note||'Clicca per aggiungere nota'}">
+          ${note ? note.substring(0,40)+(note.length>40?'…':'') : '+ nota'}
+        </span>
+      </td>
+      ${scad ? `<td style="font-size:11px;color:var(--orange)">📦 ${scad}</td>` : '<td></td>'}
+    </tr>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto">
+    <table class="contact-table">
+      <tr>
+        <th>Nome</th>
+        <th>Stato <span style="opacity:.5;font-size:10px">✏️</span></th>
+        <th>Telefono <span style="opacity:.5;font-size:10px">✏️</span></th>
+        <th>Ultima attività</th>
+        <th>Note <span style="opacity:.5;font-size:10px">✏️</span></th>
+        <th>Scadenza</th>
+      </tr>
+      ${rows}
+    </table>
+  </div>`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────
 async function init() {
   const token  = getToken();
   const utente = TOKEN_MAP[token];
@@ -175,6 +440,10 @@ async function init() {
   await loadData(utente);
 }
 
+function getToken() {
+  return new URLSearchParams(window.location.search).get('token') || '';
+}
+
 async function loadData(utente) {
   const main = $('main');
   try {
@@ -182,17 +451,18 @@ async function loadData(utente) {
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
     const [rubrica, obiettivi] = await Promise.all([
-      proxy('tbllNx7iSqpAtbQde',
+      proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
-        '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto&fields[]=Assignee&maxRecords=3000'),
-      proxy('tblTAA7KFUVtcPnZt',
+        '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
+        '&fields[]=recapito+telefonico&fields[]=Notes&fields[]=Assignee&maxRecords=3000'),
+      proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
     ]);
 
-    const miei = rubrica.filter(r => {
+    allMiei = rubrica.filter(r => {
       const a = r.fields['Assignee'];
       if (!a) return false;
       if (Array.isArray(a)) return a.some(u=>(u.email||'').toLowerCase()===mail);
@@ -202,36 +472,19 @@ async function loadData(utente) {
     const oggi  = new Date(); oggi.setHours(0,0,0,0);
     const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
 
-    const totContatti    = miei.length;
-    const daRicontattare = miei.filter(r=>{
-      const s=(r.fields['Status']||'').toLowerCase();
-      return s.includes('ricontatt')||s.includes('follow')||s==='da chiamare';
-    }).length;
-    const appuntamenti = miei.filter(r=>{
-      const p=r.fields['Preso appuntamento'];
-      return p&&p!=='NO';
-    }).length;
-    const vendite      = miei.filter(r=>r.fields['Data Vendita']).length;
-    const noleggiAttivi= miei.filter(r=>{
-      const s=r.fields['STATO NOLEGGIO'];
-      if(!s) return false;
-      const t=(Array.isArray(s)?s.join(' '):s).toLowerCase();
-      return t.includes('attiv')||t.includes('corso');
-    });
-    const noleggiScad  = miei.filter(r=>{
-      const d=r.fields['data scadenza noleggio'];
-      if(!d) return false;
-      const sc=new Date(d);
-      return sc>=oggi&&sc<=tra30;
-    });
+    const totContatti    = allMiei.length;
+    const daRicontattare = getListaByTipo('ricontattare').length;
+    const appuntamenti   = getListaByTipo('appuntamenti').length;
+    const vendite        = getListaByTipo('vendite').length;
+    const noleggiAttivi  = getListaByTipo('noleggi');
+    const noleggiScad    = getListaByTipo('scadenze');
 
-    const obj26 = obiettivi.filter(r=>{
+    const obj26 = obiettivi.filter(r => {
       const mese=(r.fields['MESE']||'').toUpperCase();
       const comm=r.fields['Name (from Commerciale)'];
       if(comm){ const arr=Array.isArray(comm)?comm:[comm]; if(arr.some(n=>n.toUpperCase().includes(firstName))) return true; }
       return mese.includes(firstName)&&mese.includes('26');
     });
-
     const fatturato = obj26.reduce((s,r)=>s+(r.fields['Valore Raggiunto']||0),0);
     const obiettivo = obj26.filter(r=>(r.fields['Valore Obiettivo']||0)>0).reduce((s,r)=>s+(r.fields['Valore Obiettivo']||0),0);
     const percFatt  = pct(fatturato,obiettivo);
@@ -248,11 +501,11 @@ async function loadData(utente) {
     });
 
     const statMap={};
-    miei.forEach(r=>{ const s=r.fields['Status']||'N/D'; statMap[s]=(statMap[s]||0)+1; });
+    allMiei.forEach(r=>{ const s=r.fields['Status']||'N/D'; statMap[s]=(statMap[s]||0)+1; });
     const COLORS=['#4f8ef7','#34c77b','#f59e0b','#ef4444','#7c5cbf','#14b8a6'];
     const statTop=Object.entries(statMap).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([l,v],i)=>({l,v,c:COLORS[i]}));
 
-    const recenti=[...miei].filter(r=>r.fields['DATA ATTIVITA'])
+    const recenti=[...allMiei].filter(r=>r.fields['DATA ATTIVITA'])
       .sort((a,b)=>new Date(b.fields['DATA ATTIVITA'])-new Date(a.fields['DATA ATTIVITA'])).slice(0,7);
 
     const donut=buildDonut(statTop,totContatti);
@@ -265,7 +518,7 @@ async function loadData(utente) {
           const lbl=diff===0?'Oggi':diff<0?'Scaduto':`${diff}gg`;
           return `<div class="row-item"><div><div class="row-nome">${r.fields['Nome e cognome']||'—'}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${lbl}</span></div>`;
         }).join('')
-      : '<div class="empty">Nessun noleggio in scadenza nei prossimi 30 giorni ✓</div>';
+      : '<div class="empty">Nessun noleggio in scadenza ✓</div>';
 
     const recentiHTML=recenti.length
       ? recenti.map(r=>{
@@ -281,19 +534,33 @@ async function loadData(utente) {
             const {f,o}=mesiMap[m]; const p=pctR(f,o),c=col(p);
             return `<tr><td>${m.charAt(0)+m.slice(1).toLowerCase()}</td><td class="r">${fmt(f)}</td><td class="r" style="color:var(--muted)">${fmt(o)}</td><td class="r" style="color:${c}">${p}%</td><td><div class="mini-bar"><div class="mini-fill" style="width:${pct(f,o)}%;background:${c}"></div></div></td></tr>`;
           }).join('')}</table>`
-      : '<div class="empty">Nessun obiettivo 2026 trovato</div>';
+      : '<div class="empty">Nessun obiettivo 2026</div>';
 
-    main.innerHTML=`
-      <div class="welcome"><h1>Ciao, ${utente.nome.split(' ')[0]} 👋</h1><p>Riepilogo aggiornato a oggi ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})}</p></div>
-      <div class="kpi-grid">
-        <div class="kpi blue">  <div class="kpi-ico">👥</div><div class="kpi-val">${totContatti}</div><div class="kpi-lbl">Contatti totali</div></div>
-        <div class="kpi orange"><div class="kpi-ico">📞</div><div class="kpi-val">${daRicontattare}</div><div class="kpi-lbl">Da ricontattare</div></div>
-        <div class="kpi purple"><div class="kpi-ico">📅</div><div class="kpi-val">${appuntamenti}</div><div class="kpi-lbl">Appuntamenti</div></div>
-        <div class="kpi green"> <div class="kpi-ico">💰</div><div class="kpi-val">${vendite}</div><div class="kpi-lbl">Vendite chiuse</div></div>
-        <div class="kpi gold">  <div class="kpi-ico">📦</div><div class="kpi-val">${noleggiAttivi.length}</div><div class="kpi-lbl">Noleggi attivi</div></div>
-        <div class="kpi red">   <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div></div>
+    main.innerHTML = `
+      <div class="welcome">
+        <h1>Ciao, ${utente.nome.split(' ')[0]} 👋</h1>
+        <p>Riepilogo al ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})} · Clicca sui KPI per vedere e modificare i contatti</p>
       </div>
+
+      <div class="kpi-grid">
+        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti',allMiei,'#4f8ef7')">
+          <div class="kpi-ico">👥</div><div class="kpi-val">${totContatti}</div><div class="kpi-lbl">Contatti totali</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare',getListaByTipo('ricontattare'),'#f59e0b')">
+          <div class="kpi-ico">📞</div><div class="kpi-val">${daRicontattare}</div><div class="kpi-lbl">Da ricontattare</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti presi',getListaByTipo('appuntamenti'),'#7c5cbf')">
+          <div class="kpi-ico">📅</div><div class="kpi-val">${appuntamenti}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse',getListaByTipo('vendite'),'#34c77b')">
+          <div class="kpi-ico">💰</div><div class="kpi-val">${vendite}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi gold"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi',getListaByTipo('noleggi'),'#f0a500')">
+          <div class="kpi-ico">📦</div><div class="kpi-val">${noleggiAttivi.length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi red"    id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg',getListaByTipo('scadenze'),'#ef4444')">
+          <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
+      </div>
+
+      <div class="drawer" id="drawer"></div>
+
       ${obiettivo>0?`<div class="progress-card"><div class="progress-head"><div><h3>Obiettivo Fatturato 2026</h3><p>${fmt(fatturato)} su ${fmt(obiettivo)}</p></div><div class="progress-pct" style="color:${col(percFattR)}">${percFattR}%</div></div><div class="track"><div class="fill" style="width:0%;background:${col(percFattR)}" data-w="${percFatt}"></div></div></div>`:''}
+
       <div class="two-col">
         <div class="panel"><div class="panel-title">Stato contatti</div><div class="donut-wrap">${donut}<div class="legend">${statTop.map(s=>`<div class="leg-row"><div class="leg-dot" style="background:${s.c}"></div><span class="leg-lbl">${s.l}</span><span class="leg-val">${s.v}</span></div>`).join('')}</div></div></div>
         <div class="panel"><div class="panel-title">Noleggi in scadenza (30gg)</div><div class="row-list">${noleggiHTML}</div></div>
@@ -302,7 +569,8 @@ async function loadData(utente) {
         <div class="panel"><div class="panel-title">Obiettivi per mese · 2026</div>${mesiHTML}</div>
         <div class="panel"><div class="panel-title">Ultimi contatti</div><div class="row-list">${recentiHTML}</div></div>
       </div>
-      <div class="footer">EQUITUTTO Dashboard · Solo i tuoi dati</div>`;
+      <div class="footer">EQUITUTTO Dashboard · I campi con ✏️ sono modificabili · si aggiornano subito su Airtable</div>
+    `;
 
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       document.querySelectorAll('.fill[data-w]').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
