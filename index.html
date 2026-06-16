@@ -503,15 +503,20 @@ function renderTable(lista) {
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
     const appunto  = r.fields['Preso appuntamento'] || '';
     const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
+    // Proposte nuova tabella
     const mieProposteRow = (window.allProposteIdx||[]).filter(p =>
       Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
     );
-    const nProd   = mieProposteRow.length;
-    const valProd = mieProposteRow.reduce((s,p)=>{
-      const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-      const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-      return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
-    }, 0);
+    // Vecchio campo prodott proposti (retrocompatibilità)
+    const vecchiProd = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'] || [];
+    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : (Array.isArray(vecchiProd) ? vecchiProd.length : 0);
+    const valProd = mieProposteRow.length > 0
+      ? mieProposteRow.reduce((s,p)=>{
+          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+          return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+        }, 0)
+      : 0;
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -723,7 +728,7 @@ async function loadData(utente) {
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=fld6PwFFS7oHlswjO&maxRecords=3000'),
+        '&fields[]=fld6PwFFS7oHlswjO&fields[]=fldMKXo8Ss8Fljvvj&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -735,6 +740,9 @@ async function loadData(utente) {
     // Salva prodotti e proposte globalmente
     allProdotti = prodotti;
     window.allProposteIdx = proposte;
+
+    // Forza refresh drawer se aperto
+    if (activeKpi) refreshDrawer();
 
     // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
