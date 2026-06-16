@@ -187,6 +187,10 @@
     </div>
     <div class="topbar-right">
       <span style="color:rgba(255,255,255,.6);font-size:13px" id="last-update"></span>
+      <button class="btn-logout" onclick="createProposteTable()" id="btn-crea-tabella"
+        style="background:rgba(240,165,0,.3);border-color:rgba(240,165,0,.5)">
+        ⚙️ Crea tabella Proposte
+      </button>
       <button class="btn-logout" onclick="location.reload()">🔄 Aggiorna</button>
       <button class="btn-logout" onclick="doLogout()">Esci</button>
     </div>
@@ -267,6 +271,51 @@ async function proxyPost(table, fields) {
     body: JSON.stringify({ fields }),
   });
   return res.json();
+}
+
+// ── Crea tabella Proposte Prodotti ─────────────────────────────
+async function createProposteTable() {
+  const btn = $('btn-crea-tabella');
+  if (btn) { btn.textContent = '⏳ Creazione...'; btn.disabled = true; }
+
+  try {
+    const res = await fetch(`${PROXY}?meta=createTable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Proposte Prodotti',
+        description: 'Tabella intermedia prodotti proposti con quantità per ogni contatto',
+        fields: [
+          { name: 'Nome proposta',   type: 'singleLineText' },
+          { name: 'Quantità',        type: 'number',   options: { precision: 0 } },
+          { name: 'Prezzo unitario', type: 'number',   options: { precision: 2 } },
+          { name: 'Data proposta',   type: 'date',     options: { dateFormat: { name: 'european' } } },
+          { name: 'Note proposta',   type: 'multilineText' },
+        ]
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.id) {
+      showToast('✅ Tabella "Proposte Prodotti" creata! ID: ' + data.id);
+      if (btn) {
+        btn.textContent = '✅ Tabella creata!';
+        btn.style.background = 'rgba(39,174,96,.4)';
+        btn.style.borderColor = 'rgba(39,174,96,.6)';
+      }
+      console.log('Nuova tabella ID:', data.id);
+      console.log('Dati tabella:', JSON.stringify(data, null, 2));
+    } else if (data.error) {
+      throw new Error(data.error.message || JSON.stringify(data.error));
+    } else {
+      throw new Error(JSON.stringify(data));
+    }
+  } catch(e) {
+    showToast('❌ Errore: ' + e.message, true);
+    if (btn) { btn.textContent = '⚙️ Crea tabella Proposte'; btn.disabled = false; }
+    console.error('Errore creazione tabella:', e);
+  }
 }
 
 // ── Auth ─────────────────────────────────────────────────────
