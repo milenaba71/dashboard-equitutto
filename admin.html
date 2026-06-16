@@ -306,7 +306,7 @@ async function loadAll() {
       '&fields[]=STATO+NOLEGGIO&fields[]=DATA+ATTIVITA' +
       '&fields[]=Valore+raggiunto&fields[]=recapito+telefonico' +
       '&fields[]=Notes&fields[]=DATA+DI+CREAZIONE+DATO' +
-      '&fields[]=prodott+proposti&fields[]=Prezzo+prodotti&maxRecords=5000'),
+      '&fields[]=fldMKXo8Ss8Fljvvj&fields[]=fldVvivlUuHmXvY8N&maxRecords=5000'),
     proxyGet('tblTAA7KFUVtcPnZt',
       'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
       '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -499,7 +499,7 @@ function renderProdotti() {
     const nome   = nomi.find(n => COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
     if (!nome) return;
 
-    const props = r.fields['prodott proposti'];
+    const props = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'];
     if (!props || !Array.isArray(props)) return;
 
     props.forEach(p => {
@@ -533,7 +533,7 @@ function renderProdotti() {
   const kpiHtml = [...CATS.filter(c=>totGlob[c].n>0), '__totale__'].map(c => {
     if (c==='__totale__') return `
       <div style="background:var(--accent);border-radius:var(--r);padding:18px;color:#fff;cursor:pointer"
-        onclick="openCatDetail('__totale__',prodMap,perComm,CATS,CAT_ICONS,CAT_COLS)">
+        onclick="openCatDetail('__totale__')">
         <div style="font-size:18px;margin-bottom:6px">💶</div>
         <div style="font-size:22px;font-weight:800">${fmt(totValoreGlob)}</div>
         <div style="font-size:11px;opacity:.7;margin-top:2px;text-transform:uppercase">Totale proposto</div>
@@ -542,7 +542,7 @@ function renderProdotti() {
     return `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .15s"
         onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''"
-        onclick="openCatDetail('${c}',prodMap,perComm,CATS,CAT_ICONS,CAT_COLS)">
+        onclick="openCatDetail('${c}')">
         <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${CAT_COLS[c]}"></div>
         <div style="font-size:18px;margin-bottom:6px">${CAT_ICONS[c]}</div>
         <div style="font-size:22px;font-weight:800;color:${CAT_COLS[c]}">${totGlob[c].n}</div>
@@ -584,7 +584,7 @@ function renderProdotti() {
   // Prodotti più proposti in assoluto
   const topProd = {};
   allRubrica.forEach(r => {
-    const props = r.fields['prodott proposti'];
+    const props = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'];
     if (!props||!Array.isArray(props)) return;
     props.forEach(p => {
       const prod = prodMap[p.id];
@@ -660,12 +660,16 @@ function renderProdotti() {
 //  DRAWER DETTAGLIO CATEGORIA
 // ══════════════════════════════════════════════════════════════
 function openCatDetail(cat) {
-  const { prodMap, perComm, CATS, CAT_ICONS, CAT_COLS } = window._prodData || {};
-  if (!prodMap) return;
+  const data = window._prodData;
+  if (!data) return;
+  const { prodMap, CAT_ICONS, CAT_COLS } = data;
+
   const drawer = $('cat-drawer');
   if (!drawer) return;
 
-  if (drawer.dataset.open === cat) { drawer.style.display='none'; drawer.dataset.open=''; return; }
+  if (drawer.dataset.open === cat) {
+    drawer.style.display='none'; drawer.dataset.open=''; return;
+  }
   drawer.dataset.open = cat;
   drawer.style.display = 'block';
 
@@ -674,13 +678,14 @@ function openCatDetail(cat) {
   const ico   = isTot ? '💶' : (CAT_ICONS[cat]||'📦');
   const label = isTot ? 'Tutti i prodotti' : cat;
 
+  // Raccoglie record — usa name dal linked record se non trova in prodMap
   const records = [];
   allRubrica.forEach(r => {
-    const props = r.fields['prodott proposti'];
+    const props = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'];
     if (!props||!Array.isArray(props)) return;
     props.forEach(p => {
-      const prod = prodMap[p.id];
-      if (!prod) return;
+      // cerca prima nella mappa per ID, poi usa il name inline
+      const prod = prodMap[p.id] || { nome: p.name||'—', prezzo:0, cat:'altro' };
       if (!isTot && prod.cat !== cat) return;
       const codice   = r.fields['Codice Equipoint'];
       const val      = typeof codice==='object'?(codice?.name||''):(codice||'');
@@ -696,12 +701,13 @@ function openCatDetail(cat) {
     byProd[rec.prod].valore += rec.prezzo;
     byProd[rec.prod].clienti.push(rec.cliente);
   });
+
   const prodRows = Object.entries(byProd).sort((a,b)=>b[1].n-a[1].n).map(([nome,v])=>`
     <tr>
-      <td style="font-weight:700;padding:8px 4px">${esc(nome)}</td>
-      <td style="text-align:center;font-weight:800;color:${CAT_COLS[v.cat]||col};padding:8px 4px">${v.n}</td>
-      <td style="font-weight:700;color:var(--accent);padding:8px 4px">${fmt(v.valore)}</td>
-      <td style="font-size:11px;color:var(--muted);padding:8px 4px">${esc(v.clienti.slice(0,3).join(', ')+(v.clienti.length>3?` +${v.clienti.length-3} altri`:''))}</td>
+      <td style="font-weight:700;padding:8px 4px;border-bottom:1px solid var(--border)">${esc(nome)}</td>
+      <td style="text-align:center;font-weight:800;color:${CAT_COLS[v.cat]||col};padding:8px 4px;border-bottom:1px solid var(--border)">${v.n}</td>
+      <td style="font-weight:700;color:var(--accent);padding:8px 4px;border-bottom:1px solid var(--border)">${fmt(v.valore)}</td>
+      <td style="font-size:11px;color:var(--muted);padding:8px 4px;border-bottom:1px solid var(--border)">${esc(v.clienti.slice(0,3).join(', ')+(v.clienti.length>3?` +${v.clienti.length-3} altri`:''))}</td>
     </tr>`).join('');
 
   const byComm = {};
@@ -710,6 +716,7 @@ function openCatDetail(cat) {
     byComm[rec.comm].n++;
     byComm[rec.comm].valore += rec.prezzo;
   });
+
   const commRows = Object.entries(byComm).sort((a,b)=>b[1].n-a[1].n).map(([nome,v])=>`
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="background:${COMM_COLORS[Object.keys(COMMERCIALI).indexOf(nome)]||'#999'};color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;min-width:60px;text-align:center">${esc(nome.split(' ')[0])}</span>
@@ -749,7 +756,7 @@ function openCatDetail(cat) {
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.7px">Per commerciale</div>
-        ${commRows||'<div style="color:var(--muted);font-size:13px">Nessun dato</div>'}
+        ${commRows||'<div style="color:var(--muted);font-size:13px;padding:20px 0">Nessun dato</div>'}
       </div>
     </div>`;
 
