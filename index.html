@@ -239,7 +239,12 @@
 
 <script>
 const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
-const TABLE_RUBRICA = 'tbllNx7iSqpAtbQde';
+const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
+const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
+const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC';
+const FLD_IDX_PRODOTTO    = 'fldfndNWIdnQWTvmE';
+const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N';
+const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL';
 
 // Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
 const TOKEN_MAP = {
@@ -502,7 +507,10 @@ function renderTable(lista) {
       : 'badge-blue';
 
     return `<tr data-creaz="${dataCreazISO}">
-      <td><div class="c-nome">${nome}</div><div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div></td>
+      <td>
+        <div class="c-nome" style="cursor:pointer;color:var(--accent)" onclick="openContactDetail('${id}')">${nome}</div>
+        <div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div>
+      </td>
       <td>
         <span class="badge ${bCls} editable"
           data-stato="1" data-id="${id}" data-field="Status" data-value="${esc(stato)}"
@@ -566,6 +574,112 @@ function renderTable(lista) {
   </div>`;
 }
 
+// ── DETTAGLIO CONTATTO ─────────────────────────────────────────
+function openContactDetail(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+
+  // Rimuovi dettaglio precedente
+  document.getElementById('contact-detail-'+recId)?.remove();
+  document.querySelectorAll('[id^="contact-detail-"]').forEach(el=>el.remove());
+
+  const nome   = rec.fields['Nome e cognome']||'—';
+  const stato  = rec.fields['Status']||'—';
+  const tel    = rec.fields['recapito telefonico']||'';
+  const note   = rec.fields['Notes']||'';
+  const scad   = rec.fields['data scadenza noleggio'] ? new Date(rec.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+
+  // Prodotti proposti dalla nuova tabella Proposte Prodotti
+  const mieProposte = (window.allProposteIdx||[]).filter(p =>
+    Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===recId)
+  );
+
+  const prodHTML = mieProposte.length > 0
+    ? mieProposte.map(p => {
+        const prodLinks = p.fields[FLD_IDX_PRODOTTO];
+        const prodId    = prodLinks?.[0]?.id;
+        const prod      = (allProdotti||[]).find(x=>x.id===prodId);
+        const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
+        const prezzo    = prod ? prodPrezzo(prod) : 0;
+        const qta       = p.fields[FLD_IDX_QTA]||1;
+        const totale    = prezzo * qta;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(nomeProd)}</div>
+            <div style="font-size:11px;color:var(--muted)">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})} × ${qta}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        </div>`;
+      }).join('') +
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:2px solid var(--accent)">
+        <span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>
+        <span style="font-size:18px;font-weight:800;color:var(--accent)">€ ${mieProposte.reduce((s,p)=>{
+          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+          return s + ((prod?prodPrezzo(prod):0) * (p.fields[FLD_IDX_QTA]||1));
+        },0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+      </div>`
+    : `<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Nessun prodotto proposto</div>`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'contact-detail-' + recId;
+  overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent)">${esc(nome)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${esc(rec.fields['Tipologia cliente']||'')}</div>
+      </div>
+      <button onclick="document.getElementById('contact-detail-${recId}').remove()"
+        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+
+    <!-- Info base -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="background:var(--surface2);border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Stato</div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent)">${esc(stato)}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Telefono</div>
+        <div style="font-size:13px;font-weight:700">${tel ? `<a href="tel:${esc(tel)}" style="color:var(--accent)">${esc(tel)}</a>` : '—'}</div>
+      </div>
+      ${scad ? `<div style="background:rgba(230,126,34,.1);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-bottom:4px">📦 Scadenza noleggio</div>
+        <div style="font-size:13px;font-weight:700;color:var(--orange)">${scad}</div>
+      </div>` : ''}
+      ${note ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Note</div>
+        <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${esc(note)}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Prodotti proposti -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:800;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        🛒 Prodotti proposti
+        <span style="font-size:11px;font-weight:400;color:var(--muted)">${mieProposte.length} prodotti</span>
+      </div>
+      ${prodHTML}
+    </div>
+
+    <!-- Azioni -->
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="document.getElementById('contact-detail-${recId}').remove();openProdottiPanel('${recId}')"
+        style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
+        ✏️ Modifica prodotti
+      </button>
+      ${tel ? `<a href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank"
+        style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
+        📲 WA
+      </a>` : ''}
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
 // ── INIT ───────────────────────────────────────────────────────
 function getToken() { return new URLSearchParams(window.location.search).get('token') || ''; }
 
@@ -588,7 +702,7 @@ async function loadData(utente) {
   try {
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
-    const [rubrica, obiettivi, prodotti] = await Promise.all([
+    const [rubrica, obiettivi, prodotti, proposte] = await Promise.all([
       proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
@@ -596,15 +710,18 @@ async function loadData(utente) {
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=prodott+proposti&fields[]=Prezzo+prodotti&maxRecords=3000'),
+        '&fields[]=fld6PwFFS7oHlswjO&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
       proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
+      proxyGet(TABLE_PROPOSTE_IDX,
+        `fields[]=${FLD_IDX_CONTATTO}&fields[]=${FLD_IDX_PRODOTTO}&fields[]=${FLD_IDX_QTA}&maxRecords=5000`),
     ]);
 
-    // Salva prodotti globalmente
+    // Salva prodotti e proposte globalmente
     allProdotti = prodotti;
+    window.allProposteIdx = proposte;
 
     // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
