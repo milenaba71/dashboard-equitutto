@@ -751,6 +751,17 @@ async function loadData(utente) {
     allProdotti = prodotti;
     window.allProposteIdx = proposte;
 
+    // DEBUG — mostra struttura dati
+    const campRubrica = allMiei[0] ? Object.keys(allMiei[0].fields) : [];
+    console.log('📋 Campi Rubrica:', campRubrica.join(', '));
+    console.log('📦 Proposte nuove:', proposte.length);
+    const conPropVecchi = allMiei.filter(r => {
+      const k = Object.keys(r.fields).find(f => f.toLowerCase().includes('prodott'));
+      return k && r.fields[k]?.length > 0;
+    });
+    console.log('📦 Contatti con vecchie proposte:', conPropVecchi.length);
+    if (conPropVecchi[0]) console.log('📦 Esempio vecchio campo:', JSON.stringify(Object.entries(conPropVecchi[0].fields).filter(([k])=>k.toLowerCase().includes('prodott'))));
+
     // Forza refresh drawer se aperto
     if (activeKpi) refreshDrawer();
 
