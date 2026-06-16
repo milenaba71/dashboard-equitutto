@@ -471,6 +471,12 @@ function getListaByTipo(tipo) {
       return t.includes('attiv')||t.includes('corso')||t.includes('noleggi'); 
     });
     case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
+    case 'proposti':     return allMiei.filter(r=>{
+      const mieP = (window.allProposteIdx||[]).filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id));
+      if (mieP.length > 0) return true;
+      const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
+      return Array.isArray(vecchi) && vecchi.length > 0;
+    });
     case 'persi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON VUOLE')||s.includes('NON INTER')||s.includes('NON ADATTO')||s.includes('NUMERO ERRATO'); });
     default: return [];
   }
@@ -509,14 +515,18 @@ function renderTable(lista) {
     );
     // Vecchio campo prodott proposti (retrocompatibilità)
     const vecchiProd = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'] || [];
-    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : (Array.isArray(vecchiProd) ? vecchiProd.length : 0);
+    const vecchiArr  = Array.isArray(vecchiProd) ? vecchiProd : [];
+    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : vecchiArr.length;
     const valProd = mieProposteRow.length > 0
       ? mieProposteRow.reduce((s,p)=>{
           const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
           const prod   = (allProdotti||[]).find(x=>x.id===prodId);
           return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
         }, 0)
-      : 0;
+      : vecchiArr.reduce((s,p)=>{
+          const prod = (allProdotti||[]).find(x=>x.id===p.id);
+          return s + (prod ? prodPrezzo(prod) : 0);
+        }, 0);
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -786,6 +796,26 @@ async function loadData(utente) {
 
     const noleggiScad = getListaByTipo('scadenze');
 
+    // Calcola totale proposto
+    const totProposto = allMiei.reduce((s, r) => {
+      const mieP = (window.allProposteIdx||[]).filter(p =>
+        Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
+      );
+      if (mieP.length > 0) {
+        return s + mieP.reduce((s2,p)=>{
+          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+          return s2 + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+        }, 0);
+      }
+      // fallback vecchio campo
+      const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
+      return s + (Array.isArray(vecchi) ? vecchi.reduce((s2,p)=>{
+        const prod = (allProdotti||[]).find(x=>x.id===p.id);
+        return s2 + (prod ? prodPrezzo(prod) : 0);
+      }, 0) : 0);
+    }, 0);
+
     const noleggiHTML = noleggiScad.length
       ? noleggiScad.slice(0,6).map(r=>{
           const sc=new Date(r.fields['data scadenza noleggio']);
@@ -841,6 +871,12 @@ async function loadData(utente) {
           <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi orange" id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')">
           <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-proposti" onclick="openDrawer('proposti','Prodotti proposti','#27ae60')" style="--kpi-before:#34c77b">
+          <div class="kpi-ico">🛒</div>
+          <div class="kpi-val" style="font-size:16px">${fmt(totProposto)}</div>
+          <div class="kpi-lbl">Proposto totale</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
       </div>
 
       <div class="drawer" id="drawer"></div>
