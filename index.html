@@ -600,8 +600,7 @@ async function loadData(utente) {
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
-      proxyGet('tblAvm14RuhE0dWZg',
-        'fields[]=Nome+prodotto&fields[]=Prezzo+(%E2%82%AC)&fields[]=Categoria&maxRecords=100'),
+      proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
     ]);
 
     // Salva prodotti globalmente
@@ -762,6 +761,17 @@ const STRIPE_LINKS = {
 };
 
 // ── PANNELLO PRODOTTI ───────────────────────────────────────────
+// ── Helper campi prodotto ────────────────────────────────────
+const prodNome   = p => p.fields['Nome prodotto']   || p.fields['fldJWkKD8emiesXgV'] || '—';
+const prodPrezzo = p => Number(p.fields['Prezzo (€)'] || p.fields['fldFVAOHfQMaMmudW'] || 0);
+const prodCat    = p => {
+  const c = p.fields['Categoria'] || p.fields['flddZwalfEpfYsRIZ'];
+  if (!c) return 'altro';
+  if (typeof c === 'object' && c.name) return c.name.toLowerCase().trim();
+  if (typeof c === 'string') return c.toLowerCase().trim();
+  return 'altro';
+};
+
 // ── CARRELLO CON TAB ───────────────────────────────────────────
 const STRIPE_LINKS_IDX = {
   'KITNOLO 10GG':              'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h',
@@ -828,20 +838,20 @@ function buildIdxCart() {
 
   let prods = [];
   if (idxCartTab === 'noleggio') {
-    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'')==='noleggio')
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))==='noleggio')
       .sort((a,b)=>(NOLO_ORDER_IDX[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER_IDX[b.fields['Nome prodotto']?.trim()]||99));
   } else if (idxCartTab === 'singolo') {
     prods = (allProdotti||[]).filter(p=>{
-      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
-      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && nome.includes('SINGOLO');
+      const nome = (prodNome(p)).toUpperCase();
+      return (prodCat(p))==='vendita dispositivi' && nome.includes('SINGOLO');
     });
   } else if (idxCartTab === 'kit') {
     prods = (allProdotti||[]).filter(p=>{
-      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
-      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && !nome.includes('SINGOLO');
+      const nome = (prodNome(p)).toUpperCase();
+      return (prodCat(p))==='vendita dispositivi' && !nome.includes('SINGOLO');
     });
   } else if (idxCartTab === 'accessori') {
-    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'')==='accessori')
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))==='accessori')
       .sort((a,b)=>{
         const na = (a.fields['Nome prodotto']||'').toUpperCase();
         const nb = (b.fields['Nome prodotto']||'').toUpperCase();
@@ -850,14 +860,14 @@ function buildIdxCart() {
         return ordA - ordB;
       });
   } else {
-    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'altro')===idxCartTab);
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))===idxCartTab);
   }
 
   const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px;padding:2px">
     ${prods.map(p=>{
       const sel    = idxCartSelIds.has(p.id);
-      const nome   = p.fields['Nome prodotto']||'—';
-      const prezzo = p.fields['Prezzo (€)']||0;
+      const nome   = prodNome(p);
+      const prezzo = prodPrezzo(p);
       const stripe = STRIPE_LINKS_IDX[nome.trim().toUpperCase()]||null;
       return `<div onclick="toggleIdxItem('${p.id}')"
         style="background:${sel?'rgba(0,114,188,.08)':'var(--surface2)'};border:2px solid ${sel?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative">
@@ -870,14 +880,14 @@ function buildIdxCart() {
   </div>`;
 
   const selProds = (allProdotti||[]).filter(p=>idxCartSelIds.has(p.id));
-  const totale   = selProds.reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+  const totale   = selProds.reduce((s,p)=>s+(prodPrezzo(p)),0);
 
   const linksHtml = selProds
-    .filter(p=>STRIPE_LINKS_IDX[(p.fields['Nome prodotto']||'').trim().toUpperCase()])
+    .filter(p=>STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()])
     .map(p=>{
-      const url = STRIPE_LINKS_IDX[(p.fields['Nome prodotto']||'').trim().toUpperCase()];
+      const url = STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()];
       return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.05);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px;margin-top:8px;gap:10px">
-        <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(p.fields['Nome prodotto']||'')}</div>
+        <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(prodNome(p))}</div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✅ Copiato!'))"
             style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copia</button>
@@ -927,7 +937,7 @@ async function saveIdxCart() {
     const rec = allMiei.find(r=>r.id===idxCartRecId);
     if (rec) {
       rec.fields['prodott proposti'] = ids.map(id=>{ const p=allProdotti.find(x=>x.id===id); return {id,name:p?.fields['Nome prodotto']||''}; });
-      rec.fields['Prezzo prodotti']  = allProdotti.filter(p=>ids.includes(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+      rec.fields['Prezzo prodotti']  = allProdotti.filter(p=>ids.includes(p.id)).reduce((s,p)=>s+(prodPrezzo(p)),0);
     }
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
