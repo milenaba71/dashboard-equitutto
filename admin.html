@@ -1099,7 +1099,8 @@ function openCartModal(recId) {
 function buildCartBody() {
   const TABS = [
     { id:'noleggio',            label:'📦 Noleggi' },
-    { id:'vendita dispositivi', label:'💰 Vendita' },
+    { id:'singolo',             label:'🔬 Singolo' },
+    { id:'kit',                 label:'📦 Kit x3' },
     { id:'accessori',           label:'🔧 Accessori' },
     { id:'calibrazione',        label:'⚙️ Calibraz.' },
     { id:'assicurazione',       label:'🛡️ Assicur.' },
@@ -1110,10 +1111,37 @@ function buildCartBody() {
     <button class="cart-tab ${t.id===cartTabAct?'active':''}"
       onclick="switchCartTab('${t.id}')">${t.label}</button>`).join('');
 
-  // Filtra e ordina prodotti per tab attivo
-  let prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'altro')===cartTabAct);
-  if (cartTabAct==='noleggio') {
-    prods = prods.sort((a,b)=>(NOLO_ORDER[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER[b.fields['Nome prodotto']?.trim()]||99));
+  // Filtra prodotti per tab attivo
+  let prods = [];
+  if (cartTabAct === 'noleggio') {
+    prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'')===cartTabAct)
+      .sort((a,b)=>(NOLO_ORDER[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER[b.fields['Nome prodotto']?.trim()]||99));
+  } else if (cartTabAct === 'singolo') {
+    prods = (allProdNegozio||[]).filter(p=>{
+      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
+      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && nome.includes('SINGOLO');
+    });
+  } else if (cartTabAct === 'kit') {
+    prods = (allProdNegozio||[]).filter(p=>{
+      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
+      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && (nome.includes('KIT') || (!nome.includes('SINGOLO') && !nome.includes('KITNOLO')));
+    });
+  } else if (cartTabAct === 'calibrazione') {
+    prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'')==='calibrazione');
+  } else if (cartTabAct === 'assicurazione') {
+    prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'')==='assicurazione');
+  } else if (cartTabAct === 'accessori') {
+    // accessori: cerotti e rocchetti prima, poi custodie e bpack
+    prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'')==='accessori')
+      .sort((a,b)=>{
+        const na = (a.fields['Nome prodotto']||'').toUpperCase();
+        const nb = (b.fields['Nome prodotto']||'').toUpperCase();
+        const ordA = na.includes('CEROTTI')?0:na.includes('ROCCH')?1:na.includes('TASCH')?2:3;
+        const ordB = nb.includes('CEROTTI')?0:nb.includes('ROCCH')?1:nb.includes('TASCH')?2:3;
+        return ordA - ordB;
+      });
+  } else {
+    prods = (allProdNegozio||[]).filter(p=>(p.fields['Categoria']?.name||'altro')===cartTabAct);
   }
 
   const itemsHtml = prods.map(p=>{
