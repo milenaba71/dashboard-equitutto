@@ -552,8 +552,8 @@ function renderProdotti() {
       </div>`;
   }).join('');
 
-  // Salva dati per uso nei drawer
-  window._prodData = { prodMap, perComm, CATS, CAT_ICONS, CAT_COLS, totGlob, topProd };
+  // Salva dati DOPO aver calcolato tutto — spostato più in basso
+  // window._prodData viene salvato dopo topProd
 
   // Tabella per commerciale
   const commRows = nomi.filter(n=>perComm[n].tot>0)
@@ -595,6 +595,10 @@ function renderProdotti() {
     });
   });
   const topList = Object.entries(topProd).sort((a,b)=>b[1].n-a[1].n).slice(0,10);
+
+  // Salva dati per uso nel drawer — DOPO che topProd è stato calcolato
+  window._prodData = { prodMap, perComm, CATS, CAT_ICONS, CAT_COLS, totGlob, topProd };
+
   const topHtml = topList.map(([nome,v],i)=>`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="font-size:16px;font-weight:800;color:var(--muted);min-width:24px">${i+1}</div>
@@ -1070,18 +1074,19 @@ async function saveNewContactAdmin() {
 //  LINK UTENTI
 // ══════════════════════════════════════════════════════════════
 function renderLinks() {
-  const rows = Object.entries(COMMERCIALI).map(([nome, info]) => {
-    const link = `${BASE_URL}?token=${info.token}`;
+  const rows = Object.entries(COMMERCIALI).map(([nome, info], idx) => {
+    const link  = `${BASE_URL}?token=${info.token}`;
+    const safeId = 'copy-' + idx;
     return `<div class="link-row">
       <div style="font-weight:700;color:var(--accent)">${esc(nome)}</div>
       <div class="link-url">${esc(link)}</div>
-      <div style="display:flex;gap:6px">
-        <button class="btn-copy" id="copy-${info.token}"
-          onclick="copyLink('${link}','${info.token}')">📋 Copia</button>
-        <a href="https://wa.me/?text=${encodeURIComponent('Ciao '+nome.split(' ')[0]+'! Ecco il link della tua dashboard personale: '+link)}"
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-copy" id="${safeId}"
+          onclick="copyLink('${link}','${safeId}')">📋 Copia</button>
+        <a href="https://wa.me/?text=${encodeURIComponent('Ciao '+nome.split(' ')[0]+'! Ecco il link della tua dashboard: '+link)}"
           target="_blank"
-          style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
-          WA
+          style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
+          📲 WA
         </a>
       </div>
     </div>`;
@@ -1097,13 +1102,13 @@ function renderLinks() {
     </div>`;
 }
 
-function copyLink(url, token) {
+function copyLink(url, btnId) {
   navigator.clipboard.writeText(url).then(() => {
-    const btn = $('copy-'+token);
-    if (btn) { btn.textContent='✅ Copiato'; btn.classList.add('copied'); }
+    const btn = $(btnId);
+    if (btn) { btn.textContent='✅ Copiato!'; btn.classList.add('copied'); }
     showToast('✅ Link copiato!');
-    setTimeout(()=>{ if(btn){btn.textContent='📋 Copia';btn.classList.remove('copied');} },2500);
-  });
+    setTimeout(()=>{ const b=$(btnId); if(b){b.textContent='📋 Copia';b.classList.remove('copied');} },2500);
+  }).catch(()=>showToast('❌ Errore copia',true));
 }
 
 // ── INIT ─────────────────────────────────────────────────────
