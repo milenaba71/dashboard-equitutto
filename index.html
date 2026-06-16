@@ -509,24 +509,18 @@ function renderTable(lista) {
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
     const appunto  = r.fields['Preso appuntamento'] || '';
     const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
-    // Proposte nuova tabella
+    // Proposte dalla nuova tabella Proposte Prodotti
     const mieProposteRow = (window.allProposteIdx||[]).filter(p =>
       Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
     );
-    // Vecchio campo prodott proposti (retrocompatibilità)
-    const vecchiProd = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'] || [];
-    const vecchiArr  = Array.isArray(vecchiProd) ? vecchiProd : [];
-    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : vecchiArr.length;
-    const valProd = mieProposteRow.length > 0
-      ? mieProposteRow.reduce((s,p)=>{
-          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-          return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
-        }, 0)
-      : vecchiArr.reduce((s,p)=>{
-          const prod = (allProdotti||[]).find(x=>x.id===p.id);
-          return s + (prod ? prodPrezzo(prod) : 0);
-        }, 0);
+    // Fallback: conta dal campo link Proposte in Rubrica
+    const linkProposte = r.fields['fld6PwFFS7oHlswjO'] || [];
+    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : (Array.isArray(linkProposte) ? linkProposte.length : 0);
+    const valProd = mieProposteRow.reduce((s,p)=>{
+      const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+      const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+      return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+    }, 0);
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -750,17 +744,8 @@ async function loadData(utente) {
     // Salva prodotti e proposte globalmente
     allProdotti = prodotti;
     window.allProposteIdx = proposte;
-
-    // DEBUG — mostra struttura dati
-    const campRubrica = allMiei[0] ? Object.keys(allMiei[0].fields) : [];
-    console.log('📋 Campi Rubrica:', campRubrica.join(', '));
-    console.log('📦 Proposte nuove:', proposte.length);
-    const conPropVecchi = allMiei.filter(r => {
-      const k = Object.keys(r.fields).find(f => f.toLowerCase().includes('prodott'));
-      return k && r.fields[k]?.length > 0;
-    });
-    console.log('📦 Contatti con vecchie proposte:', conPropVecchi.length);
-    if (conPropVecchi[0]) console.log('📦 Esempio vecchio campo:', JSON.stringify(Object.entries(conPropVecchi[0].fields).filter(([k])=>k.toLowerCase().includes('prodott'))));
+    console.log('📦 Proposte nuove:', proposte.length, '| Prodotti caricati:', allProdotti.length);
+    if (proposte[0]) console.log('📦 Prima proposta:', JSON.stringify(proposte[0].fields));
 
     // Forza refresh drawer se aperto
     if (activeKpi) refreshDrawer();
@@ -807,24 +792,11 @@ async function loadData(utente) {
 
     const noleggiScad = getListaByTipo('scadenze');
 
-    // Calcola totale proposto
-    const totProposto = allMiei.reduce((s, r) => {
-      const mieP = (window.allProposteIdx||[]).filter(p =>
-        Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
-      );
-      if (mieP.length > 0) {
-        return s + mieP.reduce((s2,p)=>{
-          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-          return s2 + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
-        }, 0);
-      }
-      // fallback vecchio campo
-      const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
-      return s + (Array.isArray(vecchi) ? vecchi.reduce((s2,p)=>{
-        const prod = (allProdotti||[]).find(x=>x.id===p.id);
-        return s2 + (prod ? prodPrezzo(prod) : 0);
-      }, 0) : 0);
+    // Calcola totale proposto dalla nuova tabella
+    const totProposto = (window.allProposteIdx||[]).reduce((s,p)=>{
+      const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+      const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+      return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
     }, 0);
 
     const noleggiHTML = noleggiScad.length
