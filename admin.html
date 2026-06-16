@@ -224,6 +224,20 @@ const PROXY       = 'https://equitutto-proxy.equistasi.workers.dev';
 const ADMIN_TOKEN = 'z2PrzMEdYTm1f6Otlf0aS4l2nLcANM45';
 const BASE_URL    = 'https://milenaba71.github.io/dashboard-equitutto/';
 
+// Tabella Proposte Prodotti (junction table)
+const TABLE_PROPOSTE  = 'tblNf8akGNQD23UjH';
+const FLD_PP_NOME     = 'fldWe4dM6FbXxN07z'; // Nome proposta
+const FLD_PP_QTA      = 'fldw2aCMC8pVKbJ2N'; // Quantità
+const FLD_PP_PREZZO   = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
+const FLD_PP_DATA     = 'fld6mOpX0RZAz9XYR'; // Data proposta
+const FLD_PP_NOTE     = 'fldZ1U0yPLvPg0o46'; // Note proposta
+const FLD_PP_CONTATTO = 'fldgWb7KAXQ1i5sRC'; // Link → Rubrica
+const FLD_PP_PRODOTTO = 'fldfndNWIdnQWTvmE'; // Link → Negozio
+// In Rubrica: fld6PwFFS7oHlswjO = "Proposte" (link a Proposte Prodotti)
+// In Negozio: fldogqPYB5quSxjPM = "Proposte" (link a Proposte Prodotti)
+
+let allProposte = []; // cache locale proposte
+
 const COMMERCIALI = {
   'Marco Costantini':    { token:'Y1kTz-Z37STfXCcBuX6umQ',  equipoint:['Marco Costantini'] },
   'Giacomo Frassica':    { token:'HJU8VtX1SrrHef7cC3znRQ',  equipoint:['GIACOMO FRASSICA'] },
@@ -363,7 +377,7 @@ let allObiettivi = [];
 let allProdNegozio = [];
 
 async function loadAll() {
-  [allRubrica, allObiettivi, allProdNegozio] = await Promise.all([
+  [allRubrica, allObiettivi, allProdNegozio, allProposte] = await Promise.all([
     proxyGet('tbllNx7iSqpAtbQde',
       'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
       '&fields[]=Codice+Equipoint&fields[]=Preso+appuntamento' +
@@ -371,12 +385,15 @@ async function loadAll() {
       '&fields[]=STATO+NOLEGGIO&fields[]=DATA+ATTIVITA' +
       '&fields[]=Valore+raggiunto&fields[]=recapito+telefonico' +
       '&fields[]=Notes&fields[]=DATA+DI+CREAZIONE+DATO' +
-      '&fields[]=fldMKXo8Ss8Fljvvj&fields[]=fldVvivlUuHmXvY8N&maxRecords=5000'),
+      '&fields[]=fld6PwFFS7oHlswjO&fields[]=fldVvivlUuHmXvY8N&maxRecords=5000'),
     proxyGet('tblTAA7KFUVtcPnZt',
       'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
       '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
     proxyGet('tblAvm14RuhE0dWZg',
       'fields[]=Nome+prodotto&fields[]=Prezzo+(%E2%82%AC)&fields[]=Categoria&maxRecords=100'),
+    proxyGet(TABLE_PROPOSTE,
+      `fields[]=${FLD_PP_NOME}&fields[]=${FLD_PP_QTA}&fields[]=${FLD_PP_PREZZO}` +
+      `&fields[]=${FLD_PP_CONTATTO}&fields[]=${FLD_PP_PRODOTTO}&fields[]=${FLD_PP_NOTE}&maxRecords=5000`),
   ]);
 
   $('last-update').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT');
@@ -1052,9 +1069,14 @@ function sortRubrica(field, keepDir=false) {
     const tel   = r.fields['recapito telefonico']||'';
     const note  = r.fields['Notes']||'';
     const commEq = COMMERCIALI[nomeComm]?.equipoint[0]||'';
-    const prodProp = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'] || [];
-    const nProd    = Array.isArray(prodProp) ? prodProp.length : 0;
-    const valProd  = r.fields['Prezzo prodotti'] || r.fields['fldVvivlUuHmXvY8N'] || 0;
+    const prodProp = r.fields['fld6PwFFS7oHlswjO'] || []; // link a Proposte Prodotti
+    const mieProposte = allProposte.filter(p => Array.isArray(p.fields[FLD_PP_CONTATTO]) && p.fields[FLD_PP_CONTATTO].some(c=>c.id===r.id));
+    const nProd    = mieProposte.length;
+    const valProd  = mieProposte.reduce((s,p)=>{
+      const qta    = p.fields[FLD_PP_QTA]||1;
+      const prezzo = p.fields[FLD_PP_PREZZO]||0;
+      return s + (qta * prezzo);
+    }, 0);
 
     return `<tr>
       <td><div class="nome-cell">${esc(r.fields['Nome e cognome']||'—')}</div><div class="sub-cell">${esc(r.fields['Tipologia cliente']||'')}</div></td>
@@ -1117,16 +1139,32 @@ const STRIPE_LINKS = {
 const NOLO_ORDER = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
 
 let cartRecId   = null;
-let cartSelIds  = new Set();
+let cartSelIds  = new Map(); // prodId → { id: proposta_id|null, qta, prezzo }
 let cartTabAct  = 'noleggio';
 
 function openCartModal(recId) {
   cartRecId  = recId;
   const rec  = allRubrica.find(r=>r.id===recId);
   if (!rec) return;
-  const props = rec.fields['prodott proposti'] || rec.fields['fldMKXo8Ss8Fljvvj'] || [];
-  cartSelIds  = new Set(Array.isArray(props) ? props.map(p=>p.id) : []);
-  cartTabAct  = 'noleggio';
+
+  // Carica proposte esistenti per questo contatto
+  cartSelIds = new Map();
+  allProposte.filter(p => Array.isArray(p.fields[FLD_PP_CONTATTO]) && p.fields[FLD_PP_CONTATTO].some(c=>c.id===recId))
+    .forEach(p => {
+      const prodLinks = p.fields[FLD_PP_PRODOTTO];
+      if (prodLinks && prodLinks.length > 0) {
+        const prodId = prodLinks[0].id;
+        cartSelIds.set(prodId, {
+          propId:  p.id,
+          qta:     p.fields[FLD_PP_QTA] || 1,
+          prezzo:  p.fields[FLD_PP_PREZZO] || (allProdNegozio.find(x=>x.id===prodId)?.fields['Prezzo (€)']||0),
+          note:    p.fields[FLD_PP_NOTE] || ''
+        });
+      }
+    });
+
+  cartTabAct = 'noleggio';
+  document.getElementById('cart-modal')?.remove();
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1194,21 +1232,33 @@ function buildCartBody() {
   }
 
   const itemsHtml = prods.map(p=>{
-    const sel   = cartSelIds.has(p.id);
-    const nome  = p.fields['Nome prodotto']||'—';
-    const prezzo= p.fields['Prezzo (€)']||0;
-    const stripe= STRIPE_LINKS[nome.trim().toUpperCase()]||STRIPE_LINKS[nome.trim()]||null;
-    return `<div class="cart-item ${sel?'sel':''}" onclick="toggleCartItem('${p.id}')">
+    const entry  = cartSelIds.get(p.id);
+    const sel    = !!entry;
+    const qta    = entry?.qta || 1;
+    const nome   = p.fields['Nome prodotto']||'—';
+    const prezzo = p.fields['Prezzo (€)']||0;
+    const stripe = STRIPE_LINKS[nome.trim().toUpperCase()]||STRIPE_LINKS[nome.trim()]||null;
+    return `<div class="cart-item ${sel?'sel':''}" onclick="toggleCartItem('${p.id}',${prezzo})">
+      ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
       <div class="cart-nome">${esc(nome)}</div>
       <div class="cart-prezzo">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+      ${sel ? `<div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;margin-top:8px">
+        <button onclick="event.stopPropagation();changeQta('${p.id}',-1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800;font-size:14px">−</button>
+        <span style="font-weight:800;font-size:14px;color:var(--accent);min-width:20px;text-align:center">${qta}</span>
+        <button onclick="event.stopPropagation();changeQta('${p.id}',1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800;font-size:14px">+</button>
+        <span style="font-size:11px;color:var(--muted)">= €${(prezzo*qta).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+      </div>` : ''}
       ${stripe?`<a class="cart-link" href="${stripe}" target="_blank" onclick="event.stopPropagation()">💳 Stripe</a>`:''}
     </div>`;
   }).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Nessun prodotto in questa categoria</div>';
 
-  // Totale e link selezionati
+  // Totale con quantità
   const selProds = (allProdNegozio||[]).filter(p=>cartSelIds.has(p.id));
-  const totale   = selProds.reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
-  const nSel     = cartSelIds.size;
+  const totale   = selProds.reduce((s,p)=>{
+    const entry = cartSelIds.get(p.id);
+    return s + ((entry?.qta||1) * (p.fields['Prezzo (€)']||0));
+  }, 0);
+  const nSel = cartSelIds.size;
 
   const linksHtml = selProds
     .filter(p=>STRIPE_LINKS[(p.fields['Nome prodotto']||'').trim().toUpperCase()]||STRIPE_LINKS[(p.fields['Nome prodotto']||'').trim()])
@@ -1250,9 +1300,18 @@ function switchCartTab(tab) {
   if (body) body.innerHTML = buildCartBody();
 }
 
-function toggleCartItem(prodId) {
+function toggleCartItem(prodId, prezzo) {
   if (cartSelIds.has(prodId)) cartSelIds.delete(prodId);
-  else cartSelIds.add(prodId);
+  else cartSelIds.set(prodId, { propId: null, qta: 1, prezzo: prezzo||0 });
+  const body = document.getElementById('cart-body');
+  if (body) body.innerHTML = buildCartBody();
+}
+
+function changeQta(prodId, delta) {
+  const entry = cartSelIds.get(prodId);
+  if (!entry) return;
+  const nuovaQta = Math.max(1, (entry.qta||1) + delta);
+  cartSelIds.set(prodId, { ...entry, qta: nuovaQta });
   const body = document.getElementById('cart-body');
   if (body) body.innerHTML = buildCartBody();
 }
@@ -1260,22 +1319,49 @@ function toggleCartItem(prodId) {
 async function saveCart() {
   if (!cartRecId) return;
   try {
-    const ids = [...cartSelIds];
-    await proxyPatch('tbllNx7iSqpAtbQde', cartRecId, {
-      'prodott proposti': ids.map(id=>({id}))
-    });
-    const rec = allRubrica.find(r=>r.id===cartRecId);
-    if (rec) {
-      rec.fields['fldMKXo8Ss8Fljvvj'] = [...cartSelIds].map(id=>{
-        const p = (allProdNegozio||[]).find(x=>x.id===id);
-        return { id, name: p?.fields['Nome prodotto']||'' };
-      });
-      rec.fields['Prezzo prodotti'] = (allProdNegozio||[]).filter(p=>cartSelIds.has(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+    const ops = [];
+    for (const [prodId, entry] of cartSelIds.entries()) {
+      const prod   = (allProdNegozio||[]).find(p=>p.id===prodId);
+      const nome   = prod?.fields['Nome prodotto']||'';
+      const prezzo = prod?.fields['Prezzo (€)']||0;
+      const fields = {
+        [FLD_PP_NOME]:     `${nome}`,
+        [FLD_PP_QTA]:      entry.qta||1,
+        [FLD_PP_PREZZO]:   prezzo,
+        [FLD_PP_CONTATTO]: [{id: cartRecId}],
+        [FLD_PP_PRODOTTO]: [{id: prodId}],
+      };
+      if (entry.propId) {
+        // aggiorna proposta esistente
+        ops.push(proxyPatch(TABLE_PROPOSTE, entry.propId, fields));
+      } else {
+        // crea nuova proposta
+        ops.push(proxyPost(TABLE_PROPOSTE, fields).then(res=>{
+          if (res.id) {
+            allProposte.push(res);
+            cartSelIds.set(prodId, { ...entry, propId: res.id });
+          }
+        }));
+      }
     }
+    // Elimina proposte rimosse
+    const daEliminare = allProposte.filter(p => {
+      const prodLinks = p.fields[FLD_PP_PRODOTTO];
+      const contLinks = p.fields[FLD_PP_CONTATTO];
+      return Array.isArray(contLinks) && contLinks.some(c=>c.id===cartRecId)
+          && Array.isArray(prodLinks) && prodLinks.length > 0
+          && !cartSelIds.has(prodLinks[0].id);
+    });
+    daEliminare.forEach(p => {
+      ops.push(fetch(`${PROXY}?table=${TABLE_PROPOSTE}&recordId=${p.id}`, { method:'DELETE' }));
+      allProposte = allProposte.filter(x=>x.id!==p.id);
+    });
+
+    await Promise.all(ops);
     document.getElementById('cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
     filterRubrica();
-  } catch(e) { showToast('❌ Errore', true); }
+  } catch(e) { showToast('❌ Errore: ' + e.message, true); console.error(e); }
 }
 
 // ── Nuovo contatto (admin) ────────────────────────────────────
