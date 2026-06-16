@@ -462,7 +462,14 @@ function getListaByTipo(tipo) {
     case 'trattativa':   return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
     case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
     case 'vendite':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
-    case 'noleggi':      return allMiei.filter(r=>{ const s=r.fields['STATO NOLEGGIO']; if(!s) return false; const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); return t.includes('attiv')||t.includes('corso'); });
+    case 'noleggi':      return allMiei.filter(r=>{ 
+      const s = r.fields['STATO NOLEGGIO']; 
+      const stato = (r.fields['Status']||'').toUpperCase();
+      if (stato.includes('NOLEGGIATO') || stato.includes('NOLEGGIO')) return true;
+      if (!s) return false; 
+      const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); 
+      return t.includes('attiv')||t.includes('corso')||t.includes('noleggi'); 
+    });
     case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
     case 'persi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON VUOLE')||s.includes('NON INTER')||s.includes('NON ADATTO')||s.includes('NUMERO ERRATO'); });
     default: return [];
@@ -496,9 +503,15 @@ function renderTable(lista) {
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
     const appunto  = r.fields['Preso appuntamento'] || '';
     const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
-    const prodProp = r.fields['prodott proposti'] || [];
-    const nProd    = Array.isArray(prodProp) ? prodProp.length : 0;
-    const valProd  = r.fields['Prezzo prodotti'] || 0;
+    const mieProposteRow = (window.allProposteIdx||[]).filter(p =>
+      Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
+    );
+    const nProd   = mieProposteRow.length;
+    const valProd = mieProposteRow.reduce((s,p)=>{
+      const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+      const prod   = (allProdotti||[]).find(x=>x.id===prodId);
+      return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+    }, 0);
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
