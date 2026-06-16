@@ -762,181 +762,177 @@ const STRIPE_LINKS = {
 };
 
 // ── PANNELLO PRODOTTI ───────────────────────────────────────────
-const CAT_COLORS = {
-  'vendita dispositivi': '#0072bc',
-  'noleggio':            '#f0a500',
-  'accessori':           '#27ae60',
-  'calibrazione':        '#e67e22',
-  'corsi':               '#7c5cbf',
-  'assicurazione':       '#34c77b',
-  'altro':               '#6b7f96',
+// ── CARRELLO CON TAB ───────────────────────────────────────────
+const STRIPE_LINKS_IDX = {
+  'KITNOLO 10GG':              'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h',
+  'KITNOLO 30GG':              'https://buy.stripe.com/dRmcN5fXw09aaqM02fafS0e',
+  'KITNOLO 41GG':              'https://buy.stripe.com/28E4gzcLk6xy6aw5mzafS0f',
+  'KITNOLO 60GG':              'https://buy.stripe.com/eVqeVddPo5tudCY9CPafS0i',
+  'KITNOLO 90GG':              'https://buy.stripe.com/9B6cN5bHgg888iEdT5afS0j',
+  'KIT SILICON 3 DISPOSITIVI': 'https://buy.stripe.com/bJefZhaDc3lm6awbKXafS0k',
+  'KIT GEL 3 DISPOSITIVI':     'https://buy.stripe.com/dRm6oH12C2hieH23erafS0l',
+  'SILICON SINGOLO':           'https://buy.stripe.com/fZuaEX7r03lm56s7uHafS0m',
+  'GEL SINGOLO':               'https://buy.stripe.com/aFaaEX9z87BC7eAbKXafS0n',
+  'CALIBRAZIONE':              'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o',
+  'DISPOSITIVO NOLO SMARRITO': 'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p',
 };
+const NOLO_ORDER_IDX = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
 
-let prodPanelRecId   = null;
-let prodSelezione    = new Set(); // id prodotti selezionati
-let prodFilterActive = 'tutti';
+let idxCartRecId  = null;
+let idxCartSelIds = new Set();
+let idxCartTab    = 'noleggio';
 
 function openProdottiPanel(recId) {
-  // chiudi se già aperto sullo stesso record
-  const existing = document.getElementById('prod-panel-' + recId);
-  if (existing) { existing.remove(); return; }
-  // chiudi altri pannelli aperti
-  document.querySelectorAll('[id^="prod-panel-"]').forEach(p => p.remove());
-
-  prodPanelRecId = recId;
-  const rec      = allMiei.find(r => r.id === recId);
+  idxCartRecId = recId;
+  const rec    = allMiei.find(r=>r.id===recId);
   if (!rec) return;
+  const props  = rec.fields['prodott proposti'] || [];
+  idxCartSelIds = new Set(Array.isArray(props) ? props.map(p=>p.id) : []);
+  idxCartTab    = 'noleggio';
 
-  // prodotti già proposti
-  const giaProposti = rec.fields['prodott proposti'] || [];
-  prodSelezione = new Set(Array.isArray(giaProposti) ? giaProposti.map(p=>p.id) : []);
-  prodFilterActive = 'tutti';
+  // chiudi modal esistente
+  document.getElementById('idx-cart-modal')?.remove();
 
-  // trova la riga della tabella e inserisce il pannello dopo
-  const btn = document.querySelector(`button[onclick="openProdottiPanel('${recId}')"]`);
-  if (!btn) return;
-  const tr = btn.closest('tr');
-  if (!tr) return;
-
-  const panel = document.createElement('tr');
-  panel.id = 'prod-panel-' + recId;
-  const td = document.createElement('td');
-  td.colSpan = 9;
-  td.innerHTML = renderProdPanel(rec);
-  panel.appendChild(td);
-  tr.insertAdjacentElement('afterend', panel);
+  const overlay = document.createElement('div');
+  overlay.id = 'idx-cart-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--accent)">🛒 Prodotti da proporre</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(rec.fields['Nome e cognome']||'')}</div>
+      </div>
+      <button onclick="document.getElementById('idx-cart-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div id="idx-cart-body">${buildIdxCart()}</div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
 }
 
-function renderProdPanel(rec) {
-  const categorie = ['tutti', ...new Set(allProdotti.map(p => (p.fields['Categoria']?.name||'altro')))];
-  const filterBtns = categorie.map(c =>
-    `<button class="prod-filter-btn ${c===prodFilterActive?'active':''}"
-      onclick="filterProdotti('${rec.id}','${c}')">${c}</button>`
-  ).join('');
+function buildIdxCart() {
+  const TABS = [
+    { id:'noleggio',      label:'📦 Noleggi' },
+    { id:'singolo',       label:'🔬 Singolo' },
+    { id:'kit',           label:'📦 Kit x3' },
+    { id:'accessori',     label:'🔧 Accessori' },
+    { id:'calibrazione',  label:'⚙️ Calibraz.' },
+    { id:'assicurazione', label:'🛡️ Assicur.' },
+    { id:'altro',         label:'📌 Altro' },
+  ];
 
-  const filtered = prodFilterActive === 'tutti'
-    ? allProdotti
-    : allProdotti.filter(p => (p.fields['Categoria']?.name||'altro') === prodFilterActive);
+  const tabsHtml = `<div style="display:flex;gap:3px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:16px;flex-wrap:wrap">
+    ${TABS.map(t=>`<button style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:${t.id===idxCartTab?'#fff':'none'};color:${t.id===idxCartTab?'var(--accent)':'var(--muted)'};box-shadow:${t.id===idxCartTab?'0 1px 4px rgba(0,0,0,.1)':'none'};transition:all .15s"
+      onclick="switchIdxTab('${t.id}')">${t.label}</button>`).join('')}
+  </div>`;
 
-  const items = filtered.map(p => {
-    const sel   = prodSelezione.has(p.id);
-    const cat   = p.fields['Categoria']?.name || 'altro';
-    const col   = CAT_COLORS[cat] || '#6b7f96';
-    const prez  = p.fields['Prezzo (€)'] || 0;
-    const nome  = p.fields['Nome prodotto'] || '—';
-    const stripe = STRIPE_LINKS[nome.trim().toUpperCase()] || null;
-    return `<div class="prod-item ${sel?'selected':''}" onclick="toggleProdotto('${rec.id}','${p.id}')">
-      <div class="prod-nome">${esc(nome)}</div>
-      <div class="prod-cat" style="color:${col}">${cat}</div>
-      <div class="prod-prezzo">€ ${prez.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
-      ${stripe ? `<div style="margin-top:6px" onclick="event.stopPropagation()">
-        <a href="${stripe.url}" target="_blank"
-          style="font-size:10px;font-weight:700;color:#635bff;text-decoration:none;background:rgba(99,91,255,.1);padding:3px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:4px">
-          💳 Link pagamento
-        </a>
-      </div>` : ''}
-    </div>`;
-  }).join('');
+  let prods = [];
+  if (idxCartTab === 'noleggio') {
+    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'')==='noleggio')
+      .sort((a,b)=>(NOLO_ORDER_IDX[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER_IDX[b.fields['Nome prodotto']?.trim()]||99));
+  } else if (idxCartTab === 'singolo') {
+    prods = (allProdotti||[]).filter(p=>{
+      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
+      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && nome.includes('SINGOLO');
+    });
+  } else if (idxCartTab === 'kit') {
+    prods = (allProdotti||[]).filter(p=>{
+      const nome = (p.fields['Nome prodotto']||'').toUpperCase();
+      return (p.fields['Categoria']?.name||'')==='vendita dispositivi' && !nome.includes('SINGOLO');
+    });
+  } else if (idxCartTab === 'accessori') {
+    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'')==='accessori')
+      .sort((a,b)=>{
+        const na = (a.fields['Nome prodotto']||'').toUpperCase();
+        const nb = (b.fields['Nome prodotto']||'').toUpperCase();
+        const ordA = na.includes('CEROTTI')?0:na.includes('ROCCH')?1:na.includes('TASCH')?2:3;
+        const ordB = nb.includes('CEROTTI')?0:nb.includes('ROCCH')?1:nb.includes('TASCH')?2:3;
+        return ordA - ordB;
+      });
+  } else {
+    prods = (allProdotti||[]).filter(p=>(p.fields['Categoria']?.name||'altro')===idxCartTab);
+  }
 
-  // Link Stripe dei prodotti selezionati
-  const linkSelezionati = allProdotti
-    .filter(p => prodSelezione.has(p.id))
-    .map(p => {
-      const nome   = (p.fields['Nome prodotto']||'').trim().toUpperCase();
-      const stripe = STRIPE_LINKS[nome];
-      return stripe ? { nome: p.fields['Nome prodotto'], ...stripe } : null;
-    })
-    .filter(Boolean);
+  const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px;padding:2px">
+    ${prods.map(p=>{
+      const sel    = idxCartSelIds.has(p.id);
+      const nome   = p.fields['Nome prodotto']||'—';
+      const prezzo = p.fields['Prezzo (€)']||0;
+      const stripe = STRIPE_LINKS_IDX[nome.trim().toUpperCase()]||null;
+      return `<div onclick="toggleIdxItem('${p.id}')"
+        style="background:${sel?'rgba(0,114,188,.08)':'var(--surface2)'};border:2px solid ${sel?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative">
+        ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;padding-right:${sel?'18px':'0'}">${esc(nome)}</div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent);margin-top:6px">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        ${stripe?`<a href="${stripe}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#635bff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;background:rgba(99,91,255,.1);padding:2px 7px;border-radius:4px">💳 Stripe</a>`:''}
+      </div>`;
+    }).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1">Nessun prodotto</div>'}
+  </div>`;
 
-  const linksHTML = linkSelezionati.length ? `
-    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">
-        💳 Link di pagamento da inviare al cliente
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${linkSelezionati.map(l => `
-          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.06);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px">
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#635bff">${esc(l.nome)}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-all">${l.url}</div>
-            </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
-              <button onclick="navigator.clipboard.writeText('${l.url}').then(()=>showToast('✅ Link copiato!'))"
-                style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">
-                📋 Copia
-              </button>
-              <a href="https://wa.me/?text=${encodeURIComponent('Ciao! Ecco il link per procedere con ' + l.nome + ': ' + l.url)}" target="_blank"
-                style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
-                WA
-              </a>
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>` : '';
+  const selProds = (allProdotti||[]).filter(p=>idxCartSelIds.has(p.id));
+  const totale   = selProds.reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
 
-  const totale = allProdotti.filter(p=>prodSelezione.has(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
-  const nSel   = prodSelezione.size;
+  const linksHtml = selProds
+    .filter(p=>STRIPE_LINKS_IDX[(p.fields['Nome prodotto']||'').trim().toUpperCase()])
+    .map(p=>{
+      const url = STRIPE_LINKS_IDX[(p.fields['Nome prodotto']||'').trim().toUpperCase()];
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.05);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px;margin-top:8px;gap:10px">
+        <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(p.fields['Nome prodotto']||'')}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✅ Copiato!'))"
+            style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copia</button>
+          <a href="https://wa.me/?text=${encodeURIComponent('Ecco il link: '+url)}" target="_blank"
+            style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none">📲 WA</a>
+        </div>
+      </div>`;
+    }).join('');
 
-  return `<div class="prod-panel">
-    <div class="prod-panel-title">
-      <span>🛒 Prodotti proposti a <strong>${esc(rec.fields['Nome e cognome']||'')}</strong></span>
-      <button onclick="document.getElementById('prod-panel-${rec.id}').remove()"
-        style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
-    </div>
-    <div class="prod-filter">${filterBtns}</div>
-    <div class="prod-grid">${items || '<div class="empty">Nessun prodotto</div>'}</div>
-    <div class="prod-total-bar">
+  return `${tabsHtml}${grid}
+    <div style="background:rgba(0,61,122,.06);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:12px;color:var(--muted)">Totale proposta</div>
+        <div style="font-size:11px;color:var(--muted)">Totale proposta</div>
         <div style="font-size:22px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;color:var(--muted)">${nSel} prodotti selezionati</div>
-        <button onclick="salvaProdotti('${rec.id}')"
-          style="margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
+        <div style="font-size:12px;color:var(--muted)">${idxCartSelIds.size} prodotti</div>
+        <button onclick="saveIdxCart()"
+          style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer">
           💾 Salva su Airtable
         </button>
       </div>
     </div>
-    ${linksHTML}
-  </div>`;
+    ${linksHtml?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">💳 Link pagamento</div>${linksHtml}</div>`:''}`;
 }
 
-function filterProdotti(recId, cat) {
-  prodFilterActive = cat;
-  const rec = allMiei.find(r => r.id === recId);
-  if (!rec) return;
-  const panel = document.getElementById('prod-panel-' + recId);
-  if (panel) panel.querySelector('td').innerHTML = renderProdPanel(rec);
+function switchIdxTab(tab) {
+  idxCartTab = tab;
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
 }
 
-function toggleProdotto(recId, prodId) {
-  if (prodSelezione.has(prodId)) prodSelezione.delete(prodId);
-  else prodSelezione.add(prodId);
-  const rec = allMiei.find(r => r.id === recId);
-  if (!rec) return;
-  const panel = document.getElementById('prod-panel-' + recId);
-  if (panel) panel.querySelector('td').innerHTML = renderProdPanel(rec);
+function toggleIdxItem(prodId) {
+  if (idxCartSelIds.has(prodId)) idxCartSelIds.delete(prodId);
+  else idxCartSelIds.add(prodId);
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
 }
 
-async function salvaProdotti(recId) {
-  const rec = allMiei.find(r => r.id === recId);
-  if (!rec) return;
-  const ids = [...prodSelezione];
+async function saveIdxCart() {
+  if (!idxCartRecId) return;
+  const ids = [...idxCartSelIds];
   try {
-    await proxyPatch(TABLE_RUBRICA, recId, {
-      'prodott proposti': ids.map(id => ({ id }))
+    await proxyPatch(TABLE_RUBRICA, idxCartRecId, {
+      'prodott proposti': ids.map(id=>({id}))
     });
-    // aggiorna cache locale
-    const prodSelezionati = allProdotti.filter(p => ids.includes(p.id));
-    rec.fields['prodott proposti'] = prodSelezionati.map(p => ({ id: p.id, name: p.fields['Nome prodotto'] }));
-    rec.fields['Prezzo prodotti']  = prodSelezionati.reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
-    showToast('✅ Prodotti salvati su Airtable!');
-    document.getElementById('prod-panel-' + recId)?.remove();
+    const rec = allMiei.find(r=>r.id===idxCartRecId);
+    if (rec) {
+      rec.fields['prodott proposti'] = ids.map(id=>{ const p=allProdotti.find(x=>x.id===id); return {id,name:p?.fields['Nome prodotto']||''}; });
+      rec.fields['Prezzo prodotti']  = allProdotti.filter(p=>ids.includes(p.id)).reduce((s,p)=>s+(p.fields['Prezzo (€)']||0),0);
+    }
+    document.getElementById('idx-cart-modal')?.remove();
+    showToast('✅ Prodotti salvati!');
     refreshDrawer();
-  } catch(e) {
-    showToast('❌ Errore salvataggio prodotti', true);
-  }
+  } catch(e) { showToast('❌ Errore', true); }
 }
 
 // ── CALENDARIO ─────────────────────────────────────────────────
