@@ -287,10 +287,16 @@ async function proxyPost(table, fields) {
   return res.json();
 }
 
-// Helper per leggere campi prodotto (supporta sia nome che field ID)
+// Helper per leggere campi prodotto (supporta nome e field ID)
 const prodNome   = p => p.fields['Nome prodotto']   || p.fields['fldJWkKD8emiesXgV'] || '—';
-const prodPrezzo = p => p.fields['Prezzo (€)']      || p.fields['fldFVAOHfQMaMmudW'] || 0;
-const prodCat    = p => (p.fields['Categoria']?.name || p.fields['flddZwalfEpfYsRIZ']?.name || 'altro').toLowerCase();
+const prodPrezzo = p => Number(p.fields['Prezzo (€)'] || p.fields['fldFVAOHfQMaMmudW'] || 0);
+const prodCat    = p => {
+  const c = p.fields['Categoria'] || p.fields['flddZwalfEpfYsRIZ'];
+  if (!c) return 'altro';
+  if (typeof c === 'object' && c.name) return c.name.toLowerCase().trim();
+  if (typeof c === 'string') return c.toLowerCase().trim();
+  return 'altro';
+};
 async function createProposteTable() {
   const btn = $('btn-crea-tabella');
   if (btn) { btn.textContent = '⏳ Creazione...'; btn.disabled = true; }
@@ -392,8 +398,7 @@ async function loadAll() {
     proxyGet('tblTAA7KFUVtcPnZt',
       'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
       '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
-    proxyGet('tblAvm14RuhE0dWZg',
-      'fields[]=fldJWkKD8emiesXgV&fields[]=fldFVAOHfQMaMmudW&fields[]=flddZwalfEpfYsRIZ&maxRecords=100'),
+    proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
     proxyGet(TABLE_PROPOSTE,
       `fields[]=${FLD_PP_NOME}&fields[]=${FLD_PP_QTA}&fields[]=${FLD_PP_PREZZO}` +
       `&fields[]=${FLD_PP_CONTATTO}&fields[]=${FLD_PP_PRODOTTO}&fields[]=${FLD_PP_NOTE}&maxRecords=5000`),
@@ -406,6 +411,15 @@ async function loadAll() {
   renderProdotti();
   renderRubrica();
   renderLinks();
+
+  // DEBUG temporaneo
+  if (allProdNegozio[0]) {
+    const p0 = allProdNegozio[0];
+    const cat = prodCat(p0);
+    const nome = prodNome(p0);
+    showToast(`✅ ${allProdNegozio.length} prodotti. Es: "${nome}" cat="${cat}"`);
+    console.log('🔍 Primo prodotto fields:', JSON.stringify(p0.fields, null, 2));
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
