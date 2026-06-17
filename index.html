@@ -565,7 +565,13 @@ function renderTable(lista) {
 
     return `<tr data-creaz="${dataCreazISO}">
       <td>
-        <div class="c-nome" style="cursor:pointer;color:var(--accent)" onclick="openContactDetail('${id}')">${nome}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="c-nome" style="cursor:pointer;color:var(--accent)" onclick="openContactDetail('${id}')">${nome}</div>
+          <button onclick="openEditContact('${id}')"
+            title="Modifica contatto"
+            style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--muted);padding:2px;opacity:.6;flex-shrink:0"
+            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'">✏️</button>
+        </div>
         <div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div>
       </td>
       <td>
@@ -718,7 +724,11 @@ function openContactDetail(recId) {
     <div style="display:flex;gap:8px;margin-top:16px">
       <button onclick="document.getElementById('contact-detail-${recId}').remove();openProdottiPanel('${recId}')"
         style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
-        ✏️ Modifica prodotti
+        🛒 Prodotti
+      </button>
+      <button onclick="document.getElementById('contact-detail-${recId}').remove();openEditContact('${recId}')"
+        style="flex:1;background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
+        ✏️ Modifica
       </button>
       ${tel ? `<a href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank"
         style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
@@ -1402,6 +1412,157 @@ function sortByDate(tipo) {
   });
   sortDir *= -1;
   rows.forEach(r => tbl.appendChild(r));
+}
+
+// ── Modifica contatto ───────────────────────────────────────────
+function openEditContact(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+  const f = rec.fields;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'edit-contact-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">✏️ Modifica contatto</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(f['Nome e cognome']||'')}</div>
+        </div>
+        <button onclick="document.getElementById('edit-contact-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nome e Cognome *</label>
+          <input id="ec-nome" type="text" value="${esc(f['Nome e cognome']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input id="ec-tel" type="tel" value="${esc(f['recapito telefonico']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="ec-stato">
+            ${STATUS_OPTIONS.map(o=>`<option ${f['Status']===o?'selected':''}>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipologia cliente</label>
+          <input id="ec-tipo" type="text" value="${esc(f['Tipologia cliente']||'')}">
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="ec-note" rows="4">${esc(f['Notes']||'')}</textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-primary" style="margin:0;flex:1" id="ec-btn" onclick="saveEditContact('${recId}')">
+          💾 Salva modifiche
+        </button>
+        <button onclick="confirmDeleteContact('${recId}')"
+          style="background:rgba(231,76,60,.1);color:var(--red);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer">
+          🗑️ Elimina
+        </button>
+      </div>
+      <div id="ec-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('ec-nome').focus();
+}
+
+async function saveEditContact(recId) {
+  const nome  = document.getElementById('ec-nome')?.value.trim();
+  const tel   = document.getElementById('ec-tel')?.value.trim();
+  const stato = document.getElementById('ec-stato')?.value;
+  const tipo  = document.getElementById('ec-tipo')?.value.trim();
+  const note  = document.getElementById('ec-note')?.value.trim();
+  const btn   = document.getElementById('ec-btn');
+  const errEl = document.getElementById('ec-error');
+
+  if (!nome) {
+    errEl.textContent = '⚠️ Il nome è obbligatorio';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvo…';
+  errEl.style.display = 'none';
+
+  const fields = {
+    'Nome e cognome':      nome,
+    'recapito telefonico': tel,
+    'Status':              stato,
+    'Tipologia cliente':   tipo,
+    'Notes':               note,
+  };
+
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    // Aggiorna cache locale
+    const rec = allMiei.find(r=>r.id===recId);
+    if (rec) rec.fields = { ...rec.fields, ...fields };
+    document.getElementById('edit-contact-modal').remove();
+    showToast('✅ Contatto aggiornato!');
+    refreshDrawer();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '💾 Salva modifiche';
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function confirmDeleteContact(recId) {
+  const rec  = allMiei.find(r=>r.id===recId);
+  const nome = rec?.fields['Nome e cognome'] || '?';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'delete-confirm-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:400px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:8px">Elimina contatto</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">
+        Sei sicuro di voler eliminare <strong>${esc(nome)}</strong>?<br>
+        <span style="color:var(--red);font-size:12px">Questa azione non può essere annullata.</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('delete-confirm-modal').remove()"
+          style="flex:1;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">
+          Annulla
+        </button>
+        <button id="del-btn" onclick="deleteContact('${recId}')"
+          style="flex:1;background:var(--red);color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">
+          🗑️ Elimina
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+async function deleteContact(recId) {
+  const btn = document.getElementById('del-btn');
+  if (btn) { btn.textContent = '⏳ Elimino…'; btn.disabled = true; }
+  try {
+    await proxyDelete(TABLE_RUBRICA, recId);
+    // Rimuovi dalla cache locale
+    allMiei = allMiei.filter(r=>r.id!==recId);
+    // Chiudi tutti i modal
+    document.getElementById('delete-confirm-modal')?.remove();
+    document.getElementById('edit-contact-modal')?.remove();
+    document.getElementById('contact-detail-'+recId)?.remove();
+    showToast('✅ Contatto eliminato!');
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore eliminazione: ' + e.message, true);
+    if (btn) { btn.textContent = '🗑️ Elimina'; btn.disabled = false; }
+  }
 }
 
 // ── Nuovo contatto ─────────────────────────────────────────────
