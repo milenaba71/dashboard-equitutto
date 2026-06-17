@@ -302,18 +302,28 @@ function getPropField(p, fieldId, ...names) {
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
-    const cl = getPropField(p, FLD_IDX_CONTATTO, 'CONTATTO', 'Contatto');
+    const f = p.fields || {};
+    // Il campo CONTATTO può avere nomi diversi
+    const cl = f[FLD_IDX_CONTATTO] || f['CONTATTO'] || f['Contatto']
+            || f['fldgWb7KAXQ1i5sRC'];
     return Array.isArray(cl) && cl.some(c => c.id === recId);
   });
 }
+
+function getProdottoDaProposta(p) {
+  const f = p.fields || {};
+  // Il prodotto può essere in PRODOTTO o negozio
+  return f[FLD_IDX_PRODOTTO] || f['PRODOTTO'] || f['Prodotto']
+      || f['fldpVAKpMGRRjnDnt'] || f['negozio'];
+}
+
 function getValoreProposte(props) {
   return props.reduce((s, p) => {
-    // Il prodotto può essere in PRODOTTO (fldfndNWIdnQWTvmE) OPPURE in negozio (fldpVAKpMGRRjnDnt)
-    const pl = getPropField(p, FLD_IDX_PRODOTTO, 'PRODOTTO', 'Prodotto')
-            || getPropField(p, 'fldpVAKpMGRRjnDnt', 'negozio');
+    const pl     = getProdottoDaProposta(p);
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
     const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
-    const qta    = getPropField(p, FLD_IDX_QTA, 'Quantità', 'Quantita') || 1;
+    const f      = p.fields || {};
+    const qta    = f[FLD_IDX_QTA] || f['Quantità'] || f['Quantita'] || 1;
     return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
@@ -733,12 +743,13 @@ function openContactDetail(recId) {
 
   const prodHTML = mieProposte.length > 0
     ? mieProposte.map(p => {
-        const prodLinks = pField(p, FLD_IDX_PRODOTTO);
+        const prodLinks = getProdottoDaProposta(p);
         const prodId    = prodLinks?.[0]?.id;
         const prod      = (allProdotti||[]).find(x=>x.id===prodId);
         const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
         const prezzo    = prod ? prodPrezzo(prod) : 0;
-        const qta       = pField(p, FLD_IDX_QTA) || 1;
+        const f         = p.fields || {};
+        const qta       = f[FLD_IDX_QTA] || f['Quantità'] || 1;
         const totale    = prezzo * qta;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1">
@@ -1093,13 +1104,14 @@ function openProdottiPanel(recId) {
   // Carica proposte esistenti dalla nuova tabella
   idxCartSelIds = new Map();
   getProposteContatto(recId).forEach(p => {
-    const prodLinks = pField(p, FLD_IDX_PRODOTTO);
+    const prodLinks = getProdottoDaProposta(p);
     if (prodLinks?.length > 0) {
       const prodId = prodLinks[0].id;
       const prod   = allProdotti.find(x=>x.id===prodId);
+      const f      = p.fields || {};
       idxCartSelIds.set(prodId, {
         propId: p.id,
-        qta:    pField(p, FLD_IDX_QTA) || 1,
+        qta:    f[FLD_IDX_QTA] || f['Quantità'] || 1,
         prezzo: prod ? prodPrezzo(prod) : 0,
       });
     }
