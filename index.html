@@ -292,24 +292,22 @@ let activeKpi = null;
 let allProdotti  = []; // cache prodotti negozio
 let allProposte  = []; // nuova tabella Proposte Prodotti
 
-// Helper — legge un campo da fields o cellValuesByFieldId
-function pField(p, fld) {
-  return p.fields?.[fld] ?? p.cellValuesByFieldId?.[fld];
-}
+// Helper — legge un campo (fields è già normalizzato)
+const pField = (p, fld) => p.fields?.[fld];
 
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
-    const cl = pField(p, FLD_IDX_CONTATTO);
+    const cl = p.fields[FLD_IDX_CONTATTO];
     return Array.isArray(cl) && cl.some(c=>c.id===recId);
   });
 }
 function getValoreProposte(props) {
   return props.reduce((s,p)=>{
-    const pl     = pField(p, FLD_IDX_PRODOTTO);
+    const pl     = p.fields[FLD_IDX_PRODOTTO];
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
     const prod   = prodId ? allProdotti.find(x=>x.id===prodId) : null;
-    const qta    = pField(p, FLD_IDX_QTA) || 1;
+    const qta    = p.fields[FLD_IDX_QTA] || 1;
     return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
@@ -793,7 +791,13 @@ async function loadData(utente) {
     ]);
 
     allProdotti = prodotti;
-    allProposte = proposteRaw;
+    // Normalizza proposte — converte cellValuesByFieldId → fields
+    allProposte = proposteRaw.map(p => ({
+      ...p,
+      fields: p.fields && Object.keys(p.fields).length > 0
+        ? p.fields
+        : (p.cellValuesByFieldId || {})
+    }));
 
     // Aggiorna orario ultimo sync
     const sync = document.getElementById('last-sync');
@@ -1170,8 +1174,8 @@ async function saveIdxCart() {
     for (const [prodId, entry] of idxCartSelIds.entries()) {
       const prod   = allProdotti.find(p=>p.id===prodId);
       const fields = {
-        [FLD_IDX_CONTATTO]: [{id: idxCartRecId}],
-        [FLD_IDX_PRODOTTO]: [{id: prodId}],
+        [FLD_IDX_CONTATTO]: [idxCartRecId],
+        [FLD_IDX_PRODOTTO]: [prodId],
         [FLD_IDX_QTA]:      entry.qta||1,
         [FLD_IDX_PREZZO]:   prod ? prodPrezzo(prod) : 0,
       };
@@ -1181,12 +1185,16 @@ async function saveIdxCart() {
         ops.push(
           proxyPost(TABLE_PROPOSTE_IDX, fields).then(res => {
             if (res.id) {
-              // Normalizza la risposta — può avere fields o cellValuesByFieldId
-              const normalized = { ...res, fields: res.fields || res.cellValuesByFieldId || fields };
+              // Normalizza fields
+              const normalized = {
+                ...res,
+                fields: Object.keys(res.fields||{}).length > 0 ? res.fields : (res.cellValuesByFieldId || fields)
+              };
               allProposte.push(normalized);
               idxCartSelIds.set(prodId, { ...entry, propId: res.id });
             } else {
-              console.error('❌ proxyPost risposta senza id:', JSON.stringify(res));
+              console.error('❌ POST fallito:', JSON.stringify(res));
+              throw new Error(res.error?.message || 'Errore POST');
             }
           })
         );
