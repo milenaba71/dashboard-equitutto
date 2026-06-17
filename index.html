@@ -1225,6 +1225,15 @@ async function saveIdxCart() {
     });
 
     await Promise.all(ops);
+
+    // Ricarica proposte aggiornate da Airtable
+    const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX,
+      `fields[]=${FLD_IDX_CONTATTO}&fields[]=${FLD_IDX_PRODOTTO}&fields[]=${FLD_IDX_QTA}&maxRecords=5000`);
+    allProposte = nuoveProposte.map(p => ({
+      ...p,
+      fields: p.fields && Object.keys(p.fields).length > 0 ? p.fields : (p.cellValuesByFieldId || {})
+    }));
+
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
     refreshDrawer();
