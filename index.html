@@ -801,13 +801,21 @@ async function loadData(utente) {
     ]);
 
     allProdotti = prodotti;
-    // Normalizza proposte — converte cellValuesByFieldId → fields
+    // Normalizza proposte
     allProposte = proposteRaw.map(p => ({
       ...p,
-      fields: p.fields && Object.keys(p.fields).length > 0
-        ? p.fields
-        : (p.cellValuesByFieldId || {})
+      fields: (p.fields && Object.keys(p.fields).length > 0) ? p.fields : (p.cellValuesByFieldId || {})
     }));
+
+    // LOG DIAGNOSTICO — rimuovere dopo fix
+    console.log('📦 allProposte caricate:', allProposte.length);
+    if (allProposte[0]) {
+      console.log('📦 Prima proposta fields:', JSON.stringify(allProposte[0].fields));
+      console.log('📦 FLD_IDX_CONTATTO:', FLD_IDX_CONTATTO);
+      console.log('📦 FLD_IDX_PRODOTTO:', FLD_IDX_PRODOTTO);
+      const cl = allProposte[0].fields[FLD_IDX_CONTATTO];
+      console.log('📦 Contatto nel record:', JSON.stringify(cl));
+    }
 
     // Aggiorna orario ultimo sync
     const sync = document.getElementById('last-sync');
