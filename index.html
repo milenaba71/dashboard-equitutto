@@ -1437,44 +1437,48 @@ function buildDonut(slices, total) {
 function applyDateFilter() {
   const da  = document.getElementById('filter-da')?.value;
   const a   = document.getElementById('filter-a')?.value;
-  const cnt = document.getElementById('filter-count');
-  const tbl = document.getElementById('tbl-body');
-  if (!tbl) return;
-  let visible = 0;
-  tbl.querySelectorAll('tr').forEach(row => {
-    const iso = row.dataset.creaz || '';
-    const d   = iso ? new Date(iso) : null;
-    let show  = true;
-    if (da && d && d < new Date(da)) show = false;
-    if (a  && d && d > new Date(a+'T23:59:59')) show = false;
-    row.style.display = show ? '' : 'none';
-    if (show) visible++;
-  });
-  if (cnt) cnt.textContent = (da||a) ? `${visible} risultati` : '';
+  if (!da && !a) { currentLista = getListaByTipo(activeKpi); }
+  else {
+    currentLista = getListaByTipo(activeKpi).filter(r => {
+      const iso = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
+      const d   = iso ? new Date(iso) : null;
+      if (da && d && d < new Date(da)) return false;
+      if (a  && d && d > new Date(a+'T23:59:59')) return false;
+      return true;
+    });
+  }
+  currentPage = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
 }
 
 function clearDateFilter() {
   const da = document.getElementById('filter-da');
   const a  = document.getElementById('filter-a');
-  const cnt= document.getElementById('filter-count');
   if (da) da.value='';
   if (a)  a.value='';
-  if (cnt) cnt.textContent='';
-  document.getElementById('tbl-body')?.querySelectorAll('tr').forEach(r=>r.style.display='');
+  currentLista = getListaByTipo(activeKpi);
+  currentPage  = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
 }
 
 let sortDir = 1;
 function sortByDate(tipo) {
-  const tbl = document.getElementById('tbl-body');
-  if (!tbl) return;
-  const rows = Array.from(tbl.querySelectorAll('tr'));
-  rows.sort((a,b) => {
-    const da = tipo==='creaz' ? new Date(a.dataset.creaz||0) : new Date(a.dataset.att||0);
-    const db = tipo==='creaz' ? new Date(b.dataset.creaz||0) : new Date(b.dataset.att||0);
+  currentLista = [...currentLista].sort((a,b) => {
+    const da = tipo==='creaz'
+      ? new Date(a.fields['DATA DI CREAZIONE DATO']||a.createdTime||0)
+      : new Date(a.fields['DATA ATTIVITA']||0);
+    const db = tipo==='creaz'
+      ? new Date(b.fields['DATA DI CREAZIONE DATO']||b.createdTime||0)
+      : new Date(b.fields['DATA ATTIVITA']||0);
     return sortDir * (da-db);
   });
   sortDir *= -1;
-  rows.forEach(r => tbl.appendChild(r));
+  currentPage = 0;
+  renderPage();
 }
 
 // ── Aggiungi attività dal calendario ───────────────────────────
