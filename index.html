@@ -292,17 +292,25 @@ let activeKpi = null;
 let allProdotti  = []; // cache prodotti negozio
 let allProposte  = []; // nuova tabella Proposte Prodotti
 
+// Helper — legge un campo da fields o cellValuesByFieldId
+function pField(p, fld) {
+  return p.fields?.[fld] ?? p.cellValuesByFieldId?.[fld];
+}
+
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
-  return allProposte.filter(p =>
-    Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===recId)
-  );
+  return allProposte.filter(p => {
+    const cl = pField(p, FLD_IDX_CONTATTO);
+    return Array.isArray(cl) && cl.some(c=>c.id===recId);
+  });
 }
 function getValoreProposte(props) {
   return props.reduce((s,p)=>{
-    const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-    const prod   = allProdotti.find(x=>x.id===prodId);
-    return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+    const pl     = pField(p, FLD_IDX_PRODOTTO);
+    const prodId = Array.isArray(pl) ? pl[0]?.id : null;
+    const prod   = prodId ? allProdotti.find(x=>x.id===prodId) : null;
+    const qta    = pField(p, FLD_IDX_QTA) || 1;
+    return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
 
@@ -645,12 +653,12 @@ function openContactDetail(recId) {
 
   const prodHTML = mieProposte.length > 0
     ? mieProposte.map(p => {
-        const prodLinks = p.fields[FLD_IDX_PRODOTTO];
+        const prodLinks = pField(p, FLD_IDX_PRODOTTO);
         const prodId    = prodLinks?.[0]?.id;
         const prod      = (allProdotti||[]).find(x=>x.id===prodId);
         const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
         const prezzo    = prod ? prodPrezzo(prod) : 0;
-        const qta       = p.fields[FLD_IDX_QTA]||1;
+        const qta       = pField(p, FLD_IDX_QTA) || 1;
         const totale    = prezzo * qta;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1">
@@ -997,13 +1005,13 @@ function openProdottiPanel(recId) {
   // Carica proposte esistenti dalla nuova tabella
   idxCartSelIds = new Map();
   getProposteContatto(recId).forEach(p => {
-    const prodLinks = p.fields[FLD_IDX_PRODOTTO];
+    const prodLinks = pField(p, FLD_IDX_PRODOTTO);
     if (prodLinks?.length > 0) {
       const prodId = prodLinks[0].id;
       const prod   = allProdotti.find(x=>x.id===prodId);
       idxCartSelIds.set(prodId, {
         propId: p.id,
-        qta:    p.fields[FLD_IDX_QTA] || 1,
+        qta:    pField(p, FLD_IDX_QTA) || 1,
         prezzo: prod ? prodPrezzo(prod) : 0,
       });
     }
@@ -1155,6 +1163,8 @@ function chgIdxQta(prodId, delta) {
 
 async function saveIdxCart() {
   if (!idxCartRecId) return;
+  const btn = document.querySelector('#idx-cart-modal button[onclick="saveIdxCart()"]');
+  if (btn) { btn.textContent = '⏳ Salvo...'; btn.disabled = true; }
   try {
     const ops = [];
     for (const [prodId, entry] of idxCartSelIds.entries()) {
@@ -1168,18 +1178,25 @@ async function saveIdxCart() {
       if (entry.propId) {
         ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
       } else {
-        ops.push(proxyPost(TABLE_PROPOSTE_IDX, fields).then(res=>{
-          if (res.id) {
-            allProposte.push(res);
-            idxCartSelIds.set(prodId, { ...entry, propId: res.id });
-          }
-        }));
+        ops.push(
+          proxyPost(TABLE_PROPOSTE_IDX, fields).then(res => {
+            if (res.id) {
+              // Normalizza la risposta — può avere fields o cellValuesByFieldId
+              const normalized = { ...res, fields: res.fields || res.cellValuesByFieldId || fields };
+              allProposte.push(normalized);
+              idxCartSelIds.set(prodId, { ...entry, propId: res.id });
+            } else {
+              console.error('❌ proxyPost risposta senza id:', JSON.stringify(res));
+            }
+          })
+        );
       }
     }
+
     // Elimina proposte rimosse
     const daEliminare = allProposte.filter(p => {
-      const cl = p.fields[FLD_IDX_CONTATTO];
-      const pl = p.fields[FLD_IDX_PRODOTTO];
+      const cl = p.fields?.[FLD_IDX_CONTATTO] || p.cellValuesByFieldId?.[FLD_IDX_CONTATTO];
+      const pl = p.fields?.[FLD_IDX_PRODOTTO] || p.cellValuesByFieldId?.[FLD_IDX_PRODOTTO];
       return Array.isArray(cl) && cl.some(c=>c.id===idxCartRecId)
           && Array.isArray(pl) && pl.length > 0
           && !idxCartSelIds.has(pl[0].id);
@@ -1188,11 +1205,16 @@ async function saveIdxCart() {
       ops.push(proxyDelete(TABLE_PROPOSTE_IDX, p.id));
       allProposte = allProposte.filter(x=>x.id!==p.id);
     });
+
     await Promise.all(ops);
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
     refreshDrawer();
-  } catch(e) { showToast('❌ Errore: '+e.message, true); }
+  } catch(e) {
+    console.error('❌ saveIdxCart errore:', e);
+    showToast('❌ Errore: ' + e.message, true);
+    if (btn) { btn.textContent = '💾 Salva su Airtable'; btn.disabled = false; }
+  }
 }
 
 // ── CALENDARIO ─────────────────────────────────────────────────
