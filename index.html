@@ -801,21 +801,7 @@ async function loadData(utente) {
     ]);
 
     allProdotti = prodotti;
-    // Normalizza proposte
-    allProposte = proposteRaw.map(p => ({
-      ...p,
-      fields: (p.fields && Object.keys(p.fields).length > 0) ? p.fields : (p.cellValuesByFieldId || {})
-    }));
-
-    // LOG DIAGNOSTICO — rimuovere dopo fix
-    console.log('📦 allProposte caricate:', allProposte.length);
-    if (allProposte[0]) {
-      console.log('📦 Prima proposta fields:', JSON.stringify(allProposte[0].fields));
-      console.log('📦 FLD_IDX_CONTATTO:', FLD_IDX_CONTATTO);
-      console.log('📦 FLD_IDX_PRODOTTO:', FLD_IDX_PRODOTTO);
-      const cl = allProposte[0].fields[FLD_IDX_CONTATTO];
-      console.log('📦 Contatto nel record:', JSON.stringify(cl));
-    }
+    allProposte = proposteRaw; // già normalizzate dal Worker
 
     // Aggiorna orario ultimo sync
     const sync = document.getElementById('last-sync');
@@ -1317,7 +1303,9 @@ function buildCalendar(eventsData) {
       </div>`;
     }).join('');
     const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
-    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}">
+    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}"
+      onclick="openAddActivity('${c.iso}')" style="cursor:pointer"
+      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
       <div class="cal-day-num">${c.day}</div>
       ${evHtml}${more}
     </div>`;
@@ -1429,6 +1417,111 @@ function sortByDate(tipo) {
   });
   sortDir *= -1;
   rows.forEach(r => tbl.appendChild(r));
+}
+
+// ── Aggiungi attività dal calendario ───────────────────────────
+function openAddActivity(isoDate) {
+  const dataFmt = isoDate ? new Date(isoDate).toLocaleDateString('it-IT') : '';
+  document.getElementById('add-activity-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'add-activity-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">📅 Aggiungi attività</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${dataFmt}</div>
+        </div>
+        <button onclick="document.getElementById('add-activity-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Contatto *</label>
+          <input id="aa-cerca" type="text" placeholder="Cerca per nome…" oninput="cercaContattoAA(this.value)">
+          <div id="aa-results" style="background:#fff;border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;margin-top:4px;display:none"></div>
+          <input type="hidden" id="aa-recId">
+          <div id="aa-selected" style="margin-top:6px;font-size:13px;color:var(--accent);font-weight:700"></div>
+        </div>
+        <div class="form-group form-full">
+          <label>Tipo attività</label>
+          <select id="aa-tipo">
+            <option value="DATA ATTIVITA">📞 Chiamata / Attività</option>
+            <option value="Datavisita">🏠 Visita</option>
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Data</label>
+          <input id="aa-data" type="date" value="${isoDate||''}">
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="aa-note" rows="3" placeholder="Descrivi l'attività…"></textarea>
+        </div>
+      </div>
+      <div id="aa-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="aa-btn" style="margin-top:14px" onclick="saveActivity()">💾 Salva attività</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('aa-cerca').focus();
+}
+
+function cercaContattoAA(q) {
+  const res = document.getElementById('aa-results');
+  if (!q || q.length < 2) { res.style.display='none'; return; }
+  const hits = allMiei.filter(r => (r.fields['Nome e cognome']||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (!hits.length) { res.style.display='none'; return; }
+  res.style.display = 'block';
+  res.innerHTML = hits.map(r => `
+    <div onclick="selezionaContattoAA('${r.id}','${esc(r.fields['Nome e cognome']||'')}')"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${esc(r.fields['Nome e cognome']||'—')}
+      <span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(r.fields['Status']||'')}</span>
+    </div>`).join('');
+}
+
+function selezionaContattoAA(recId, nome) {
+  document.getElementById('aa-recId').value = recId;
+  document.getElementById('aa-cerca').value = nome;
+  document.getElementById('aa-selected').textContent = '✓ ' + nome;
+  document.getElementById('aa-results').style.display = 'none';
+}
+
+async function saveActivity() {
+  const recId = document.getElementById('aa-recId').value;
+  const tipo  = document.getElementById('aa-tipo').value;
+  const data  = document.getElementById('aa-data').value;
+  const note  = document.getElementById('aa-note').value.trim();
+  const errEl = document.getElementById('aa-error');
+  const btn   = document.getElementById('aa-btn');
+
+  if (!recId) { errEl.textContent='⚠️ Seleziona un contatto'; errEl.style.display='block'; return; }
+  if (!data)  { errEl.textContent='⚠️ Inserisci una data'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = '⏳ Salvo…';
+  errEl.style.display = 'none';
+
+  const fields = { [tipo]: data };
+  if (note) fields['Notes'] = note;
+
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    const rec = allMiei.find(r=>r.id===recId);
+    if (rec) { rec.fields[tipo] = data; if(note) rec.fields['Notes'] = note; }
+    document.getElementById('add-activity-modal').remove();
+    showToast('✅ Attività salvata!');
+    // Ricarica calendario
+    const calEl = document.getElementById('cal-section');
+    if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+  } catch(e) {
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '💾 Salva attività';
+  }
 }
 
 // ── Modifica contatto ───────────────────────────────────────────
