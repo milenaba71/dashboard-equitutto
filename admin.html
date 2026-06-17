@@ -231,8 +231,8 @@ const FLD_PP_QTA      = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_PP_PREZZO   = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 const FLD_PP_DATA     = 'fld6mOpX0RZAz9XYR'; // Data proposta
 const FLD_PP_NOTE     = 'fldZ1U0yPLvPg0o46'; // Note proposta
-const FLD_PP_CONTATTO = 'fldgWb7KAXQ1i5sRC'; // Link → Rubrica
-const FLD_PP_PRODOTTO = 'fldfndNWIdnQWTvmE'; // Link → Negozio
+const FLD_PP_CONTATTO = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
+const FLD_PP_PRODOTTO = 'fldfndNWIdnQWTvmE'; // PRODOTTO → negozio
 // In Rubrica: fld6PwFFS7oHlswjO = "Proposte" (link a Proposte Prodotti)
 // In Negozio: fldogqPYB5quSxjPM = "Proposte" (link a Proposte Prodotti)
 
@@ -1345,8 +1345,8 @@ async function saveCart() {
         [FLD_PP_NOME]:     `${nome}`,
         [FLD_PP_QTA]:      entry.qta||1,
         [FLD_PP_PREZZO]:   prezzo,
-        [FLD_PP_CONTATTO]: [{id: cartRecId}],
-        [FLD_PP_PRODOTTO]: [{id: prodId}],
+        [FLD_PP_CONTATTO]: [cartRecId],
+        [FLD_PP_PRODOTTO]: [prodId],
       };
       if (entry.propId) {
         // aggiorna proposta esistente
@@ -1520,3 +1520,4 @@ if (sessionStorage.getItem('eq_admin')==='1') {
 </script>
 </body>
 </html>
+
