@@ -248,8 +248,8 @@
 const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
 const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
 const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
-const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // Link → Rubrica
-const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // Link → Negozio (campo corretto!)
+const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
+const FLD_IDX_PRODOTTO    = 'fldfndNWIdnQWTvmE'; // PRODOTTO → negozio
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 
@@ -292,22 +292,27 @@ let activeKpi = null;
 let allProdotti  = []; // cache prodotti negozio
 let allProposte  = []; // nuova tabella Proposte Prodotti
 
-// Helper — legge un campo (fields è già normalizzato)
-const pField = (p, fld) => p.fields?.[fld];
+// Helper per leggere campi proposte — usa field ID o nome campo
+function getPropField(p, fieldId, ...names) {
+  if (p.fields?.[fieldId] !== undefined) return p.fields[fieldId];
+  for (const n of names) if (p.fields?.[n] !== undefined) return p.fields[n];
+  return p.cellValuesByFieldId?.[fieldId];
+}
 
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
-    const cl = p.fields[FLD_IDX_CONTATTO];
-    return Array.isArray(cl) && cl.some(c=>c.id===recId);
+    const cl = getPropField(p, FLD_IDX_CONTATTO, 'CONTATTO', 'Contatto');
+    return Array.isArray(cl) && cl.some(c => c.id === recId);
   });
 }
 function getValoreProposte(props) {
-  return props.reduce((s,p)=>{
-    const pl     = p.fields[FLD_IDX_PRODOTTO];
+  return props.reduce((s, p) => {
+    // Campo PRODOTTO contiene il link al negozio
+    const pl     = getPropField(p, FLD_IDX_PRODOTTO, 'PRODOTTO', 'Prodotto', 'negozio');
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
-    const prod   = prodId ? allProdotti.find(x=>x.id===prodId) : null;
-    const qta    = p.fields[FLD_IDX_QTA] || 1;
+    const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
+    const qta    = getPropField(p, FLD_IDX_QTA, 'Quantità', 'Quantita') || 1;
     return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
@@ -796,8 +801,7 @@ async function loadData(utente) {
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
       proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
-      proxyGet(TABLE_PROPOSTE_IDX,
-        `fields[]=${FLD_IDX_CONTATTO}&fields[]=${FLD_IDX_PRODOTTO}&fields[]=${FLD_IDX_QTA}&maxRecords=5000`),
+      proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000'),
     ]);
 
     allProdotti = prodotti;
@@ -1221,8 +1225,7 @@ async function saveIdxCart() {
     await Promise.all(ops);
 
     // Ricarica proposte aggiornate da Airtable
-    const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX,
-      `fields[]=${FLD_IDX_CONTATTO}&fields[]=${FLD_IDX_PRODOTTO}&fields[]=${FLD_IDX_QTA}&maxRecords=5000`);
+    const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
     allProposte = nuoveProposte.map(p => ({
       ...p,
       fields: p.fields && Object.keys(p.fields).length > 0 ? p.fields : (p.cellValuesByFieldId || {})
