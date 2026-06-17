@@ -282,7 +282,22 @@ const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/
 
 let allMiei   = [];
 let activeKpi = null;
-let allProdotti = []; // cache prodotti negozio
+let allProdotti  = []; // cache prodotti negozio
+let allProposte  = []; // nuova tabella Proposte Prodotti
+
+// Helper per calcolare proposte di un contatto
+function getProposteContatto(recId) {
+  return allProposte.filter(p =>
+    Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===recId)
+  );
+}
+function getValoreProposte(props) {
+  return props.reduce((s,p)=>{
+    const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
+    const prod   = allProdotti.find(x=>x.id===prodId);
+    return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
+  }, 0);
+}
 
 function showToast(msg, isError=false) {
   const t = $('toast');
@@ -472,7 +487,7 @@ function getListaByTipo(tipo) {
     });
     case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
     case 'proposti':     return allMiei.filter(r=>{
-      const mieP = (window.allProposteIdx||[]).filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id));
+      const mieP = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id));
       if (mieP.length > 0) return true;
       const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
       return Array.isArray(vecchi) && vecchi.length > 0;
@@ -509,24 +524,9 @@ function renderTable(lista) {
     const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
     const appunto  = r.fields['Preso appuntamento'] || '';
     const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
-    const mieProposteRow = (window.allProposteIdx||[]).filter(p =>
-      Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id)
-    );
-    // Vecchio campo come fallback
-    const vecchiArr = Array.isArray(r.fields['fldMKXo8Ss8Fljvvj']) ? r.fields['fldMKXo8Ss8Fljvvj']
-                    : Array.isArray(r.fields['prodott proposti'])    ? r.fields['prodott proposti']
-                    : [];
-    const nProd   = mieProposteRow.length > 0 ? mieProposteRow.length : vecchiArr.length;
-    const valProd = mieProposteRow.length > 0
-      ? mieProposteRow.reduce((s,p)=>{
-          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-          return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
-        }, 0)
-      : vecchiArr.reduce((s,p)=>{
-          const prod = (allProdotti||[]).find(x=>x.id===p.id);
-          return s + (prod ? prodPrezzo(prod) : 0);
-        }, 0);
+    const mieProposteRow = getProposteContatto(r.id);
+    const nProd   = mieProposteRow.length;
+    const valProd = getValoreProposte(mieProposteRow);
     const statoUp  = (r.fields['Status']||'').toUpperCase();
     const bCls     = venduto ? 'badge-green'
       : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
@@ -618,9 +618,7 @@ function openContactDetail(recId) {
   const scad   = rec.fields['data scadenza noleggio'] ? new Date(rec.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
 
   // Prodotti proposti dalla nuova tabella Proposte Prodotti
-  const mieProposte = (window.allProposteIdx||[]).filter(p =>
-    Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===recId)
-  );
+  const mieProposte = getProposteContatto(recId);
 
   const prodHTML = mieProposte.length > 0
     ? mieProposte.map(p => {
@@ -641,11 +639,7 @@ function openContactDetail(recId) {
       }).join('') +
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:2px solid var(--accent)">
         <span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>
-        <span style="font-size:18px;font-weight:800;color:var(--accent)">€ ${mieProposte.reduce((s,p)=>{
-          const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-          const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-          return s + ((prod?prodPrezzo(prod):0) * (p.fields[FLD_IDX_QTA]||1));
-        },0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+        <span style="font-size:18px;font-weight:800;color:var(--accent)">€ ${getValoreProposte(mieProposte).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
       </div>`
     : `<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Nessun prodotto proposto</div>`;
 
@@ -730,15 +724,14 @@ async function loadData(utente) {
   try {
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
-    const [rubrica, obiettivi, prodotti, proposte] = await Promise.all([
+    const [rubrica, obiettivi, prodotti, proposteRaw] = await Promise.all([
       proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
-        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=fld6PwFFS7oHlswjO&fields[]=fldMKXo8Ss8Fljvvj&fields[]=prodott+proposti&maxRecords=3000'),
+        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -747,19 +740,8 @@ async function loadData(utente) {
         `fields[]=${FLD_IDX_CONTATTO}&fields[]=${FLD_IDX_PRODOTTO}&fields[]=${FLD_IDX_QTA}&maxRecords=5000`),
     ]);
 
-    // Salva prodotti e proposte globalmente
-    allProdotti = prodotti.map(p => ({
-      ...p,
-      fields: p.fields || p.cellValuesByFieldId || {}
-    }));
-    window.allProposteIdx = proposte;
-    // Cerca KITNOLO 41GG per verifica
-    const testProd = allProdotti.find(x=>x.id==='recpDBc0npmCUTHuy');
-    console.log('🔍 Test KITNOLO 41GG:', testProd ? `trovato prezzo=${prodPrezzo(testProd)}` : 'NON TROVATO');
-    console.log('🔍 Totale prodotti:', allProdotti.length, '| Primo:', allProdotti[0]?.id);
-
-    // Forza refresh drawer se aperto
-    if (activeKpi) refreshDrawer();
+    allProdotti = prodotti;
+    allProposte = proposteRaw;
 
     // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
@@ -803,12 +785,11 @@ async function loadData(utente) {
 
     const noleggiScad = getListaByTipo('scadenze');
 
-    // Calcola totale proposto dalla nuova tabella
-    const totProposto = (window.allProposteIdx||[]).reduce((s,p)=>{
-      const prodId = p.fields[FLD_IDX_PRODOTTO]?.[0]?.id;
-      const prod   = (allProdotti||[]).find(x=>x.id===prodId);
-      return s + ((prod ? prodPrezzo(prod) : 0) * (p.fields[FLD_IDX_QTA]||1));
-    }, 0);
+    // Calcola totale proposto — filtra solo proposte dei contatti di questo commerciale
+    const mieProposteAll = allProposte.filter(p =>
+      Array.isArray(p.fields[FLD_IDX_CONTATTO]) && allMiei.some(r=>r.id===p.fields[FLD_IDX_CONTATTO][0]?.id)
+    );
+    const totProposto = getValoreProposte(mieProposteAll);
 
     const noleggiHTML = noleggiScad.length
       ? noleggiScad.slice(0,6).map(r=>{
@@ -957,16 +938,29 @@ const STRIPE_LINKS_IDX = {
 const NOLO_ORDER_IDX = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
 
 let idxCartRecId  = null;
-let idxCartSelIds = new Set();
+let idxCartSelIds = new Map(); // prodId → { propId, qta, prezzo }
 let idxCartTab    = 'noleggio';
 
 function openProdottiPanel(recId) {
   idxCartRecId = recId;
   const rec    = allMiei.find(r=>r.id===recId);
   if (!rec) return;
-  const props  = rec.fields['prodott proposti'] || [];
-  idxCartSelIds = new Set(Array.isArray(props) ? props.map(p=>p.id) : []);
-  idxCartTab    = 'noleggio';
+
+  // Carica proposte esistenti dalla nuova tabella
+  idxCartSelIds = new Map();
+  getProposteContatto(recId).forEach(p => {
+    const prodLinks = p.fields[FLD_IDX_PRODOTTO];
+    if (prodLinks?.length > 0) {
+      const prodId = prodLinks[0].id;
+      const prod   = allProdotti.find(x=>x.id===prodId);
+      idxCartSelIds.set(prodId, {
+        propId: p.id,
+        qta:    p.fields[FLD_IDX_QTA] || 1,
+        prezzo: prod ? prodPrezzo(prod) : 0,
+      });
+    }
+  });
+  idxCartTab = 'noleggio';
 
   // chiudi modal esistente
   document.getElementById('idx-cart-modal')?.remove();
@@ -1033,22 +1027,30 @@ function buildIdxCart() {
 
   const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px;padding:2px">
     ${prods.map(p=>{
-      const sel    = idxCartSelIds.has(p.id);
+      const entry  = idxCartSelIds.get(p.id);
+      const sel    = !!entry;
+      const qta    = entry?.qta||1;
       const nome   = prodNome(p);
       const prezzo = prodPrezzo(p);
       const stripe = STRIPE_LINKS_IDX[nome.trim().toUpperCase()]||null;
-      return `<div onclick="toggleIdxItem('${p.id}')"
+      return `<div onclick="toggleIdxItem('${p.id}',${prezzo})"
         style="background:${sel?'rgba(0,114,188,.08)':'var(--surface2)'};border:2px solid ${sel?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative">
         ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
         <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;padding-right:${sel?'18px':'0'}">${esc(nome)}</div>
         <div style="font-size:15px;font-weight:800;color:var(--accent);margin-top:6px">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        ${sel?`<div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;margin-top:7px">
+          <button onclick="event.stopPropagation();chgIdxQta('${p.id}',-1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800">−</button>
+          <span style="font-weight:800;font-size:14px;color:var(--accent);min-width:20px;text-align:center">${qta}</span>
+          <button onclick="event.stopPropagation();chgIdxQta('${p.id}',1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800">+</button>
+          <span style="font-size:10px;color:var(--muted)">= €${(prezzo*qta).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+        </div>`:''}
         ${stripe?`<a href="${stripe}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#635bff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;background:rgba(99,91,255,.1);padding:2px 7px;border-radius:4px">💳 Stripe</a>`:''}
       </div>`;
     }).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1">Nessun prodotto</div>'}
   </div>`;
 
-  const selProds = (allProdotti||[]).filter(p=>idxCartSelIds.has(p.id));
-  const totale   = selProds.reduce((s,p)=>s+(prodPrezzo(p)),0);
+  const selProds = allProdotti.filter(p=>idxCartSelIds.has(p.id));
+  const totale   = selProds.reduce((s,p)=>{ const e=idxCartSelIds.get(p.id); return s+prodPrezzo(p)*(e?.qta||1); }, 0);
 
   const linksHtml = selProds
     .filter(p=>STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()])
@@ -1088,29 +1090,61 @@ function switchIdxTab(tab) {
   if (b) b.innerHTML = buildIdxCart();
 }
 
-function toggleIdxItem(prodId) {
+function toggleIdxItem(prodId, prezzo) {
   if (idxCartSelIds.has(prodId)) idxCartSelIds.delete(prodId);
-  else idxCartSelIds.add(prodId);
+  else idxCartSelIds.set(prodId, { propId:null, qta:1, prezzo:prezzo||0 });
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
+}
+
+function chgIdxQta(prodId, delta) {
+  const e = idxCartSelIds.get(prodId);
+  if (!e) return;
+  idxCartSelIds.set(prodId, { ...e, qta: Math.max(1,(e.qta||1)+delta) });
   const b = document.getElementById('idx-cart-body');
   if (b) b.innerHTML = buildIdxCart();
 }
 
 async function saveIdxCart() {
   if (!idxCartRecId) return;
-  const ids = [...idxCartSelIds];
   try {
-    await proxyPatch(TABLE_RUBRICA, idxCartRecId, {
-      'prodott proposti': ids.map(id=>({id}))
-    });
-    const rec = allMiei.find(r=>r.id===idxCartRecId);
-    if (rec) {
-      rec.fields['prodott proposti'] = ids.map(id=>{ const p=allProdotti.find(x=>x.id===id); return {id,name:p?.fields['Nome prodotto']||''}; });
-      rec.fields['Prezzo prodotti']  = allProdotti.filter(p=>ids.includes(p.id)).reduce((s,p)=>s+(prodPrezzo(p)),0);
+    const ops = [];
+    for (const [prodId, entry] of idxCartSelIds.entries()) {
+      const prod   = allProdotti.find(p=>p.id===prodId);
+      const fields = {
+        [FLD_IDX_CONTATTO]: [{id: idxCartRecId}],
+        [FLD_IDX_PRODOTTO]: [{id: prodId}],
+        [FLD_IDX_QTA]:      entry.qta||1,
+        [FLD_IDX_PREZZO]:   prod ? prodPrezzo(prod) : 0,
+      };
+      if (entry.propId) {
+        ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
+      } else {
+        ops.push(proxyPost(TABLE_PROPOSTE_IDX, fields).then(res=>{
+          if (res.id) {
+            allProposte.push(res);
+            idxCartSelIds.set(prodId, { ...entry, propId: res.id });
+          }
+        }));
+      }
     }
+    // Elimina proposte rimosse
+    const daEliminare = allProposte.filter(p => {
+      const cl = p.fields[FLD_IDX_CONTATTO];
+      const pl = p.fields[FLD_IDX_PRODOTTO];
+      return Array.isArray(cl) && cl.some(c=>c.id===idxCartRecId)
+          && Array.isArray(pl) && pl.length > 0
+          && !idxCartSelIds.has(pl[0].id);
+    });
+    daEliminare.forEach(p => {
+      ops.push(fetch(`${PROXY}?table=${TABLE_PROPOSTE_IDX}&recordId=${p.id}`, {method:'DELETE'}));
+      allProposte = allProposte.filter(x=>x.id!==p.id);
+    });
+    await Promise.all(ops);
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
     refreshDrawer();
-  } catch(e) { showToast('❌ Errore', true); }
+  } catch(e) { showToast('❌ Errore: '+e.message, true); }
 }
 
 // ── CALENDARIO ─────────────────────────────────────────────────
