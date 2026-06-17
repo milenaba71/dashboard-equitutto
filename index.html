@@ -453,13 +453,18 @@ document.addEventListener('click', function(e) {
 });
 
 // ── Drawer ─────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
+let currentPage = 0;
+let currentLista = [];
+
 function openDrawer(tipo, titolo, colore) {
   if (activeKpi === tipo) { closeDrawer(); return; }
   activeKpi = tipo;
+  currentPage = 0;
   document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
   const kpiEl = $('kpi-' + tipo);
   if (kpiEl) kpiEl.classList.add('active');
-  const lista = getListaByTipo(tipo);
+  currentLista = getListaByTipo(tipo);
   const drawer = $('drawer');
   drawer.classList.add('open');
   drawer.innerHTML = `
@@ -467,39 +472,89 @@ function openDrawer(tipo, titolo, colore) {
       <div style="display:flex;align-items:center;gap:8px">
         <div style="width:10px;height:10px;border-radius:50%;background:${colore}"></div>
         <span class="drawer-title">${titolo}</span>
-        <span class="drawer-count" id="drawer-count">${lista.length} contatti</span>
+        <span class="drawer-count" id="drawer-count">${currentLista.length} contatti</span>
       </div>
       <button class="drawer-close" onclick="closeDrawer()">✕</button>
     </div>
     <div class="drawer-body">
       <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)">
-      <div id="drawer-table">${renderTable(lista)}</div>
+      <div id="drawer-table"></div>
+      <div id="pagination-bar"></div>
     </div>`;
+  renderPage();
   setTimeout(() => drawer.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+}
+
+function renderPage() {
+  const start = currentPage * PAGE_SIZE;
+  const slice = currentLista.slice(start, start + PAGE_SIZE);
+  const tbl = $('drawer-table');
+  if (tbl) tbl.innerHTML = renderTable(slice);
+  renderPaginationBar();
+}
+
+function renderPaginationBar() {
+  const bar  = $('pagination-bar');
+  if (!bar) return;
+  const total = currentLista.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { bar.innerHTML = ''; return; }
+
+  const start = currentPage * PAGE_SIZE + 1;
+  const end   = Math.min((currentPage + 1) * PAGE_SIZE, total);
+
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;border-top:1px solid var(--border)">
+      <button onclick="goToPage(${currentPage - 1})"
+        ${currentPage === 0 ? 'disabled' : ''}
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:${currentPage === 0 ? 'not-allowed' : 'pointer'};color:${currentPage === 0 ? 'var(--muted)' : 'var(--accent)'}">
+        ← Precedente
+      </button>
+      <div style="font-size:13px;color:var(--muted);text-align:center">
+        <strong style="color:var(--accent)">${start}–${end}</strong> di <strong>${total}</strong>
+        <div style="font-size:11px;margin-top:2px">Pagina ${currentPage + 1} di ${pages}</div>
+      </div>
+      <button onclick="goToPage(${currentPage + 1})"
+        ${currentPage >= pages - 1 ? 'disabled' : ''}
+        style="background:${currentPage < pages - 1 ? 'var(--accent)' : 'var(--surface2)'};border:1px solid ${currentPage < pages - 1 ? 'var(--accent)' : 'var(--border)'};color:${currentPage < pages - 1 ? '#fff' : 'var(--muted)'};border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:${currentPage >= pages - 1 ? 'not-allowed' : 'pointer'}">
+        Successivo →
+      </button>
+    </div>`;
+}
+
+function goToPage(page) {
+  const pages = Math.ceil(currentLista.length / PAGE_SIZE);
+  if (page < 0 || page >= pages) return;
+  currentPage = page;
+  renderPage();
+  $('drawer-table')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 function closeDrawer() {
   $('drawer').classList.remove('open');
   document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
   activeKpi = null;
+  currentPage = 0;
+  currentLista = [];
 }
 
 function refreshDrawer() {
   if (!activeKpi) return;
-  const lista = getListaByTipo(activeKpi);
-  const tbl = $('drawer-table');
-  if (tbl) tbl.innerHTML = renderTable(lista);
+  currentLista = getListaByTipo(activeKpi);
   const cnt = $('drawer-count');
-  if (cnt) cnt.textContent = lista.length + ' contatti';
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
 }
 
 function filterDrawer(q) {
   const ql = q.toLowerCase();
-  const lista = getListaByTipo(activeKpi).filter(r =>
+  currentLista = getListaByTipo(activeKpi).filter(r =>
     JSON.stringify(r.fields).toLowerCase().includes(ql)
   );
-  $('drawer-table').innerHTML = renderTable(lista);
-  $('drawer-count').textContent = lista.length + ' contatti';
+  currentPage = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
 }
 
 function getListaByTipo(tipo) {
