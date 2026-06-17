@@ -748,10 +748,15 @@ async function loadData(utente) {
     ]);
 
     // Salva prodotti e proposte globalmente
-    allProdotti = prodotti;
+    allProdotti = prodotti.map(p => ({
+      ...p,
+      fields: p.fields || p.cellValuesByFieldId || {}
+    }));
     window.allProposteIdx = proposte;
-    console.log('📦 Proposte nuove:', proposte.length, '| Prodotti caricati:', allProdotti.length);
-    if (proposte[0]) console.log('📦 Prima proposta:', JSON.stringify(proposte[0].fields));
+    // Cerca KITNOLO 41GG per verifica
+    const testProd = allProdotti.find(x=>x.id==='recpDBc0npmCUTHuy');
+    console.log('🔍 Test KITNOLO 41GG:', testProd ? `trovato prezzo=${prodPrezzo(testProd)}` : 'NON TROVATO');
+    console.log('🔍 Totale prodotti:', allProdotti.length, '| Primo:', allProdotti[0]?.id);
 
     // Forza refresh drawer se aperto
     if (activeKpi) refreshDrawer();
