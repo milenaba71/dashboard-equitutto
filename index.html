@@ -249,7 +249,7 @@ const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
 const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
 const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
 const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
-const FLD_IDX_PRODOTTO    = 'fldfndNWIdnQWTvmE'; // PRODOTTO → negozio
+const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 
@@ -302,17 +302,27 @@ function getPropField(p, fieldId, ...names) {
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
-    const cl = getPropField(p, FLD_IDX_CONTATTO, 'CONTATTO', 'Contatto');
+    const f = p.fields || {};
+    // Il campo CONTATTO può avere nomi diversi
+    const cl = f[FLD_IDX_CONTATTO] || f['CONTATTO'] || f['Contatto']
+            || f['fldgWb7KAXQ1i5sRC'];
     return Array.isArray(cl) && cl.some(c => c.id === recId);
   });
 }
+
+function getProdottoDaProposta(p) {
+  const f = p.fields || {};
+  // Il campo prodotto si chiama "negozio" (fldpVAKpMGRRjnDnt)
+  return f[FLD_IDX_PRODOTTO] || f['negozio'] || f['PRODOTTO'] || f['fldfndNWIdnQWTvmE'];
+}
+
 function getValoreProposte(props) {
   return props.reduce((s, p) => {
-    // Campo PRODOTTO contiene il link al negozio
-    const pl     = getPropField(p, FLD_IDX_PRODOTTO, 'PRODOTTO', 'Prodotto', 'negozio');
+    const pl     = getProdottoDaProposta(p);
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
     const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
-    const qta    = getPropField(p, FLD_IDX_QTA, 'Quantità', 'Quantita') || 1;
+    const f      = p.fields || {};
+    const qta    = f[FLD_IDX_QTA] || f['Quantità'] || f['Quantita'] || 1;
     return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
@@ -478,6 +488,13 @@ function openDrawer(tipo, titolo, colore) {
     </div>
     <div class="drawer-body">
       <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:700;color:var(--accent)">📅 Data creazione:</span>
+        <input type="date" id="filter-da" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()">
+        <span style="font-size:12px;color:var(--muted)">→</span>
+        <input type="date" id="filter-a" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()">
+        <button onclick="clearDateFilter()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--muted);cursor:pointer">✕</button>
+      </div>
       <div id="drawer-table"></div>
       <div id="pagination-bar"></div>
     </div>`;
@@ -503,22 +520,42 @@ function renderPaginationBar() {
   const start = currentPage * PAGE_SIZE + 1;
   const end   = Math.min((currentPage + 1) * PAGE_SIZE, total);
 
+  // Genera i numeri pagina — mostra max 5 intorno alla pagina corrente
+  let pageNums = [];
+  const delta = 2;
+  for (let i = 0; i < pages; i++) {
+    if (i === 0 || i === pages-1 || (i >= currentPage-delta && i <= currentPage+delta)) {
+      pageNums.push(i);
+    }
+  }
+  // Aggiunge "..." dove ci sono salti
+  let pageButtons = '';
+  let prev = -1;
+  for (const i of pageNums) {
+    if (prev !== -1 && i - prev > 1) {
+      pageButtons += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+    }
+    pageButtons += `<button onclick="goToPage(${i})"
+      style="min-width:32px;height:32px;border-radius:6px;border:1px solid ${i===currentPage?'var(--accent)':'var(--border)'};background:${i===currentPage?'var(--accent)':'var(--surface2)'};color:${i===currentPage?'#fff':'var(--text)'};font-size:13px;font-weight:${i===currentPage?'800':'500'};cursor:pointer">
+      ${i+1}
+    </button>`;
+    prev = i;
+  }
+
   bar.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;border-top:1px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0;margin-top:8px;border-top:1px solid var(--border);flex-wrap:wrap">
       <button onclick="goToPage(${currentPage - 1})"
         ${currentPage === 0 ? 'disabled' : ''}
-        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:${currentPage === 0 ? 'not-allowed' : 'pointer'};color:${currentPage === 0 ? 'var(--muted)' : 'var(--accent)'}">
-        ← Precedente
+        style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${currentPage===0?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${currentPage===0?'not-allowed':'pointer'}">
+        ←
       </button>
-      <div style="font-size:13px;color:var(--muted);text-align:center">
-        <strong style="color:var(--accent)">${start}–${end}</strong> di <strong>${total}</strong>
-        <div style="font-size:11px;margin-top:2px">Pagina ${currentPage + 1} di ${pages}</div>
-      </div>
+      ${pageButtons}
       <button onclick="goToPage(${currentPage + 1})"
-        ${currentPage >= pages - 1 ? 'disabled' : ''}
-        style="background:${currentPage < pages - 1 ? 'var(--accent)' : 'var(--surface2)'};border:1px solid ${currentPage < pages - 1 ? 'var(--accent)' : 'var(--border)'};color:${currentPage < pages - 1 ? '#fff' : 'var(--muted)'};border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:${currentPage >= pages - 1 ? 'not-allowed' : 'pointer'}">
-        Successivo →
+        ${currentPage >= pages-1 ? 'disabled' : ''}
+        style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${currentPage>=pages-1?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${currentPage>=pages-1?'not-allowed':'pointer'}">
+        →
       </button>
+      <span style="font-size:12px;color:var(--muted);margin-left:8px">${start}–${end} di ${total}</span>
     </div>`;
 }
 
@@ -588,17 +625,6 @@ function getListaByTipo(tipo) {
 
 function renderTable(lista) {
   if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
-
-  // Barra filtri data
-  const filterBar = `
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:12px 16px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
-      <span style="font-size:12px;font-weight:700;color:var(--accent)">📅 Filtra per data creazione:</span>
-      <input type="date" id="filter-da" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()" placeholder="Dal">
-      <span style="font-size:12px;color:var(--muted)">→</span>
-      <input type="date" id="filter-a" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()" placeholder="Al">
-      <button onclick="clearDateFilter()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer">✕ Cancella</button>
-      <span id="filter-count" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
-    </div>`;
 
   const rows = lista.map(r => {
     const id       = r.id;
@@ -679,7 +705,6 @@ function renderTable(lista) {
   }).join('');
 
   return `<div style="overflow-x:auto">
-    ${filterBar}
     <table class="contact-table" id="contact-tbl">
       <tr>
         <th>Nome</th>
@@ -717,12 +742,13 @@ function openContactDetail(recId) {
 
   const prodHTML = mieProposte.length > 0
     ? mieProposte.map(p => {
-        const prodLinks = pField(p, FLD_IDX_PRODOTTO);
+        const prodLinks = getProdottoDaProposta(p);
         const prodId    = prodLinks?.[0]?.id;
         const prod      = (allProdotti||[]).find(x=>x.id===prodId);
         const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
         const prezzo    = prod ? prodPrezzo(prod) : 0;
-        const qta       = pField(p, FLD_IDX_QTA) || 1;
+        const f         = p.fields || {};
+        const qta       = f[FLD_IDX_QTA] || f['Quantità'] || 1;
         const totale    = prezzo * qta;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1">
@@ -860,7 +886,12 @@ async function loadData(utente) {
     ]);
 
     allProdotti = prodotti;
-    allProposte = proposteRaw; // già normalizzate dal Worker
+    // Normalizza proposte — unisce fields e cellValuesByFieldId
+    allProposte = proposteRaw.map(p => {
+      const cv = p.cellValuesByFieldId || {};
+      const f  = p.fields || {};
+      return { ...p, fields: { ...cv, ...f } };
+    });
 
     // Aggiorna orario ultimo sync
     const sync = document.getElementById('last-sync');
@@ -965,8 +996,8 @@ async function loadData(utente) {
           <div class="kpi-ico">💰</div><div class="kpi-val">${getListaByTipo('vendite').length}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi red"    id="kpi-persi"        onclick="openDrawer('persi','Contatti persi','#e74c3c')">
           <div class="kpi-ico">❌</div><div class="kpi-val">${getListaByTipo('persi').length}</div><div class="kpi-lbl">Non interessati</div><div class="kpi-hint">Clicca per vedere →</div></div>
-        <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivi','#003d7a')" style="--kpi-before:#0072bc">
-          <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivi</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#0072bc">
+          <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivati</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi orange" id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')">
           <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi green" id="kpi-proposti" onclick="openDrawer('proposti','Prodotti proposti','#27ae60')" style="--kpi-before:#34c77b">
@@ -1072,13 +1103,14 @@ function openProdottiPanel(recId) {
   // Carica proposte esistenti dalla nuova tabella
   idxCartSelIds = new Map();
   getProposteContatto(recId).forEach(p => {
-    const prodLinks = pField(p, FLD_IDX_PRODOTTO);
+    const prodLinks = getProdottoDaProposta(p);
     if (prodLinks?.length > 0) {
       const prodId = prodLinks[0].id;
       const prod   = allProdotti.find(x=>x.id===prodId);
+      const f      = p.fields || {};
       idxCartSelIds.set(prodId, {
         propId: p.id,
-        qta:    pField(p, FLD_IDX_QTA) || 1,
+        qta:    f[FLD_IDX_QTA] || f['Quantità'] || 1,
         prezzo: prod ? prodPrezzo(prod) : 0,
       });
     }
@@ -1281,10 +1313,11 @@ async function saveIdxCart() {
 
     // Ricarica proposte aggiornate da Airtable
     const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
-    allProposte = nuoveProposte.map(p => ({
-      ...p,
-      fields: p.fields && Object.keys(p.fields).length > 0 ? p.fields : (p.cellValuesByFieldId || {})
-    }));
+    allProposte = nuoveProposte.map(p => {
+      const cv = p.cellValuesByFieldId || {};
+      const f  = p.fields || {};
+      return { ...p, fields: { ...cv, ...f } };
+    });
 
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
