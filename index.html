@@ -225,9 +225,16 @@
         <div class="brand-text">Dashboard Commerciale</div>
       </div>
     </div>
-    <div class="user-chip">
-      <div class="avatar" id="av"></div>
-      <div class="user-name" id="un"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="last-sync" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
+      <button onclick="refreshAll()" id="btn-refresh"
+        style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">
+        🔄 Aggiorna
+      </button>
+      <div class="user-chip">
+        <div class="avatar" id="av"></div>
+        <div class="user-name" id="un"></div>
+      </div>
     </div>
   </div>
   <div class="main" id="main">
@@ -320,6 +327,22 @@ async function proxyPatch(table, recordId, fields) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields }),
   });
+  return res.json();
+}
+
+async function proxyPost(table, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
+}
+
+async function proxyDelete(table, recordId) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, { method: 'DELETE' });
   return res.json();
 }
 
@@ -716,7 +739,28 @@ async function init() {
   $('dashboard').style.display      = 'block';
   $('av').textContent = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   $('un').textContent = utente.nome.split(' ')[0];
+  _currentUtente = utente;
   await loadData(utente);
+
+  // Auto-refresh ogni 5 minuti
+  setInterval(() => refreshAll(), 5 * 60 * 1000);
+}
+
+let _currentUtente = null;
+
+async function refreshAll() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.textContent = '⏳ Carico...'; btn.disabled = true; }
+  try {
+    await loadData(_currentUtente);
+    const sync = document.getElementById('last-sync');
+    if (sync) sync.textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+    showToast('✅ Dati aggiornati!');
+  } catch(e) {
+    showToast('❌ Errore aggiornamento', true);
+  } finally {
+    if (btn) { btn.textContent = '🔄 Aggiorna'; btn.disabled = false; }
+  }
 }
 
 async function loadData(utente) {
@@ -742,6 +786,10 @@ async function loadData(utente) {
 
     allProdotti = prodotti;
     allProposte = proposteRaw;
+
+    // Aggiorna orario ultimo sync
+    const sync = document.getElementById('last-sync');
+    if (sync) sync.textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
 
     // Filtra per Codice Equipoint
     allMiei = rubrica.filter(r => {
@@ -1137,7 +1185,7 @@ async function saveIdxCart() {
           && !idxCartSelIds.has(pl[0].id);
     });
     daEliminare.forEach(p => {
-      ops.push(fetch(`${PROXY}?table=${TABLE_PROPOSTE_IDX}&recordId=${p.id}`, {method:'DELETE'}));
+      ops.push(proxyDelete(TABLE_PROPOSTE_IDX, p.id));
       allProposte = allProposte.filter(x=>x.id!==p.id);
     });
     await Promise.all(ops);
