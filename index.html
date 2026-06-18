@@ -1269,10 +1269,10 @@ async function saveIdxCart() {
     for (const [prodId, entry] of idxCartSelIds.entries()) {
       const prod   = allProdotti.find(p=>p.id===prodId);
       const fields = {
-        [FLD_IDX_CONTATTO]: [idxCartRecId],
-        [FLD_IDX_PRODOTTO]: [prodId],
-        [FLD_IDX_QTA]:      entry.qta||1,
-        [FLD_IDX_PREZZO]:   prod ? prodPrezzo(prod) : 0,
+        'CONTATTO':        [idxCartRecId],
+        'negozio':         [prodId],
+        'Quantità':        entry.qta||1,
+        'Prezzo unitario': prod ? prodPrezzo(prod) : 0,
       };
       if (entry.propId) {
         ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
