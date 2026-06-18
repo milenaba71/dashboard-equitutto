@@ -394,7 +394,13 @@ let allProdNegozio = [];
 
 async function loadAll() {
   [allRubrica, allObiettivi, allProdNegozio, allProposte] = await Promise.all([
-    proxyGet('tbllNx7iSqpAtbQde', 'maxRecords=5000'),
+    proxyGet('tbllNx7iSqpAtbQde',
+      'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
+      '&fields[]=Codice+Equipoint&fields[]=Preso+appuntamento' +
+      '&fields[]=Data+Vendita&fields[]=data+scadenza+noleggio' +
+      '&fields[]=STATO+NOLEGGIO&fields[]=DATA+ATTIVITA' +
+      '&fields[]=Valore+raggiunto&fields[]=recapito+telefonico' +
+      '&fields[]=Notes&fields[]=DATA+DI+CREAZIONE+DATO&maxRecords=5000'),
     proxyGet('tblTAA7KFUVtcPnZt',
       'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
       '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
