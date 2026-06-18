@@ -504,6 +504,7 @@ function openDrawer(tipo, titolo, colore) {
 function renderPage() {
   const start = currentPage * PAGE_SIZE;
   const slice = currentLista.slice(start, start + PAGE_SIZE);
+  console.log(`📄 renderPage: lista=${currentLista.length}, pagina=${currentPage}, slice=${slice.length}, pages=${Math.ceil(currentLista.length/PAGE_SIZE)}`);
   const tbl = $('drawer-table');
   if (tbl) tbl.innerHTML = renderTable(slice);
   renderPaginationBar();
