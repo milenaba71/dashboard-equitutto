@@ -303,17 +303,16 @@ function getPropField(p, fieldId, ...names) {
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
     const f = p.fields || {};
-    // Il campo CONTATTO può avere nomi diversi
-    const cl = f[FLD_IDX_CONTATTO] || f['CONTATTO'] || f['Contatto']
-            || f['fldgWb7KAXQ1i5sRC'];
+    // Cerca in tutti i possibili campi contatto
+    const cl = f['fldgWb7KAXQ1i5sRC'] || f['CONTATTO'] || f['Contatto']
+            || f['fldBq5MM457raLunf'];
     return Array.isArray(cl) && cl.some(c => c.id === recId);
   });
 }
 
 function getProdottoDaProposta(p) {
   const f = p.fields || {};
-  // Il campo prodotto si chiama "negozio" (fldpVAKpMGRRjnDnt)
-  return f[FLD_IDX_PRODOTTO] || f['negozio'] || f['PRODOTTO'] || f['fldfndNWIdnQWTvmE'];
+  return f['fldpVAKpMGRRjnDnt'] || f['negozio'] || f['PRODOTTO'];
 }
 
 function getValoreProposte(props) {
@@ -322,7 +321,7 @@ function getValoreProposte(props) {
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
     const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
     const f      = p.fields || {};
-    const qta    = f[FLD_IDX_QTA] || f['Quantità'] || f['Quantita'] || 1;
+    const qta    = f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1;
     return s + ((prod ? prodPrezzo(prod) : 0) * qta);
   }, 0);
 }
@@ -1100,7 +1099,6 @@ function openProdottiPanel(recId) {
   const rec    = allMiei.find(r=>r.id===recId);
   if (!rec) return;
 
-  // Carica proposte esistenti dalla nuova tabella
   idxCartSelIds = new Map();
   getProposteContatto(recId).forEach(p => {
     const prodLinks = getProdottoDaProposta(p);
@@ -1110,7 +1108,7 @@ function openProdottiPanel(recId) {
       const f      = p.fields || {};
       idxCartSelIds.set(prodId, {
         propId: p.id,
-        qta:    f[FLD_IDX_QTA] || f['Quantità'] || 1,
+        qta:    f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1,
         prezzo: prod ? prodPrezzo(prod) : 0,
       });
     }
