@@ -923,6 +923,7 @@ function renderRubrica() {
           </tr></thead>
           <tbody id="rb-body"></tbody>
         </table>
+        <div id="admin-pbar"></div>
       </div>
     </div>`;
   filterRubrica();
@@ -1066,10 +1067,14 @@ function filterRubrica() {
     return true;
   });
 
+  adminPage = 0;
   sortRubrica(sortField, true);
   const cnt = $('rubrica-count');
   if (cnt) cnt.textContent = `${rubricaFiltrata.length.toLocaleString('it-IT')} risultati`;
 }
+
+let adminPage = 0;
+const ADMIN_PAGE_SIZE = 20;
 
 function sortRubrica(field, keepDir=false) {
   if (!keepDir) sortDir = sortField===field ? -sortDir : -1;
@@ -1079,8 +1084,14 @@ function sortRubrica(field, keepDir=false) {
     const vb = b.fields[field]||b.createdTime||'';
     return sortDir * String(va).localeCompare(String(vb));
   });
+  adminPage = 0;
+  renderAdminPage();
+}
 
-  const rows = rubricaFiltrata.slice(0,500).map(r => {
+function renderAdminPage() {
+  const start = adminPage * ADMIN_PAGE_SIZE;
+  const slice = rubricaFiltrata.slice(start, start + ADMIN_PAGE_SIZE);
+  const rows = slice.map(r => {
     const codice   = r.fields['Codice Equipoint'];
     const val      = typeof codice==='object' ? (codice?.name||'') : (codice||'');
     const nomeComm = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
@@ -1145,6 +1156,47 @@ function sortRubrica(field, keepDir=false) {
 
   const tbody = $('rb-body');
   if (tbody) tbody.innerHTML = rows || '<tr><td colspan="8" class="empty">Nessun risultato</td></tr>';
+
+  // Paginazione
+  const total = rubricaFiltrata.length;
+  const pages = Math.ceil(total / ADMIN_PAGE_SIZE);
+  const pbar  = $('admin-pbar');
+  if (!pbar) return;
+  if (pages <= 1) { pbar.innerHTML=''; return; }
+
+  const s = adminPage * ADMIN_PAGE_SIZE + 1;
+  const e = Math.min((adminPage+1)*ADMIN_PAGE_SIZE, total);
+  let btns = '';
+  const delta = 2;
+  let prev = -1;
+  for (let i=0; i<pages; i++) {
+    if (i===0||i===pages-1||(i>=adminPage-delta&&i<=adminPage+delta)) {
+      if (prev!==-1&&i-prev>1) btns+=`<span style="color:var(--muted);padding:0 4px">…</span>`;
+      btns+=`<button onclick="goAdminPage(${i})"
+        style="min-width:32px;height:32px;border-radius:6px;border:1px solid ${i===adminPage?'var(--accent)':'var(--border)'};background:${i===adminPage?'var(--accent)':'var(--surface2)'};color:${i===adminPage?'#fff':'var(--text)'};font-size:13px;font-weight:${i===adminPage?'800':'500'};cursor:pointer">
+        ${i+1}</button>`;
+      prev=i;
+    }
+  }
+  pbar.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 0;border-top:1px solid var(--border);flex-wrap:wrap">
+    <button onclick="goAdminPage(${adminPage-1})" ${adminPage===0?'disabled':''} style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${adminPage===0?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${adminPage===0?'not-allowed':'pointer'}">←</button>
+    ${btns}
+    <button onclick="goAdminPage(${adminPage+1})" ${adminPage>=pages-1?'disabled':''} style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${adminPage>=pages-1?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${adminPage>=pages-1?'not-allowed':'pointer'}">→</button>
+    <span style="font-size:12px;color:var(--muted);margin-left:8px">${s}–${e} di ${total}</span>
+  </div>`;
+}
+
+function goAdminPage(page) {
+  const pages = Math.ceil(rubricaFiltrata.length / ADMIN_PAGE_SIZE);
+  if (page<0||page>=pages) return;
+  adminPage = page;
+  renderAdminPage();
+  $('rb-body')?.closest('table')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function filterRubricaAndRender() {
+  adminPage = 0;
+  sortRubrica(sortField, true);
 }
 
 // ══════════════════════════════════════════════════════════════
