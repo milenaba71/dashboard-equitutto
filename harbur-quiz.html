@@ -262,25 +262,72 @@ async function registra(){
   const indir=document.getElementById("f-indirizzo").value.trim();
   const regione=document.getElementById("f-regione").value.trim();
   const area=document.getElementById("f-area").value;
+
+  // Reset errori
   ["nome","cognome","email","area"].forEach(id=>document.getElementById("e-"+id).classList.remove("on"));
+  ["f-nome","f-cognome","f-email"].forEach(id=>{document.getElementById(id).style.borderColor="";});
+  document.getElementById("f-area").style.borderColor="";
   document.getElementById("alert-reg").className="alert";
+
+  // Validazione
   let ok=true;
   if(!nome){mark("nome","f-nome");ok=false;}
   if(!cognome){mark("cognome","f-cognome");ok=false;}
   if(!email||!/^[^@]+@[^@]+\.[^@]+$/.test(email)){mark("email","f-email");ok=false;}
   if(!area){document.getElementById("e-area").classList.add("on");document.getElementById("f-area").style.borderColor="var(--errore)";ok=false;}
   if(!ok)return;
+
   const btn=document.getElementById("btn-reg");
   document.getElementById("lbl-reg").textContent="Salvataggio…";
   btn.disabled=true;
-  // Salva SEMPRE i dati indipendentemente dal quiz
+
+  // Payload Airtable
+  const payload = {
+    records:[{fields:{
+      "fld6bfoJlK5cIiAp8": nome+" "+cognome,
+      "fldO0RdkbUbkWFPLB": email,
+      "fldddgGgkQbofsaCg": tel,
+      "fldv5sC8e738SQbhp": indir,
+      "fldQt9tuBAM9p3J0B": regione,
+      "fld5EpJuoZLFEqeJ6": "HARBUR",
+      "fldjYetGgeIZmd5yD": "HARBUR - "+area
+    }}]
+  };
+
   try{
-    await fetch("https://api.airtable.com/v0/"+BASE_ID+"/"+TABLE_ID,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+API_KEY},
-      body:JSON.stringify({records:[{fields:{[F.nome]:nome+" "+cognome,[F.email]:email,[F.tel]:tel,[F.indir]:indir,[F.regione]:regione,[F.status]:"HARBUR",[F.origine]:"HARBUR - "+area}}]})
-    });
-  }catch(e){console.warn("Airtable:",e.message);}
+    const res = await fetch(
+      "https://api.airtable.com/v0/"+BASE_ID+"/"+TABLE_ID,
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+API_KEY
+        },
+        body:JSON.stringify(payload)
+      }
+    );
+    if(!res.ok){
+      const errData = await res.json();
+      console.error("Airtable error:", errData);
+      // Mostra errore ma vai avanti
+      const al=document.getElementById("alert-reg");
+      al.textContent="⚠️ Errore salvataggio: "+(errData?.error?.message||"API error")+". Il quiz parte comunque.";
+      al.className="alert warn";
+      setTimeout(()=>{loadQuestions();goQuiz();},2000);
+      return;
+    }
+    const saved = await res.json();
+    console.log("Salvato in Airtable:", saved.records[0].id);
+  }catch(e){
+    console.error("Fetch error:", e.message);
+    // Errore rete - vai avanti comunque
+    const al=document.getElementById("alert-reg");
+    al.textContent="⚠️ Connessione non riuscita. Il quiz parte comunque.";
+    al.className="alert warn";
+    setTimeout(()=>{loadQuestions();goQuiz();},1500);
+    return;
+  }
+
   loadQuestions();
   goQuiz();
 }
