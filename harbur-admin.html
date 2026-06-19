@@ -382,7 +382,7 @@ function renderR() {
     var s = r.fields['fld5EpJuoZLFEqeJ6'] || '';
     var col = sc[s] || '#9e9e9e';
     html += '<div class="rr">' +
-      '<input type="checkbox" ' + (sel.has(r.id) ? 'checked' : '') + ' onchange="togSel('' + r.id + '',this.checked)">' +
+      '<input type="checkbox" ' + (sel.has(r.id) ? 'checked' : '') + ' onchange="togSel(\"' + r.id + '\",this.checked)">' +
       '<div class="rn">' + n + '<br><span class="rs">' + e + (t ? ' · ' + t : '') + '</span></div>' +
       '<span class="rp" style="background:' + col + '">' + (s || '—') + '</span></div>';
   }
