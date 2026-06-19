@@ -311,10 +311,21 @@ function getPropField(p, fieldId, ...names) {
 function getProposteContatto(recId) {
   return allProposte.filter(p => {
     const f = p.fields || {};
-    // Cerca in tutti i possibili campi contatto
+    // Cerca in tutti i possibili campi contatto (field ID e nome)
     const cl = f['fldgWb7KAXQ1i5sRC'] || f['CONTATTO'] || f['Contatto']
-            || f['fldBq5MM457raLunf'];
-    return Array.isArray(cl) && cl.some(c => c.id === recId);
+            || f['fldBq5MM457raLunf'] || f['Nome e cognome'] || f['contatto'];
+    if (Array.isArray(cl)) {
+      return cl.some(c => {
+        if (typeof c === 'object' && c !== null) return c.id === recId;
+        return c === recId;
+      });
+    }
+    // Caso in cui sia stringa (nome)
+    if (typeof cl === 'string') {
+      const rec = allMiei.find(r => r.id === recId);
+      return rec && cl === (rec.fields['Nome e cognome'] || '');
+    }
+    return false;
   });
 }
 
@@ -329,8 +340,14 @@ function getValoreProposte(props) {
     const prodId = Array.isArray(pl) ? pl[0]?.id : null;
     const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
     const f      = p.fields || {};
-    const qta    = f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1;
-    return s + ((prod ? prodPrezzo(prod) : 0) * qta);
+    const qta    = parseFloat(f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1);
+    // Usa prima il prezzo dal prodotto, poi il prezzo diretto dalla proposta, poi Totale riga
+    const prezzoUnitario = f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0;
+    const totaleRiga     = f['fldtdDMFRqF9FLf9v'] || f['Totale riga'] || 0;
+    const prezzo = prod ? prodPrezzo(prod) : (prezzoUnitario || 0);
+    // Se c'è il totale riga diretto, usalo; altrimenti prezzo x qta
+    const valore = totaleRiga ? parseFloat(totaleRiga) : (parseFloat(prezzo) * qta);
+    return s + valore;
   }, 0);
 }
 
@@ -903,7 +920,9 @@ async function loadData(utente) {
     allProposte = proposteRaw.map(p => {
       const cv = p.cellValuesByFieldId || {};
       const f  = p.fields || {};
-      return { ...p, fields: { ...cv, ...f } };
+      // Unisce fields e cellValuesByFieldId, con cellValuesByFieldId prioritario per i field ID
+      const merged = { ...f, ...cv };
+      return { ...p, fields: merged };
     });
 
     // Aggiorna orario ultimo sync
@@ -953,9 +972,11 @@ async function loadData(utente) {
     const noleggiScad = getListaByTipo('scadenze');
 
     // Calcola totale proposto — filtra solo proposte dei contatti di questo commerciale
-    const mieProposteAll = allProposte.filter(p =>
-      Array.isArray(p.fields[FLD_IDX_CONTATTO]) && allMiei.some(r=>r.id===p.fields[FLD_IDX_CONTATTO][0]?.id)
-    );
+    const mieProposteAll = allProposte.filter(p => {
+      const cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || p.fields['Contatto'] || [];
+      if (Array.isArray(cl)) return allMiei.some(r => cl.some(c => (typeof c === 'object' ? c.id : c) === r.id));
+      return false;
+    });
     const totProposto = getValoreProposte(mieProposteAll);
     const nConProposte = allMiei.filter(r => {
       const mieP = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(x=>x.id===r.id));
