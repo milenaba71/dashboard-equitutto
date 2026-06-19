@@ -119,7 +119,7 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
     <h2>🔐 Accesso Admin</h2>
     <p>Inserisci la password per gestire il quiz HARBUR</p>
     <div class="login-err" id="login-err">❌ Password errata. Riprova.</div>
-    <input type="password" id="pwd-input" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="pwd-input" placeholder="••••••••••" autocomplete="off" autocorrect="off" autocapitalize="off" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="btn btn-primary" style="width:100%;padding:13px;margin-top:4px;" onclick="doLogin()">🔓 Accedi</button>
     <p style="margin-top:20px;font-size:11px;color:#bbb;">Password: <strong style="color:var(--soft);">harbur2026</strong></p>
   </div>
@@ -317,6 +317,10 @@ function doLogin(){
   }
 }
 document.getElementById("pwd-input").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+// Pulisci campo password al caricamento per evitare autocomplete del browser
+window.addEventListener("load", function(){
+  setTimeout(()=>{ document.getElementById("pwd-input").value=""; }, 100);
+});
 
 // ── TABS ──────────────────────────────────────
 function showTab(id,btn){
