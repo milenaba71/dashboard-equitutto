@@ -15,11 +15,13 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Open Sans',sans-serif;background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 16px 60px;}
 
+/* HEADER */
 header{width:100%;background:var(--navy);height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;margin-bottom:40px;box-shadow:0 3px 20px rgba(11,37,69,.3);position:sticky;top:0;z-index:10;}
 .logo img{height:44px;}
 .hbadge strong{display:block;color:var(--yellow);font-family:'Raleway',sans-serif;font-weight:700;font-size:13px;text-align:right;}
-.hbadge span{font-size:11px;color:rgba(255,255,255,.4);float:right;}
+.hbadge span{font-size:11px;color:rgba(255,255,255,.4);display:block;text-align:right;}
 
+/* CARD */
 .card{background:var(--white);border-radius:16px;box-shadow:0 8px 40px rgba(11,37,69,.13);padding:44px 52px;width:100%;max-width:660px;border-top:4px solid var(--yellow);animation:fadeUp .35s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 
@@ -31,93 +33,98 @@ header{width:100%;background:var(--navy);height:76px;display:flex;align-items:ce
 .sl{flex:1;height:2px;background:var(--brd);transition:background .3s;}
 .sl.done{background:var(--navy);}
 
+/* FORM */
 .card h2{font-family:'Raleway',sans-serif;font-weight:800;font-size:26px;color:var(--navy);margin-bottom:6px;}
 .subtitle{font-size:14px;color:var(--soft);margin-bottom:28px;line-height:1.6;}
-
-/* FORM */
 .field{margin-bottom:16px;}
 label{display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.9px;}
-input,select{width:100%;padding:12px 15px;border:1.5px solid var(--brd);border-radius:8px;font-family:'Open Sans',sans-serif;font-size:15px;outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none;}
-input:focus,select:focus{border-color:var(--blue);}
+input,select{width:100%;padding:12px 15px;border:1.5px solid var(--brd);border-radius:8px;font-family:'Open Sans',sans-serif;font-size:15px;color:var(--navy);background:#fff;outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none;}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(27,79,155,.1);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .sw{position:relative;}.sw::after{content:'▾';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--soft);pointer-events:none;}
 .err{font-size:12px;color:var(--errore);margin-top:3px;display:none;}
 .err.on{display:block;}
-.alert{padding:12px 15px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;border-left:4px solid;}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;line-height:1.5;display:none;border-left:4px solid;}
 .alert.error{display:block;background:#fdecea;color:var(--errore);border-color:var(--errore);}
 .alert.warn{display:block;background:#fff8e1;color:#7a5c00;border-color:var(--yellow);}
+.alert.ok{display:block;background:#e8f5ef;color:var(--ok);border-color:var(--ok);}
 .divl{height:2px;background:linear-gradient(90deg,var(--yellow),var(--blue));border-radius:99px;opacity:.3;margin:24px 0 0;}
+
+/* BOTTONE */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 28px;border:none;border-radius:9px;font-family:'Raleway',sans-serif;font-weight:800;font-size:15px;cursor:pointer;transition:all .2s;width:100%;margin-top:10px;}
 .btn-p{background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;box-shadow:0 4px 16px rgba(27,79,155,.28);}
-.btn-p:hover{transform:translateY(-2px);}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 7px 24px rgba(27,79,155,.38);}
 .btn-p:disabled{background:#aec0cf;box-shadow:none;cursor:not-allowed;transform:none;}
+.btn-red{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;box-shadow:0 4px 16px rgba(192,57,43,.3);}
+.btn-red:hover{transform:translateY(-2px);}
 
-/* ══ QUIZ KAHOOT ══ */
+/* QUIZ KAHOOT */
 #screen-quiz{display:none;}
+.prog-wrap{margin-bottom:16px;}
+.prog-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--soft);font-weight:600;margin-bottom:5px;}
+.prog-track{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--brd);}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--blue));border-radius:99px;transition:width .4s ease;}
+.quiz-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.qnum{font-family:'Raleway',sans-serif;font-weight:800;font-size:15px;color:var(--navy);}
+.score-pill{background:var(--navy);color:var(--yellow);border-radius:99px;padding:7px 18px;font-family:'Raleway',sans-serif;font-weight:800;font-size:14px;}
 
-/* HEADER QUIZ */
-.quiz-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.quiz-hdr .qnum{font-family:'Raleway',sans-serif;font-weight:800;font-size:16px;color:var(--navy);}
-.score-live{background:var(--navy);color:var(--yellow);border-radius:99px;padding:7px 18px;font-family:'Raleway',sans-serif;font-weight:800;font-size:15px;}
-
-/* COUNTDOWN */
-.timer-wrap{margin-bottom:18px;}
-.timer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.timer-num{font-family:'Raleway',sans-serif;font-weight:900;font-size:28px;color:var(--navy);transition:color .3s;}
+/* TIMER */
+.timer-wrap{margin-bottom:16px;}
+.timer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.timer-lbl{font-size:11px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.8px;}
+.timer-num{font-family:'Raleway',sans-serif;font-weight:900;font-size:30px;color:var(--navy);transition:color .3s;min-width:44px;text-align:right;}
 .timer-num.urgent{color:var(--errore);}
 .timer-track{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--brd);}
-.timer-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--yellow),var(--blue));transition:width 1s linear,background .3s;}
+.timer-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--yellow),var(--blue));transition:width 1s linear;}
 .timer-fill.urgent{background:linear-gradient(90deg,#ff6b6b,var(--errore));}
 
-/* DOMANDA */
-.q-box{background:var(--navy);border-radius:14px;padding:28px 32px;margin-bottom:22px;min-height:90px;display:flex;align-items:center;}
-.q-box .q-txt{font-family:'Raleway',sans-serif;font-weight:800;font-size:20px;color:#fff;line-height:1.4;text-align:center;width:100%;}
+/* DOMANDA BOX */
+.q-box{background:var(--navy);border-radius:14px;padding:26px 28px;margin-bottom:20px;min-height:90px;display:flex;align-items:center;justify-content:center;}
+.q-txt{font-family:'Raleway',sans-serif;font-weight:800;font-size:20px;color:#fff;line-height:1.4;text-align:center;}
 
-/* RISPOSTE 2x2 KAHOOT */
-.answers-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.ans-btn{padding:18px 16px;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:'Raleway',sans-serif;font-weight:700;font-size:15px;color:#fff;transition:all .2s;text-align:left;line-height:1.3;}
-.ans-btn:hover:not(:disabled){transform:scale(1.02);filter:brightness(1.1);}
-.ans-btn:disabled{cursor:default;}
+/* RISPOSTE KAHOOT 2x2 */
+.ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ans-btn{padding:18px 14px;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:'Raleway',sans-serif;font-weight:700;font-size:14px;color:#fff;transition:all .18s;text-align:left;line-height:1.3;min-height:70px;}
+.ans-btn:hover:not(:disabled){transform:scale(1.03);filter:brightness(1.1);}
 .ans-btn.A{background:var(--A);}
 .ans-btn.B{background:var(--B);}
 .ans-btn.C{background:var(--C);}
 .ans-btn.D{background:var(--D);}
-.ans-btn.correct{filter:brightness(1.15);box-shadow:0 0 0 4px rgba(255,255,255,.6),0 6px 20px rgba(0,0,0,.2);transform:scale(1.03);}
-.ans-btn.wrong{opacity:.4;transform:scale(.97);}
-.ans-icon{width:34px;height:34px;border-radius:8px;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ans-btn.correct{box-shadow:0 0 0 4px rgba(255,255,255,.7),0 6px 20px rgba(0,0,0,.2);transform:scale(1.04);filter:brightness(1.15);}
+.ans-btn.wrong{opacity:.35;transform:scale(.97);}
+.ans-btn:disabled{cursor:default;}
+.ans-icon{width:32px;height:32px;border-radius:7px;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
 
-.fb-box{margin-top:16px;padding:14px 18px;border-radius:10px;font-size:14px;line-height:1.6;display:none;border-left:4px solid;}
-.fb-box.on{display:block;}
-.fb-box.ok{background:#e8f5ef;color:#145a32;border-color:var(--ok);}
-.fb-box.ko{background:#fdecea;color:var(--errore);border-color:var(--errore);}
-.fb-box.timeout{background:#fff3cd;color:#7a5c00;border-color:var(--yellow);}
+/* FEEDBACK */
+.fb{margin-top:14px;padding:13px 16px;border-radius:10px;font-size:14px;line-height:1.6;display:none;border-left:4px solid;}
+.fb.on{display:block;}
+.fb.ok{background:#e8f5ef;color:#145a32;border-color:var(--ok);}
+.fb.ko{background:#fdecea;color:var(--errore);border-color:var(--errore);}
+.fb.timeout{background:#fff8e1;color:#7a5c00;border-color:var(--yellow);}
 
-.nav-btn{margin-top:20px;}
+/* BTN ROW */
+.btn-row{display:flex;gap:10px;margin-top:18px;}
+.btn-row .btn{margin-top:0;}
 
-/* BARRA PROGRESSO */
-.prog-wrap{margin-bottom:6px;}
-.prog-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);font-weight:600;margin-bottom:5px;}
-.prog-track{height:5px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--brd);}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--blue));border-radius:99px;transition:width .4s ease;}
-
-/* ══ RISULTATO ══ */
+/* RISULTATO */
 #screen-result{display:none;text-align:center;}
-.result-icon{font-size:80px;margin-bottom:16px;animation:pop .5s ease;}
+.res-icon{font-size:72px;margin-bottom:12px;display:block;animation:pop .5s ease;}
 @keyframes pop{from{transform:scale(0);}to{transform:scale(1);}}
-.score-big{font-family:'Raleway',sans-serif;font-weight:900;font-size:56px;color:var(--navy);line-height:1;}
-.score-sub{font-size:14px;color:var(--soft);margin-bottom:8px;}
-.score-pct{font-family:'Raleway',sans-serif;font-weight:800;font-size:22px;margin-bottom:24px;}
+.res-score{font-family:'Raleway',sans-serif;font-weight:900;font-size:52px;color:var(--navy);line-height:1;}
+.res-sub{font-size:13px;color:var(--soft);margin-bottom:6px;}
+.res-pct{font-family:'Raleway',sans-serif;font-weight:800;font-size:20px;color:var(--blue);margin-bottom:20px;}
+.winner-box{background:linear-gradient(135deg,var(--yellow),#f39c12);color:var(--navy);border-radius:12px;padding:18px 24px;margin-bottom:20px;font-family:'Raleway',sans-serif;font-weight:800;font-size:16px;line-height:1.5;}
 #res-title{font-family:'Raleway',sans-serif;font-weight:800;font-size:24px;color:var(--navy);margin-bottom:8px;}
-#res-msg{font-size:14px;color:var(--soft);line-height:1.7;margin-bottom:28px;max-width:400px;margin-left:auto;margin-right:auto;}
-.winner-badge{background:linear-gradient(135deg,#f5c800,#f39c12);color:var(--navy);border-radius:12px;padding:16px 24px;margin-bottom:24px;font-family:'Raleway',sans-serif;font-weight:800;font-size:16px;}
+#res-msg{font-size:14px;color:var(--soft);line-height:1.7;margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto;}
 
 @media(max-width:560px){
   header{padding:0 18px;height:62px;}.logo img{height:34px;}
   .card{padding:26px 18px;}
-  .q-box .q-txt{font-size:17px;}
-  .answers-grid{grid-template-columns:1fr;}
-  .ans-btn{font-size:14px;}
+  .q-txt{font-size:17px;}
+  .ans-grid{grid-template-columns:1fr;}
+  .ans-btn{font-size:13px;padding:14px 12px;}
   .row2{grid-template-columns:1fr;}
+  .btn-row{flex-direction:column;}
 }
 </style>
 </head>
@@ -133,7 +140,7 @@ input:focus,select:focus{border-color:var(--blue);}
   </div>
 </header>
 
-<!-- ══ REGISTRAZIONE ══ -->
+<!-- REGISTRAZIONE -->
 <div class="card" id="screen-reg">
   <div class="steps">
     <div class="sd active">1</div><div class="sl"></div>
@@ -141,21 +148,28 @@ input:focus,select:focus{border-color:var(--blue);}
     <div class="sd">3</div>
   </div>
   <h2>Partecipa al Quiz!</h2>
-  <p class="subtitle">Registrati e rispondi correttamente a <strong>tutte e 15 le domande</strong> per vincere il premio Equistasi®!</p>
+  <p class="subtitle">Registrati e rispondi correttamente a <strong>tutte e 15 le domande</strong> per vincere il premio Equistasi®! ⏱ Hai 30 secondi per risposta.</p>
   <div id="alert-reg" class="alert"></div>
   <div class="row2">
-    <div class="field"><label>Nome *</label><input type="text" id="f-nome" placeholder="Mario"><span class="err" id="e-nome">Obbligatorio</span></div>
-    <div class="field"><label>Cognome *</label><input type="text" id="f-cognome" placeholder="Rossi"><span class="err" id="e-cognome">Obbligatorio</span></div>
+    <div class="field"><label>Nome *</label><input type="text" id="f-nome" placeholder="Mario" autocomplete="given-name"><span class="err" id="e-nome">Obbligatorio</span></div>
+    <div class="field"><label>Cognome *</label><input type="text" id="f-cognome" placeholder="Rossi" autocomplete="family-name"><span class="err" id="e-cognome">Obbligatorio</span></div>
   </div>
-  <div class="field"><label>Email *</label><input type="email" id="f-email" placeholder="mario@email.it"><span class="err" id="e-email">Email non valida</span></div>
-  <div class="field"><label>Telefono</label><input type="tel" id="f-tel" placeholder="+39 333 1234567"></div>
+  <div class="field"><label>Email *</label><input type="email" id="f-email" placeholder="mario@email.it" autocomplete="email"><span class="err" id="e-email">Email non valida</span></div>
+  <div class="field"><label>Telefono</label><input type="tel" id="f-tel" placeholder="+39 333 1234567" autocomplete="tel"></div>
   <div class="row2">
-    <div class="field"><label>Città</label><input type="text" id="f-indirizzo" placeholder="Milano"></div>
+    <div class="field"><label>Città</label><input type="text" id="f-citta" placeholder="Milano"></div>
     <div class="field"><label>Regione</label><input type="text" id="f-regione" placeholder="Lombardia"></div>
   </div>
   <div class="field">
     <label>Area di interesse *</label>
-    <div class="sw"><select id="f-area" onchange="this.style.color=this.value?'':'var(--soft)'"><option value="" disabled selected>— Seleziona —</option><option value="Dolore">Dolore</option><option value="Sport">Sport</option><option value="Neurologico">Neurologico</option></select></div>
+    <div class="sw">
+      <select id="f-area">
+        <option value="" disabled selected>— Seleziona —</option>
+        <option value="Dolore">Dolore</option>
+        <option value="Sport">Sport</option>
+        <option value="Neurologico">Neurologico</option>
+      </select>
+    </div>
     <span class="err" id="e-area">Seleziona un'area</span>
   </div>
   <div class="divl"></div>
@@ -165,7 +179,7 @@ input:focus,select:focus{border-color:var(--blue);}
   </button>
 </div>
 
-<!-- ══ QUIZ ══ -->
+<!-- QUIZ -->
 <div class="card" id="screen-quiz">
   <div class="steps">
     <div class="sd done">✓</div><div class="sl done"></div>
@@ -173,24 +187,31 @@ input:focus,select:focus{border-color:var(--blue);}
     <div class="sd">3</div>
   </div>
   <div class="prog-wrap">
-    <div class="prog-meta"><span id="q-count">1 / 15</span><span id="score-live">⭐ 0 punti</span></div>
+    <div class="prog-meta">
+      <span id="q-count">1 / 15</span>
+      <span id="score-live">⭐ 0 punti</span>
+    </div>
     <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
   </div>
   <div class="quiz-hdr">
     <div class="qnum" id="q-label">Domanda 1</div>
-    <div class="score-live" id="score-badge">⭐ 0</div>
+    <div class="score-pill" id="score-pill">⭐ 0</div>
   </div>
   <div class="timer-wrap">
     <div class="timer-row">
-      <span style="font-size:12px;font-weight:600;color:var(--soft);">⏱ TEMPO RIMASTO</span>
+      <span class="timer-lbl">⏱ Tempo rimasto</span>
       <span class="timer-num" id="timer-num">30</span>
     </div>
     <div class="timer-track"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
   </div>
-  <div class="q-box"><div class="q-txt" id="q-txt">...</div></div>
-  <div class="answers-grid" id="answers-grid"></div>
-  <div class="fb-box" id="fb-box"></div>
-  <div class="nav-btn">
+  <div class="q-box"><div class="q-txt" id="q-txt">Caricamento...</div></div>
+  <div class="ans-grid" id="ans-grid"></div>
+  <div class="fb" id="fb"></div>
+  <div class="btn-row">
+    <button class="btn btn-red" onclick="resetQuiz()" style="max-width:160px;">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M20 10A8 8 0 0012 4a8 8 0 00-5.66 2.34M4 14a8 8 0 008 8 8 8 0 005.66-2.34" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Stop
+    </button>
     <button class="btn btn-p" id="btn-next" onclick="nextQ()" disabled>
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M13 5l7 7-7 7M5 12h14" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span id="lbl-next">Prossima domanda</span>
@@ -198,222 +219,221 @@ input:focus,select:focus{border-color:var(--blue);}
   </div>
 </div>
 
-<!-- ══ RISULTATO ══ -->
+<!-- RISULTATO -->
 <div class="card" id="screen-result">
   <div class="steps">
     <div class="sd done">✓</div><div class="sl done"></div>
     <div class="sd done">✓</div><div class="sl done"></div>
     <div class="sd active">✓</div>
   </div>
-  <div class="result-icon" id="res-icon">🎯</div>
-  <div class="score-big" id="res-score">0</div>
-  <div class="score-sub">punti totalizzati</div>
-  <div class="score-pct" id="res-pct"></div>
+  <span class="res-icon" id="res-icon">🎯</span>
+  <div class="res-score" id="res-score">0</div>
+  <div class="res-sub">punti totalizzati</div>
+  <div class="res-pct" id="res-pct"></div>
   <div id="winner-box"></div>
   <div id="res-title"></div>
   <p id="res-msg"></p>
-  <div class="divl" style="margin-bottom:24px;"></div>
-  <button class="btn btn-p" onclick="restart()">🔄 Ricomincia</button>
+  <div class="divl" style="margin-bottom:22px;"></div>
+  <button class="btn btn-p" onclick="resetQuiz()">🔄 Gioca ancora</button>
 </div>
 
 <script>
-const BASE_ID  = "appI8mMIC0khEkLqK";
-const TABLE_ID = "tbllNx7iSqpAtbQde";
-const API_KEY  = "pat2OTaowokXbRMMA.f4392c6f404307e57068f68fd182ebc4e76ea5872ec8f832d0d7272127dc457b";
-const F={nome:"fld6bfoJlK5cIiAp8",email:"fldO0RdkbUbkWFPLB",tel:"fldddgGgkQbofsaCg",indir:"fldv5sC8e738SQbhp",regione:"fldQt9tuBAM9p3J0B",status:"fld5EpJuoZLFEqeJ6",origine:"fldjYetGgeIZmd5yD"};
-const ICONS={A:"▲",B:"◆",C:"●",D:"■"};
-const COLORS={A:"var(--A)",B:"var(--B)",C:"var(--C)",D:"var(--D)"};
-const TIMER_SEC = 30;
+// ── CONFIG ────────────────────────────────────
+const API_KEY     = "pat2OTaowokXbRMMA.f4392c6f404307e57068f68fd182ebc4e76ea5872ec8f832d0d7272127dc457b";
+const BASE_ID     = "appI8mMIC0khEkLqK";
+const RUBRICA_TBL = "tbllNx7iSqpAtbQde";
+const LAVAGNA_TBL = "tblzUmqPMBlpQHfi4";
+const DOMANDE_REC = "recibDeWFDUtxfdOl";
+const F_NOTES     = "fldZf60LmjT8vQ0Zo";
+const TIMER_SEC   = 30;
+const ICONS = {A:"▲",B:"◆",C:"●",D:"■"};
 
-let questions=[], qIdx=0, score=0, correct=0, timerInterval=null, timeLeft=TIMER_SEC, answered=false;
-
-function loadQuestions(){
-  const saved = localStorage.getItem("harbur_quiz_questions");
-  if(saved){ questions=JSON.parse(saved); }
-  else { questions=getDefaultQuestions(); }
-}
-
-function getDefaultQuestions(){
-  return [
-    {d:"Cos'è Equistasi®?", a:"Un farmaco antidolorifico", b:"Un dispositivo medico indossabile per il benessere posturale", c:"Un integratore alimentare", e:"Un macchinario ospedaliero", c_ok:"B"},
-    {d:"In quale area Equistasi® può aiutare maggiormente?", a:"Solo nella perdita di peso", b:"Solo nella cura di malattie infettive", c:"Nel controllo motorio, equilibrio e dolore", e:"Esclusivamente nella chirurgia", c_ok:"C"},
-    {d:"Quante ore di attività fisica settimanale raccomanda l'OMS?", a:"Almeno 30 minuti", b:"Almeno 150 minuti", c:"Almeno 300 minuti", e:"Almeno 500 minuti", c_ok:"B"},
-    {d:"Equistasi® è classificato come:", a:"Presidio medico chirurgico", b:"Integratore di classe A", c:"Dispositivo medico certificato CE", e:"Farmaco da banco", c_ok:"C"},
-    {d:"Quale patologia può beneficiare di Equistasi®?", a:"Diabete di tipo 1", b:"Malattia di Parkinson", c:"Ipertensione arteriosa", e:"Appendicite", c_ok:"B"},
-    {d:"Cosa si intende per 'controllo posturale'?", a:"La capacità di mantenere una corretta postura e stabilità", b:"La forza muscolare massimale", c:"La velocità di reazione", e:"La flessibilità articolare", c_ok:"A"},
-    {d:"Equistasi® agisce principalmente su:", a:"Il sistema digestivo", b:"Il sistema nervoso autonomo", c:"Il sistema neuromuscolare e posturale", e:"Il sistema endocrino", c_ok:"C"},
-    {d:"Quale atleta può beneficiare di Equistasi®?", a:"Solo i maratoneti", b:"Solo i nuotatori", c:"Solo i calciatori", e:"Atleti di qualsiasi disciplina sportiva", c_ok:"D"},
-    {d:"Cos'è la Sclerosi Multipla?", a:"Una malattia del fegato", b:"Una malattia autoimmune del sistema nervoso centrale", c:"Un tipo di tumore", e:"Una malattia delle ossa", c_ok:"B"},
-    {d:"Il termine 'indossabile' in ambito medico significa:", a:"Un device che si assume oralmente", b:"Un device che si applica sul corpo", c:"Un device impiantabile chirurgicamente", e:"Un device solo per uso ospedaliero", c_ok:"B"},
-    {d:"Equistasi® può essere utilizzato:", a:"Solo in ospedale con supervisione medica", b:"Solo durante la fisioterapia", c:"Durante le attività quotidiane e la riabilitazione", e:"Solo durante il sonno", c_ok:"C"},
-    {d:"Quale effetto ha Equistasi® sul tono muscolare?", a:"Lo aumenta sempre al massimo", b:"Lo normalizza e ottimizza", c:"Lo blocca completamente", e:"Non ha effetti sul tono muscolare", c_ok:"B"},
-    {d:"Equistasi® è un'azienda:", a:"Americana", b:"Tedesca", c:"Giapponese", e:"Italiana", c_ok:"D"},
-    {d:"Cosa si intende per 'biostimolazione'?", a:"La stimolazione tramite farmaci biologici", b:"L'uso di stimolazioni fisiche per migliorare le funzioni biologiche", c:"Un tipo di chirurgia minimamente invasiva", e:"Un esame diagnostico", c_ok:"B"},
-    {d:"Equistasi® rientra nella categoria:", a:"Dispositivi di classe I", b:"Dispositivi di classe IIa", c:"Dispositivi di classe IIb", e:"Dispositivi di classe III", c_ok:"B"}
-  ];
-}
+// ── STATO ─────────────────────────────────────
+let questions=[], qIdx=0, score=0, correct=0, timerInt=null, timeLeft=TIMER_SEC, answered=false;
 
 // ── REGISTRAZIONE ─────────────────────────────
 async function registra(){
-  const nome=document.getElementById("f-nome").value.trim();
-  const cognome=document.getElementById("f-cognome").value.trim();
-  const email=document.getElementById("f-email").value.trim();
-  const tel=document.getElementById("f-tel").value.trim();
-  const indir=document.getElementById("f-indirizzo").value.trim();
-  const regione=document.getElementById("f-regione").value.trim();
-  const area=document.getElementById("f-area").value;
+  const nome    = document.getElementById("f-nome").value.trim();
+  const cognome = document.getElementById("f-cognome").value.trim();
+  const email   = document.getElementById("f-email").value.trim();
+  const tel     = document.getElementById("f-tel").value.trim();
+  const citta   = document.getElementById("f-citta").value.trim();
+  const regione = document.getElementById("f-regione").value.trim();
+  const area    = document.getElementById("f-area").value;
 
-  // Reset errori
-  ["nome","cognome","email","area"].forEach(id=>document.getElementById("e-"+id).classList.remove("on"));
-  ["f-nome","f-cognome","f-email"].forEach(id=>{document.getElementById(id).style.borderColor="";});
-  document.getElementById("f-area").style.borderColor="";
+  // Reset
+  ["nome","cognome","email","area"].forEach(id=>{
+    document.getElementById("e-"+id).classList.remove("on");
+  });
   document.getElementById("alert-reg").className="alert";
 
   // Validazione
   let ok=true;
-  if(!nome){mark("nome","f-nome");ok=false;}
-  if(!cognome){mark("cognome","f-cognome");ok=false;}
-  if(!email||!/^[^@]+@[^@]+\.[^@]+$/.test(email)){mark("email","f-email");ok=false;}
-  if(!area){document.getElementById("e-area").classList.add("on");document.getElementById("f-area").style.borderColor="var(--errore)";ok=false;}
-  if(!ok)return;
+  if(!nome)   { document.getElementById("e-nome").classList.add("on");    ok=false; }
+  if(!cognome){ document.getElementById("e-cognome").classList.add("on"); ok=false; }
+  if(!email||!/^[^@]+@[^@]+\.[^@]+$/.test(email)){ document.getElementById("e-email").classList.add("on"); ok=false; }
+  if(!area)   { document.getElementById("e-area").classList.add("on");    ok=false; }
+  if(!ok) return;
 
-  const btn=document.getElementById("btn-reg");
-  document.getElementById("lbl-reg").textContent="Salvataggio…";
-  btn.disabled=true;
+  const btn = document.getElementById("btn-reg");
+  btn.disabled = true;
+  document.getElementById("lbl-reg").textContent = "Salvataggio...";
 
-  // Payload Airtable
-  const payload = {
-    records:[{fields:{
-      "fld6bfoJlK5cIiAp8": nome+" "+cognome,
-      "fldO0RdkbUbkWFPLB": email,
-      "fldddgGgkQbofsaCg": tel,
-      "fldv5sC8e738SQbhp": indir,
-      "fldQt9tuBAM9p3J0B": regione,
-      "fld5EpJuoZLFEqeJ6": "HARBUR",
-      "fldjYetGgeIZmd5yD": "HARBUR - "+area
-    }}]
-  };
-
+  // Salva su Airtable
   try{
-    const res = await fetch(
-      "https://api.airtable.com/v0/"+BASE_ID+"/"+TABLE_ID,
-      {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":"Bearer "+API_KEY
-        },
-        body:JSON.stringify(payload)
-      }
-    );
-    if(!res.ok){
-      const errData = await res.json();
-      console.error("Airtable error:", errData);
-      // Mostra errore ma vai avanti
-      const al=document.getElementById("alert-reg");
-      al.textContent="⚠️ Errore salvataggio: "+(errData?.error?.message||"API error")+". Il quiz parte comunque.";
-      al.className="alert warn";
-      setTimeout(()=>{loadQuestions();goQuiz();},2000);
-      return;
+    const body = JSON.stringify({
+      records:[{fields:{
+        "fld6bfoJlK5cIiAp8": nome+" "+cognome,
+        "fldO0RdkbUbkWFPLB": email,
+        "fldddgGgkQbofsaCg": tel,
+        "fldv5sC8e738SQbhp": citta,
+        "fldQt9tuBAM9p3J0B": regione,
+        "fld5EpJuoZLFEqeJ6": "HARBUR",
+        "fldjYetGgeIZmd5yD": "HARBUR - "+area
+      }}]
+    });
+
+    const res = await fetch("https://api.airtable.com/v0/"+BASE_ID+"/"+RUBRICA_TBL, {
+      method : "POST",
+      mode   : "cors",
+      headers: {
+        "Content-Type" : "application/json",
+        "Authorization": "Bearer "+API_KEY
+      },
+      body: body
+    });
+
+    if(res.ok){
+      const data = await res.json();
+      console.log("✅ Salvato:", data.records[0].id);
+    } else {
+      const err = await res.json();
+      console.error("❌ Airtable error:", err);
+      showAlert("warn","⚠️ Attenzione: "+( err?.error?.message||"errore API")+" — Il quiz parte comunque.");
+      await sleep(1500);
     }
-    const saved = await res.json();
-    console.log("Salvato in Airtable:", saved.records[0].id);
-  }catch(e){
-    console.error("Fetch error:", e.message);
-    // Errore rete - vai avanti comunque
-    const al=document.getElementById("alert-reg");
-    al.textContent="⚠️ Connessione non riuscita. Il quiz parte comunque.";
-    al.className="alert warn";
-    setTimeout(()=>{loadQuestions();goQuiz();},1500);
-    return;
+  } catch(e){
+    console.error("❌ Fetch error:", e);
+    showAlert("warn","⚠️ Connessione non riuscita — Il quiz parte comunque.");
+    await sleep(1500);
   }
 
-  loadQuestions();
+  await loadQuestions();
   goQuiz();
 }
-function mark(e,i){document.getElementById("e-"+e).classList.add("on");document.getElementById(i).style.borderColor="var(--errore)";}
 
+function showAlert(type, msg){
+  const el = document.getElementById("alert-reg");
+  el.textContent = msg;
+  el.className = "alert "+type;
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ── CARICA DOMANDE ────────────────────────────
+async function loadQuestions(){
+  try{
+    const res = await fetch(
+      "https://api.airtable.com/v0/"+BASE_ID+"/"+LAVAGNA_TBL+"/"+DOMANDE_REC,
+      {mode:"cors", headers:{"Authorization":"Bearer "+API_KEY}}
+    );
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    const saved = data.fields[F_NOTES]||"[]";
+    const parsed = JSON.parse(saved);
+    if(parsed.length>0){ questions=parsed; }
+    else { questions=getDefaultQuestions(); }
+  } catch(e){
+    console.warn("Domande fallback:", e.message);
+    questions=getDefaultQuestions();
+  }
+}
+
+// ── QUIZ ──────────────────────────────────────
 function goQuiz(){
   document.getElementById("screen-reg").style.display="none";
   document.getElementById("screen-quiz").style.display="block";
   renderQ();
 }
 
-// ── QUIZ ──────────────────────────────────────
 function renderQ(){
-  const q=questions[qIdx], total=questions.length;
-  const isLast=qIdx===total-1;
+  const q=questions[qIdx], total=questions.length, isLast=qIdx===total-1;
   document.getElementById("q-count").textContent=(qIdx+1)+" / "+total;
   document.getElementById("q-label").textContent="Domanda "+(qIdx+1);
   document.getElementById("lbl-next").textContent=isLast?"Vedi il risultato":"Prossima domanda";
   document.getElementById("prog-fill").style.width=((qIdx/total)*100)+"%";
   document.getElementById("q-txt").textContent=q.d;
-  document.getElementById("fb-box").className="fb-box";
+  document.getElementById("fb").className="fb";
   document.getElementById("btn-next").disabled=true;
   answered=false;
 
-  const grid=document.getElementById("answers-grid");
+  const grid=document.getElementById("ans-grid");
   const opts=[{l:"A",t:q.a},{l:"B",t:q.b},{l:"C",t:q.c},{l:"D",t:q.e}];
   grid.innerHTML=opts.map(o=>`
     <button class="ans-btn ${o.l}" onclick="pick('${o.l}')" id="ans-${o.l}">
-      <span class="ans-icon">${ICONS[o.l]}</span>
-      ${o.t}
+      <span class="ans-icon">${ICONS[o.l]}</span>${o.t}
     </button>`).join("");
 
   startTimer();
 }
 
 function startTimer(){
-  clearInterval(timerInterval);
+  clearInterval(timerInt);
   timeLeft=TIMER_SEC;
-  updateTimerUI();
-  timerInterval=setInterval(()=>{
+  updateTimer();
+  timerInt=setInterval(()=>{
     timeLeft--;
-    updateTimerUI();
-    if(timeLeft<=0){clearInterval(timerInterval);timeExpired();}
+    updateTimer();
+    if(timeLeft<=0){ clearInterval(timerInt); timeExpired(); }
   },1000);
 }
 
-function updateTimerUI(){
+function updateTimer(){
   const pct=(timeLeft/TIMER_SEC)*100;
   const numEl=document.getElementById("timer-num");
   const fillEl=document.getElementById("timer-fill");
   numEl.textContent=timeLeft;
   fillEl.style.width=pct+"%";
-  if(timeLeft<=10){numEl.classList.add("urgent");fillEl.classList.add("urgent");}
-  else{numEl.classList.remove("urgent");fillEl.classList.remove("urgent");}
+  if(timeLeft<=10){ numEl.classList.add("urgent"); fillEl.classList.add("urgent"); }
+  else { numEl.classList.remove("urgent"); fillEl.classList.remove("urgent"); }
 }
 
 function timeExpired(){
-  if(answered)return;
+  if(answered) return;
   answered=true;
   document.querySelectorAll(".ans-btn").forEach(b=>b.disabled=true);
-  const q=questions[qIdx];
-  document.getElementById("ans-"+q.c_ok).classList.add("correct");
-  const fb=document.getElementById("fb-box");
-  fb.textContent="⏰ Tempo scaduto! La risposta corretta era "+q.c_ok+".";
-  fb.className="fb-box on timeout";
+  document.getElementById("ans-"+questions[qIdx].c_ok).classList.add("correct");
+  const fb=document.getElementById("fb");
+  fb.textContent="⏰ Tempo scaduto! La risposta corretta era "+questions[qIdx].c_ok+".";
+  fb.className="fb on timeout";
   document.getElementById("btn-next").disabled=false;
 }
 
 function pick(letter){
-  if(answered)return;
+  if(answered) return;
   answered=true;
-  clearInterval(timerInterval);
+  clearInterval(timerInt);
   const q=questions[qIdx];
   document.querySelectorAll(".ans-btn").forEach(b=>b.disabled=true);
   const isOk=(letter===q.c_ok);
   document.getElementById("ans-"+q.c_ok).classList.add("correct");
   if(!isOk) document.getElementById("ans-"+letter).classList.add("wrong");
   if(isOk){
-    score+=Math.max(100,Math.round(100+(timeLeft/TIMER_SEC)*900));
+    const pts=Math.max(100,Math.round(100+(timeLeft/TIMER_SEC)*900));
+    score+=pts;
     correct++;
+    document.getElementById("score-pill").textContent="⭐ "+score;
+    document.getElementById("score-live").textContent="⭐ "+score+" punti";
   }
-  document.getElementById("score-badge").textContent="⭐ "+score;
-  document.getElementById("score-live").textContent="⭐ "+score+" punti";
-  const fb=document.getElementById("fb-box");
-  fb.textContent=isOk?"✅ Corretto! +"+Math.max(100,Math.round(100+(timeLeft/TIMER_SEC)*900))+" punti":"❌ Sbagliato! La risposta corretta era "+q.c_ok+".";
-  fb.className="fb-box on "+(isOk?"ok":"ko");
+  const fb=document.getElementById("fb");
+  if(isOk){
+    const pts=Math.max(100,Math.round(100+(timeLeft/TIMER_SEC)*900));
+    fb.textContent="✅ Corretto! +"+pts+" punti";
+    fb.className="fb on ok";
+  } else {
+    fb.textContent="❌ Sbagliato! La risposta corretta era "+q.c_ok+".";
+    fb.className="fb on ko";
+  }
   document.getElementById("btn-next").disabled=false;
 }
 
@@ -425,29 +445,29 @@ function nextQ(){
 
 // ── RISULTATO ─────────────────────────────────
 function showResult(){
-  clearInterval(timerInterval);
+  clearInterval(timerInt);
   document.getElementById("screen-quiz").style.display="none";
   document.getElementById("screen-result").style.display="block";
   document.getElementById("prog-fill").style.width="100%";
   const total=questions.length;
-  const isWinner=(correct===total);
   const pct=Math.round((correct/total)*100);
+  const isWinner=(correct===total);
   document.getElementById("res-score").textContent=score.toLocaleString("it");
   document.getElementById("res-pct").textContent=correct+" / "+total+" risposte corrette ("+pct+"%)";
   let icon,title,msg,winnerHTML="";
   if(isWinner){
     icon="🏆"; title="PERFETTO! Hai vinto!";
     msg="Straordinario! Hai risposto correttamente a tutte e "+total+" le domande. Passa al nostro stand per ritirare il premio Equistasi®!";
-    winnerHTML=`<div class="winner-badge">🎁 VAI ALLO STAND EQUISTASI® PER IL TUO PREMIO!</div>`;
+    winnerHTML='<div class="winner-box">🎁 VAI ALLO STAND EQUISTASI®<br>PER RITIRARE IL TUO PREMIO!</div>';
   } else if(pct>=80){
     icon="🥈"; title="Ottimo risultato!";
-    msg="Quasi perfetto! Hai sbagliato solo "+(total-correct)+" domand"+(total-correct===1?"a":"e")+". Sei molto preparato sul mondo del benessere!";
+    msg="Quasi perfetto! Hai sbagliato solo "+(total-correct)+" domand"+(total-correct===1?"a":"e")+". Passa al nostro stand per scoprire di più!";
   } else if(pct>=50){
     icon="👍"; title="Buon risultato!";
-    msg="Hai una buona base. Passa al nostro stand per scoprire di più su Equistasi® e i suoi benefici!";
+    msg="Hai una buona base. Passa al nostro stand Equistasi® per scoprire i benefici dei nostri dispositivi!";
   } else {
     icon="🌱"; title="Inizia il percorso!";
-    msg="C'è molto da scoprire! Passa al nostro stand Equistasi® — il nostro team ti spiegherà tutto sul benessere posturale.";
+    msg="Passa al nostro stand Equistasi® — il nostro team ti spiegherà tutto sul benessere posturale!";
   }
   document.getElementById("res-icon").textContent=icon;
   document.getElementById("res-title").textContent=title;
@@ -455,18 +475,47 @@ function showResult(){
   document.getElementById("winner-box").innerHTML=winnerHTML;
 }
 
-function restart(){
-  qIdx=0;score=0;correct=0;answered=false;
-  clearInterval(timerInterval);
+// ── RESET ─────────────────────────────────────
+function resetQuiz(){
+  if(!confirm("Vuoi ricominciare da capo?")) return;
+  clearInterval(timerInt);
+  qIdx=0; score=0; correct=0; answered=false;
+  document.getElementById("screen-quiz").style.display="none";
   document.getElementById("screen-result").style.display="none";
   document.getElementById("screen-reg").style.display="block";
-  ["f-nome","f-cognome","f-email","f-tel","f-indirizzo","f-regione"].forEach(id=>{const el=document.getElementById(id);if(el){el.value="";el.style.borderColor="";}});
+  // Reset form
+  ["f-nome","f-cognome","f-email","f-tel","f-citta","f-regione"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.value="";el.style.borderColor="";}
+  });
   document.getElementById("f-area").value="";
   ["nome","cognome","email","area"].forEach(id=>document.getElementById("e-"+id).classList.remove("on"));
   document.getElementById("alert-reg").className="alert";
   document.getElementById("btn-reg").disabled=false;
   document.getElementById("lbl-reg").textContent="Inizia il Quiz →";
-  document.getElementById("score-badge").textContent="⭐ 0";
+  document.getElementById("score-pill").textContent="⭐ 0";
+  document.getElementById("score-live").textContent="⭐ 0 punti";
+}
+
+// ── DOMANDE DEFAULT ───────────────────────────
+function getDefaultQuestions(){
+  return [
+    {d:"Cos'è Equistasi®?",a:"Un farmaco antidolorifico",b:"Un dispositivo medico indossabile",c:"Un integratore alimentare",e:"Un macchinario ospedaliero",c_ok:"B"},
+    {d:"Equistasi® agisce principalmente su:",a:"Il sistema digestivo",b:"Il sistema nervoso autonomo",c:"Il sistema neuromuscolare e posturale",e:"Il sistema endocrino",c_ok:"C"},
+    {d:"Quante ore di attività fisica settimanale raccomanda l'OMS?",a:"30 minuti",b:"150 minuti",c:"300 minuti",e:"500 minuti",c_ok:"B"},
+    {d:"Equistasi® è classificato come:",a:"Presidio medico chirurgico",b:"Integratore di classe A",c:"Dispositivo medico certificato CE",e:"Farmaco da banco",c_ok:"C"},
+    {d:"Quale patologia può beneficiare di Equistasi®?",a:"Diabete di tipo 1",b:"Malattia di Parkinson",c:"Ipertensione",e:"Appendicite",c_ok:"B"},
+    {d:"Cosa si intende per controllo posturale?",a:"Mantenere corretta postura e stabilità",b:"La forza muscolare massimale",c:"La velocità di reazione",e:"La flessibilità articolare",c_ok:"A"},
+    {d:"Equistasi® può essere utilizzato:",a:"Solo in ospedale",b:"Solo in fisioterapia",c:"Durante le attività quotidiane e la riabilitazione",e:"Solo durante il sonno",c_ok:"C"},
+    {d:"Quale atleta può beneficiare di Equistasi®?",a:"Solo maratoneti",b:"Solo nuotatori",c:"Solo calciatori",e:"Atleti di qualsiasi disciplina",c_ok:"D"},
+    {d:"Cos'è la Sclerosi Multipla?",a:"Una malattia del fegato",b:"Una malattia autoimmune del sistema nervoso centrale",c:"Un tipo di tumore",e:"Una malattia delle ossa",c_ok:"B"},
+    {d:"Cosa significa indossabile in ambito medico?",a:"Si assume oralmente",b:"Si applica sul corpo",c:"Si impianta chirurgicamente",e:"Solo per uso ospedaliero",c_ok:"B"},
+    {d:"Quale effetto ha Equistasi® sul tono muscolare?",a:"Lo aumenta al massimo",b:"Lo normalizza e ottimizza",c:"Lo blocca",e:"Nessun effetto",c_ok:"B"},
+    {d:"Equistasi® è un'azienda:",a:"Americana",b:"Tedesca",c:"Giapponese",e:"Italiana",c_ok:"D"},
+    {d:"Equistasi® rientra nella categoria:",a:"Classe I",b:"Classe IIa",c:"Classe IIb",e:"Classe III",c_ok:"B"},
+    {d:"La sede di Equistasi® è a:",a:"Roma",b:"Milano",c:"Gorgonzola (MI)",e:"Torino",c_ok:"C"},
+    {d:"Equistasi® può aiutare nel controllo del dolore?",a:"No, solo per il movimento",b:"Sì, ha proprietà antalgiche",c:"Solo con farmaci associati",e:"Solo in ambito sportivo",c_ok:"B"}
+  ];
 }
 </script>
 </body>
