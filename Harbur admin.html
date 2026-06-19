@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equistasi® – Admin Quiz HARBUR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;700;800&family=Open+Sans:wght@400;500;600&display=swap');
+:root{
+  --navy:#0B2545;--blue:#1B4F9B;--yellow:#F5C800;
+  --ok:#1A7A4A;--errore:#C0392B;
+  --bg:#F2F6FA;--white:#fff;--brd:#D2E0EC;--soft:#4A6278;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);min-height:100vh;}
+
+header{background:var(--navy);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 36px;box-shadow:0 3px 16px rgba(11,37,69,.35);}
+.logo img{height:40px;}
+.hbadge{color:var(--yellow);font-family:'Raleway',sans-serif;font-weight:700;font-size:14px;letter-spacing:.5px;}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 70px);}
+.login-box{background:var(--white);border-radius:14px;padding:44px 48px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(11,37,69,.13);border-top:4px solid var(--yellow);text-align:center;}
+.login-box h2{font-family:'Raleway',sans-serif;font-weight:800;font-size:22px;color:var(--navy);margin-bottom:8px;}
+.login-box p{font-size:13px;color:var(--soft);margin-bottom:28px;}
+.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--brd);border-radius:8px;font-size:15px;margin-bottom:12px;outline:none;font-family:'Open Sans',sans-serif;}
+.login-box input:focus{border-color:var(--blue);}
+.login-err{color:var(--errore);font-size:13px;margin-bottom:10px;display:none;}
+.login-err.on{display:block;}
+
+/* MAIN ADMIN */
+#admin-screen{display:none;padding:32px 24px 60px;}
+.admin-wrap{max-width:900px;margin:0 auto;}
+.admin-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+.admin-top h1{font-family:'Raleway',sans-serif;font-weight:800;font-size:24px;color:var(--navy);}
+.admin-top .btns{display:flex;gap:10px;}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:8px;font-family:'Raleway',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;box-shadow:0 4px 14px rgba(27,79,155,.25);}
+.btn-primary:hover{transform:translateY(-1px);}
+.btn-yellow{background:var(--yellow);color:var(--navy);}
+.btn-yellow:hover{opacity:.9;}
+.btn-danger{background:var(--errore);color:#fff;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+
+/* CONTATORE */
+.counter-bar{background:var(--white);border-radius:10px;padding:16px 22px;margin-bottom:24px;display:flex;align-items:center;gap:20px;box-shadow:0 2px 12px rgba(11,37,69,.08);border-left:4px solid var(--yellow);}
+.counter-bar .num{font-family:'Raleway',sans-serif;font-weight:800;font-size:32px;color:var(--navy);}
+.counter-bar .lbl{font-size:13px;color:var(--soft);}
+.counter-bar .status{margin-left:auto;font-size:13px;font-weight:600;}
+.status.ok{color:var(--ok);}
+.status.warn{color:var(--errore);}
+
+/* FORM NUOVA DOMANDA */
+.add-card{background:var(--white);border-radius:12px;padding:28px 32px;margin-bottom:24px;box-shadow:0 4px 20px rgba(11,37,69,.09);border-top:3px solid var(--blue);}
+.add-card h3{font-family:'Raleway',sans-serif;font-weight:700;font-size:16px;color:var(--navy);margin-bottom:20px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.8px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:1.5px solid var(--brd);border-radius:7px;font-family:'Open Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue);}
+.answers-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.answer-item{position:relative;}
+.answer-item label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.8px;}
+.answer-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;}
+.badge-A{background:#e74c3c;}
+.badge-B{background:#3498db;}
+.badge-C{background:#2ecc71;}
+.badge-D{background:#f39c12;}
+
+/* LISTA DOMANDE */
+.questions-list{display:flex;flex-direction:column;gap:12px;}
+.q-card{background:var(--white);border-radius:10px;padding:20px 24px;box-shadow:0 2px 12px rgba(11,37,69,.07);display:flex;gap:16px;align-items:flex-start;border-left:4px solid var(--brd);transition:border-color .2s;}
+.q-card:hover{border-left-color:var(--blue);}
+.q-num{width:36px;height:36px;border-radius:8px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Raleway',sans-serif;font-weight:800;font-size:15px;flex-shrink:0;}
+.q-body{flex:1;}
+.q-text{font-weight:600;font-size:15px;color:var(--navy);margin-bottom:10px;line-height:1.4;}
+.q-answers{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.q-ans{padding:7px 12px;border-radius:6px;font-size:13px;border:1.5px solid var(--brd);display:flex;align-items:center;gap:8px;}
+.q-ans.correct{border-color:var(--ok);background:#e8f5ef;font-weight:700;}
+.q-actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0;}
+.empty-state{text-align:center;padding:48px;color:var(--soft);font-size:15px;}
+.empty-state svg{margin-bottom:12px;opacity:.4;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:14px 22px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;border-left:4px solid var(--yellow);}
+.toast.show{transform:translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="logo"><img src="data:image/png;base64,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" alt="Equistasi®"></a>
+  <div class="hbadge">⚙️ Admin Quiz HARBUR</div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2>🔐 Accesso Admin</h2>
+    <p>Inserisci la password per gestire le domande del quiz</p>
+    <div class="login-err" id="login-err">Password errata. Riprova.</div>
+    <input type="password" id="pwd-input" placeholder="Password admin" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="doLogin()">Accedi</button>
+    <p style="margin-top:16px;font-size:12px;color:#aaa;">Password di default: <strong>harbur2026</strong></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-screen">
+  <div class="admin-wrap">
+
+    <div class="admin-top">
+      <h1>📋 Gestione Domande Quiz</h1>
+      <div class="btns">
+        <button class="btn btn-yellow" onclick="exportJSON()">📥 Esporta JSON</button>
+        <button class="btn btn-primary" onclick="scrollToAdd()">➕ Nuova Domanda</button>
+      </div>
+    </div>
+
+    <!-- COUNTER -->
+    <div class="counter-bar">
+      <div>
+        <div class="num" id="q-count">0</div>
+        <div class="lbl">domande inserite</div>
+      </div>
+      <div>
+        <div class="num" style="color:var(--blue)" id="q-target">/ 15</div>
+        <div class="lbl">obiettivo</div>
+      </div>
+      <div class="status" id="q-status">⚠️ Aggiungi domande</div>
+    </div>
+
+    <!-- LISTA -->
+    <div class="questions-list" id="q-list"></div>
+
+    <!-- FORM AGGIUNGI -->
+    <div class="add-card" id="add-form" style="margin-top:24px;">
+      <h3>➕ Aggiungi nuova domanda</h3>
+      <div class="form-group">
+        <label>Testo della domanda *</label>
+        <input type="text" id="new-domanda" placeholder="Es: Qual è il principale vantaggio di Equistasi®?">
+      </div>
+      <div class="answers-grid">
+        <div class="answer-item">
+          <label><div class="answer-badge badge-A">A</div> Risposta A *</label>
+          <input type="text" id="new-a" placeholder="Prima risposta">
+        </div>
+        <div class="answer-item">
+          <label><div class="answer-badge badge-B">B</div> Risposta B *</label>
+          <input type="text" id="new-b" placeholder="Seconda risposta">
+        </div>
+        <div class="answer-item">
+          <label><div class="answer-badge badge-C">C</div> Risposta C *</label>
+          <input type="text" id="new-c" placeholder="Terza risposta">
+        </div>
+        <div class="answer-item">
+          <label><div class="answer-badge badge-D">D</div> Risposta D *</label>
+          <input type="text" id="new-d" placeholder="Quarta risposta">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Risposta corretta *</label>
+        <select id="new-corretta">
+          <option value="">— Seleziona —</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addQuestion()" style="margin-top:6px;">
+        ✅ Salva Domanda
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PASS = "harbur2026";
+let questions = [];
+
+// ── LOGIN ──────────────────────────────────────
+function doLogin(){
+  const pwd = document.getElementById("pwd-input").value;
+  if(pwd === PASS){
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("admin-screen").style.display="block";
+    loadQuestions();
+  } else {
+    document.getElementById("login-err").classList.add("on");
+  }
+}
+document.getElementById("pwd-input").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+
+// ── STORAGE ───────────────────────────────────
+function loadQuestions(){
+  const saved = localStorage.getItem("harbur_quiz_questions");
+  questions = saved ? JSON.parse(saved) : getDefaultQuestions();
+  renderList();
+}
+function saveQuestions(){
+  localStorage.setItem("harbur_quiz_questions", JSON.stringify(questions));
+  renderList();
+}
+
+// ── DEFAULT 15 DOMANDE ────────────────────────
+function getDefaultQuestions(){
+  return [
+    {d:"Cos'è Equistasi®?", a:"Un farmaco antidolorifico", b:"Un dispositivo medico indossabile per il benessere posturale", c:"Un integratore alimentare", e:"Un macchinario ospedaliero", c_ok:"B"},
+    {d:"In quale area Equistasi® può aiutare maggiormente?", a:"Solo nella perdita di peso", b:"Solo nella cura delle malattie infettive", c:"Nel controllo motorio, equilibrio e dolore", e:"Esclusivamente nella chirurgia", c_ok:"C"},
+    {d:"Quante ore di attività fisica settimanale raccomanda l'OMS?", a:"Almeno 30 minuti", b:"Almeno 150 minuti", c:"Almeno 300 minuti", e:"Almeno 500 minuti", c_ok:"B"},
+    {d:"Equistasi® è classificato come:", a:"Presidio medico chirurgico", b:"Integratore di classe A", c:"Dispositivo medico certificato CE", e:"Farmaco da banco", c_ok:"C"},
+    {d:"Quale patologia può beneficiare di Equistasi®?", a:"Diabete di tipo 1", b:"Malattia di Parkinson", c:"Ipertensione arteriosa", e:"Appendicite", c_ok:"B"},
+    {d:"Cosa si intende per 'controllo posturale'?", a:"La capacità di mantenere una corretta postura e stabilità", b:"La forza muscolare massimale", c:"La velocità di reazione", e:"La flessibilità articolare", c_ok:"A"},
+    {d:"Equistasi® agisce principalmente su:", a:"Il sistema digestivo", b:"Il sistema nervoso autonomo", c:"Il sistema neuromuscolare e posturale", e:"Il sistema endocrino", c_ok:"C"},
+    {d:"Quale atleta può beneficiare di Equistasi®?", a:"Solo i maratoneti", b:"Solo i nuotatori", c:"Solo i calciatori", e:"Atleti di qualsiasi disciplina sportiva", c_ok:"D"},
+    {d:"Cos'è la Sclerosi Multipla?", a:"Una malattia del fegato", b:"Una malattia autoimmune del sistema nervoso centrale", c:"Un tipo di tumore", e:"Una malattia delle ossa", c_ok:"B"},
+    {d:"Il termine 'indossabile' in ambito medico significa:", a:"Un device che si assume oralmente", b:"Un device che si applica sulla pelle o sul corpo", c:"Un device impiantabile chirurgicamente", e:"Un device solo per uso ospedaliero", c_ok:"B"},
+    {d:"Equistasi® può essere utilizzato:", a:"Solo in ospedale con supervisione medica", b:"Solo durante la fisioterapia", c:"Durante le attività quotidiane e la riabilitazione", e:"Solo durante il sonno", c_ok:"C"},
+    {d:"Quale effetto ha Equistasi® sul tono muscolare?", a:"Lo aumenta sempre al massimo", b:"Lo normalizza e ottimizza", c:"Lo blocca completamente", e:"Non ha effetti sul tono muscolare", c_ok:"B"},
+    {d:"In quale anno è nata Equistasi® Srl?", a:"1995", b:"2005", c:"2010", e:"Nessuna delle precedenti", c_ok:"D"},
+    {d:"Cosa si intende per 'biostimolazione'?", a:"La stimolazione tramite farmaci biologici", b:"L'uso di stimolazioni fisiche per migliorare le funzioni biologiche", c:"Un tipo di chirurgia minimamente invasiva", e:"Un esame diagnostico", c_ok:"B"},
+    {d:"Equistasi® rientra nella categoria:", a:"Dispositivi di classe I", b:"Dispositivi di classe IIa", c:"Dispositivi di classe IIb", e:"Dispositivi di classe III", c_ok:"B"}
+  ];
+}
+
+// ── RENDER LISTA ──────────────────────────────
+function renderList(){
+  const list = document.getElementById("q-list");
+  const count = questions.length;
+  document.getElementById("q-count").textContent = count;
+  const status = document.getElementById("q-status");
+  if(count >= 15){ status.textContent="✅ Quiz completo!"; status.className="status ok"; }
+  else { status.textContent=`⚠️ Mancano ${15-count} domande`; status.className="status warn"; }
+
+  if(count === 0){
+    list.innerHTML=`<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><br>Nessuna domanda ancora. Aggiungine una qui sotto!</div>`;
+    return;
+  }
+  const colors={A:"#e74c3c",B:"#3498db",C:"#2ecc71",D:"#f39c12"};
+  list.innerHTML = questions.map((q,i)=>`
+    <div class="q-card" id="qc-${i}">
+      <div class="q-num">${i+1}</div>
+      <div class="q-body">
+        <div class="q-text">${q.d}</div>
+        <div class="q-answers">
+          ${["A","B","C","D"].map(l=>`
+            <div class="q-ans ${q.c_ok===l?'correct':''}">
+              <span style="background:${colors[l]};color:#fff;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;">${l}</span>
+              ${l==="A"?q.a:l==="B"?q.b:l==="C"?q.c:q.e}
+              ${q.c_ok===l?' ✓':''}
+            </div>`).join("")}
+        </div>
+      </div>
+      <div class="q-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteQ(${i})">🗑</button>
+      </div>
+    </div>`).join("");
+}
+
+// ── AGGIUNGI ──────────────────────────────────
+function addQuestion(){
+  const d  = document.getElementById("new-domanda").value.trim();
+  const a  = document.getElementById("new-a").value.trim();
+  const b  = document.getElementById("new-b").value.trim();
+  const c  = document.getElementById("new-c").value.trim();
+  const e  = document.getElementById("new-d").value.trim();
+  const ck = document.getElementById("new-corretta").value;
+  if(!d||!a||!b||!c||!e||!ck){ showToast("⚠️ Compila tutti i campi!"); return; }
+  questions.push({d,a,b,c,e,c_ok:ck});
+  saveQuestions();
+  // Reset form
+  ["new-domanda","new-a","new-b","new-c","new-d"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("new-corretta").value="";
+  showToast("✅ Domanda salvata! ("+questions.length+"/15)");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// ── ELIMINA ───────────────────────────────────
+function deleteQ(idx){
+  if(!confirm("Eliminare questa domanda?")) return;
+  questions.splice(idx,1);
+  saveQuestions();
+  showToast("🗑 Domanda eliminata");
+}
+
+// ── EXPORT ────────────────────────────────────
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(questions,null,2)],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="harbur-quiz-domande.json";
+  a.click();
+  showToast("📥 JSON esportato!");
+}
+
+function scrollToAdd(){ document.getElementById("add-form").scrollIntoView({behavior:"smooth"}); }
+
+// ── TOAST ─────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
+}
+</script>
+</body>
+</html>
