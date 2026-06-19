@@ -56,6 +56,14 @@
   .kpi-lbl { font-size:12px; color:var(--muted); margin-top:5px; }
   .kpi-hint { font-size:10px; color:var(--accent2); margin-top:6px; opacity:.7; }
 
+  /* Tab navigazione tabelle */
+  .nav-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; background:var(--surface); border-radius:var(--r); padding:8px; border:1px solid var(--border); }
+  .nav-tab { padding:8px 16px; border:none; border-radius:var(--r-sm); font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--muted); transition:all .2s; }
+  .nav-tab:hover { background:var(--surface2); color:var(--text); }
+  .nav-tab.active { background:var(--accent); color:#fff; }
+  .nav-tab .tab-count { display:inline-block; background:rgba(255,255,255,.25); border-radius:99px; padding:1px 7px; font-size:11px; margin-left:5px; }
+  .nav-tab:not(.active) .tab-count { background:var(--surface2); color:var(--muted); }
+
   .drawer { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; overflow:hidden; max-height:0; transition:max-height .4s cubic-bezier(.4,0,.2,1); box-shadow:0 2px 12px rgba(0,61,122,.08); }
   .drawer.open { max-height:3000px; }
   .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); }
@@ -467,6 +475,10 @@ let currentPage = 0;
 let currentLista = [];
 
 function openDrawer(tipo, titolo, colore) {
+  // Aggiorna tab attivo
+  document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+  var activeTab = document.getElementById('navtab-' + tipo);
+  if (activeTab) activeTab.classList.add('active');
   if (activeKpi === tipo) { closeDrawer(); return; }
   activeKpi = tipo;
   currentPage = 0;
@@ -619,6 +631,7 @@ function getListaByTipo(tipo) {
       return Array.isArray(vecchi) && vecchi.length > 0;
     });
     case 'persi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON VUOLE')||s.includes('NON INTER')||s.includes('NON ADATTO')||s.includes('NUMERO ERRATO'); });
+    case 'harbur':       return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('HARBUR')||s.includes('ATP'); });
     default: return [];
   }
 }
@@ -944,6 +957,30 @@ async function loadData(utente) {
       Array.isArray(p.fields[FLD_IDX_CONTATTO]) && allMiei.some(r=>r.id===p.fields[FLD_IDX_CONTATTO][0]?.id)
     );
     const totProposto = getValoreProposte(mieProposteAll);
+    const nConProposte = allMiei.filter(r => {
+      const mieP = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(x=>x.id===r.id));
+      return mieP.length > 0;
+    }).length;
+
+    // Aggiorna contatori tab navigazione
+    setTimeout(() => {
+      const tabCounts = {
+        'contatti': allMiei.length,
+        'ricontattare': getListaByTipo('ricontattare').length,
+        'trattativa': getListaByTipo('trattativa').length,
+        'appuntamenti': getListaByTipo('appuntamenti').length,
+        'vendite': getListaByTipo('vendite').length,
+        'noleggi': getListaByTipo('noleggi').length,
+        'proposti': getListaByTipo('proposti').length,
+        'persi': getListaByTipo('persi').length,
+        'scadenze': noleggiScad.length,
+        'harbur': getListaByTipo('harbur').length
+      };
+      Object.entries(tabCounts).forEach(([k,v]) => {
+        const el = document.getElementById('tc-'+k);
+        if (el) el.textContent = v;
+      });
+    }, 100);
 
     const noleggiHTML = noleggiScad.length
       ? noleggiScad.slice(0,6).map(r=>{
@@ -1006,9 +1043,53 @@ async function loadData(utente) {
           <div class="kpi-lbl">Proposto totale</div>
           <div class="kpi-hint">Clicca per vedere →</div>
         </div>
+        <div class="kpi purple" id="kpi-n-proposte" onclick="openDrawer('proposti','Contatti con proposte','#0072bc')" style="--kpi-before:#0072bc">
+          <div class="kpi-ico">📋</div>
+          <div class="kpi-val">${nConProposte}</div>
+          <div class="kpi-lbl">Con proposte</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
+        <div class="kpi gold" id="kpi-media-proposta" onclick="openDrawer('proposti','Valore medio proposta','#f0a500')" style="--kpi-before:#f0a500">
+          <div class="kpi-ico">📊</div>
+          <div class="kpi-val" style="font-size:16px">${fmt(nConProposte > 0 ? Math.round(totProposto / nConProposte) : 0)}</div>
+          <div class="kpi-lbl">Media proposta</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
       </div>
 
-      <div class="drawer" id="drawer"></div>
+      <div class="nav-tabs" id="nav-tabs">
+        <button class="nav-tab active" onclick="openDrawer('contatti','Tutti i contatti','#003d7a')" id="navtab-contatti">
+          👥 Tutti <span class="tab-count" id="tc-contatti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('ricontattare','Da ricontattare','#e67e22')" id="navtab-ricontattare">
+          📞 Da ricontattare <span class="tab-count" id="tc-ricontattare">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('trattativa','Trattativa in corso','#f0a500')" id="navtab-trattativa">
+          🤝 Trattativa <span class="tab-count" id="tc-trattativa">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('appuntamenti','Appuntamenti','#0072bc')" id="navtab-appuntamenti">
+          📅 Appuntamenti <span class="tab-count" id="tc-appuntamenti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('vendite','Vendite chiuse','#27ae60')" id="navtab-vendite">
+          💰 Vendite <span class="tab-count" id="tc-vendite">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" id="navtab-noleggi">
+          📦 Noleggi <span class="tab-count" id="tc-noleggi">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('proposti','Con proposte','#27ae60')" id="navtab-proposti">
+          🛒 Proposte <span class="tab-count" id="tc-proposti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('persi','Non interessati','#e74c3c')" id="navtab-persi">
+          ❌ Persi <span class="tab-count" id="tc-persi">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')" id="navtab-scadenze">
+          ⚠️ Scadenze <span class="tab-count" id="tc-scadenze">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('harbur','HARBUR','#9b59b6')" id="navtab-harbur">
+          🎯 HARBUR <span class="tab-count" id="tc-harbur">0</span>
+        </button>
+      </div>
+      <div class="drawer open" id="drawer"></div>
 
       <div id="cal-container">${buildCalendar(allMiei)}</div>
 
@@ -1706,6 +1787,16 @@ async function saveEditContact(recId) {
 
   try {
     await proxyPatch(TABLE_RUBRICA, recId, fields);
+    // Aggiorna anche Valore raggiunto con il totale proposte
+    try {
+      const propContatto = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(x=>x.id===recId));
+      const totVal = getValoreProposte(propContatto);
+      if (totVal > 0) {
+        await proxyPatch(TABLE_RUBRICA, recId, { 'Valore raggiunto': totVal });
+        const recUp = allMiei.find(r=>r.id===recId);
+        if (recUp) recUp.fields['Valore raggiunto'] = totVal;
+      }
+    } catch(e) { console.warn('Aggiornamento valore raggiunto:', e); }
     // Aggiorna cache locale
     const rec = allMiei.find(r=>r.id===recId);
     if (rec) rec.fields = { ...rec.fields, ...fields };
