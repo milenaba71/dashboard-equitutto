@@ -18,8 +18,9 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
 .login-box{background:var(--white);border-radius:14px;padding:44px 48px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(11,37,69,.13);border-top:4px solid var(--yellow);text-align:center;}
 .login-box h2{font-family:'Raleway',sans-serif;font-weight:800;font-size:22px;color:var(--navy);margin-bottom:8px;}
 .login-box p{font-size:13px;color:var(--soft);margin-bottom:24px;}
-.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--brd);border-radius:8px;font-size:15px;margin-bottom:12px;outline:none;font-family:'Open Sans',sans-serif;text-align:center;letter-spacing:3px;}
-.login-box input:focus{border-color:var(--blue);}
+.pin-wrap{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+.pin-digit{width:52px;height:60px;border:2px solid var(--brd);border-radius:10px;font-size:28px;font-weight:800;text-align:center;font-family:'Raleway',sans-serif;color:var(--navy);outline:none;transition:border-color .2s;}
+.pin-digit:focus{border-color:var(--blue);}
 .login-err{color:var(--errore);font-size:13px;margin-bottom:10px;display:none;}
 .login-err.on{display:block;}
 
@@ -50,7 +51,7 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
 .counter-bar .status{margin-left:auto;font-size:14px;font-weight:700;}
 .status.ok{color:var(--ok);}.status.warn{color:var(--errore);}
 
-/* FORM */
+/* FORM DOMANDE */
 .add-card{background:var(--white);border-radius:12px;padding:28px 32px;margin-bottom:24px;box-shadow:0 4px 20px rgba(11,37,69,.09);border-top:3px solid var(--blue);}
 .add-card h3{font-family:'Raleway',sans-serif;font-weight:700;font-size:16px;color:var(--navy);margin-bottom:20px;}
 .fg{margin-bottom:14px;}
@@ -79,32 +80,30 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
 .stato-panel{background:var(--white);border-radius:12px;padding:28px 32px;box-shadow:0 4px 20px rgba(11,37,69,.09);}
 .stato-panel h3{font-family:'Raleway',sans-serif;font-weight:700;font-size:16px;color:var(--navy);margin-bottom:6px;}
 .stato-panel p{font-size:13px;color:var(--soft);margin-bottom:20px;line-height:1.5;}
-.stato-select-wrap{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;}
-.stato-select-wrap .fg{flex:1;margin:0;}
-.stato-preview{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
-.stato-pill{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;opacity:.7;transition:all .2s;border:2px solid transparent;}
+.stato-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.stato-pill{padding:6px 16px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;opacity:.7;transition:all .2s;border:3px solid transparent;}
 .stato-pill:hover{opacity:1;transform:scale(1.05);}
-.stato-pill.selected{opacity:1;border-color:rgba(0,0,0,.3);box-shadow:0 2px 8px rgba(0,0,0,.2);}
-.rubrica-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;}
-.rubrica-row{background:var(--bg);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;font-size:14px;}
+.stato-pill.sel{opacity:1;border-color:rgba(0,0,0,.4);box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.rubrica-list{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;}
+.rubrica-row{background:var(--bg);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;}
 .rubrica-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--blue);}
-.rubrica-nome{flex:1;font-weight:600;color:var(--navy);}
-.rubrica-email{font-size:12px;color:var(--soft);}
-.rubrica-stato{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;color:#fff;}
-.sel-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.rubrica-nome{flex:1;font-weight:600;color:var(--navy);line-height:1.3;}
+.rubrica-sub{font-size:11px;color:var(--soft);font-weight:400;}
+.rubrica-stato{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;}
+.sel-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
 .sel-count{font-size:13px;color:var(--soft);font-weight:600;}
 
 /* SYNC */
-.sync-bar{background:#e8f5ef;border:1px solid #b8dfc9;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--ok);display:none;}
+.sync-bar{border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;display:none;}
 .sync-bar.show{display:block;}
-.sync-bar.error{background:#fdecea;border-color:#f5c6c2;color:var(--errore);}
-.sync-bar.info{background:#e8f0fe;border-color:#c5d3f8;color:var(--blue);}
+.sync-bar.ok{background:#e8f5ef;color:var(--ok);border:1px solid #b8dfc9;}
+.sync-bar.err{background:#fdecea;color:var(--errore);border:1px solid #f5c6c2;}
+.sync-bar.info{background:#e8f0fe;color:var(--blue);border:1px solid #c5d3f8;}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:14px 22px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;border-left:4px solid var(--yellow);}
 .toast.show{transform:translateY(0);opacity:1;}
-
-@media(max-width:560px){.ag{grid-template-columns:1fr;}.q-ans-grid{grid-template-columns:1fr;}.stato-select-wrap{flex-direction:column;}}
+@media(max-width:560px){.ag{grid-template-columns:1fr;}.q-ans-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -113,31 +112,38 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
   <div class="hbadge">⚙️ Admin Quiz HARBUR</div>
 </header>
 
-<!-- LOGIN -->
+<!-- LOGIN con PIN a cifre separate -->
 <div id="login-screen">
   <div class="login-box">
     <h2>🔐 Accesso Admin</h2>
-    <p>Inserisci la password per gestire il quiz HARBUR</p>
-    <div class="login-err" id="login-err">❌ Password errata. Riprova.</div>
-    <input type="password" id="pwd-input" placeholder="••••••••••" autocomplete="off" autocorrect="off" autocapitalize="off" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-primary" style="width:100%;padding:13px;margin-top:4px;" onclick="doLogin()">🔓 Accedi</button>
-    <p style="margin-top:20px;font-size:11px;color:#bbb;">Password: <strong style="color:var(--soft);">harbur2026</strong></p>
+    <p>Inserisci il codice di accesso cifra per cifra</p>
+    <div class="login-err" id="login-err">❌ Codice errato. Riprova.</div>
+    <div class="pin-wrap">
+      <input class="pin-digit" id="p0" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,0)">
+      <input class="pin-digit" id="p1" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,1)">
+      <input class="pin-digit" id="p2" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,2)">
+      <input class="pin-digit" id="p3" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,3)">
+      <input class="pin-digit" id="p4" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,4)">
+      <input class="pin-digit" id="p5" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,5)">
+      <input class="pin-digit" id="p6" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,6)">
+      <input class="pin-digit" id="p7" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,7)">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:13px;" onclick="doLogin()">🔓 Accedi</button>
+    <p style="margin-top:16px;font-size:11px;color:#bbb;">Codice: <strong style="color:var(--soft);">harbur2026</strong></p>
   </div>
 </div>
 
 <!-- ADMIN -->
 <div id="admin-screen">
   <div class="admin-wrap">
-
     <div class="admin-top">
       <h1>⚙️ Admin Quiz HARBUR</h1>
       <button class="btn btn-primary" onclick="loadAll()">🔄 Aggiorna tutto</button>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
       <button class="tab active" onclick="showTab('tab-domande',this)">📋 Domande Quiz</button>
-      <button class="tab" onclick="showTab('tab-stato',this)">🏷️ Gestione Stato Contatti</button>
+      <button class="tab" onclick="showTab('tab-stato',this)">🏷️ Stato Contatti</button>
     </div>
 
     <!-- TAB DOMANDE -->
@@ -149,7 +155,7 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
         <div class="status" id="q-status">Caricamento...</div>
       </div>
       <div class="q-list" id="q-list"><div class="empty">⏳ Caricamento...</div></div>
-      <div class="add-card" id="add-form" style="margin-top:24px;">
+      <div class="add-card" style="margin-top:24px;">
         <h3>➕ Aggiungi nuova domanda</h3>
         <div class="fg"><label>Testo della domanda *</label><input type="text" id="new-d" placeholder="Es: Cos'è Equistasi®?"></div>
         <div class="ag">
@@ -158,11 +164,10 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
           <div class="ab"><label><div class="badge bC">C</div>Risposta C *</label><input type="text" id="new-c" placeholder="Terza risposta"></div>
           <div class="ab"><label><div class="badge bD">D</div>Risposta D *</label><input type="text" id="new-e" placeholder="Quarta risposta"></div>
         </div>
-        <div class="fg">
-          <label>Risposta corretta *</label>
+        <div class="fg"><label>Risposta corretta *</label>
           <div class="sw"><select id="new-ok"><option value="">— Seleziona —</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
         </div>
-        <button class="btn btn-primary" id="btn-add" onclick="addQuestion()" style="width:100%;padding:13px;margin-top:6px;">✅ Salva Domanda su Airtable</button>
+        <button class="btn btn-primary" id="btn-add" onclick="addQuestion()" style="width:100%;padding:13px;margin-top:6px;">✅ Salva Domanda</button>
       </div>
     </div>
 
@@ -170,122 +175,41 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
     <div id="tab-stato" style="display:none;">
       <div class="sync-bar" id="sync-s"></div>
       <div class="stato-panel">
-        <h3>🏷️ Cambia Stato ai Contatti HARBUR</h3>
-        <p>Seleziona i contatti dalla lista e assegna loro un nuovo stato Airtable. Utile per aggiornare i lead dopo l'evento.</p>
+        <h3>🏷️ Cambia Stato ai Contatti</h3>
+        <p>Filtra i contatti, selezionali e assegna un nuovo stato direttamente su Airtable.</p>
 
-        <!-- SELEZIONE STATO -->
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Filtra per stato attuale</label>
+          <div class="sw"><select id="filter-stato" onchange="filterRubrica()">
+            <option value="HARBUR" selected>HARBUR</option>
+            <option value="">— Tutti —</option>
+          </select></div>
+        </div>
+
+        <div class="fg" style="margin-bottom:12px;">
+          <label>⬇️ Nuovo stato da assegnare</label>
+          <div class="sw"><select id="nuovo-stato">
+            <option value="">— Seleziona —</option>
+          </select></div>
+        </div>
+
+        <!-- PILLOLE STATI (caricate dinamicamente) -->
         <div style="margin-bottom:16px;">
-          <div class="fg" style="margin-bottom:12px;"><label>Filtra per stato attuale</label>
-            <div class="sw"><select id="filter-stato" onchange="filterRubrica()">
-              <option value="">— Tutti gli stati —</option>
-              <option value="HARBUR" selected>HARBUR</option>
-<option value="HARBUR">HARBUR</option>
-<option value="DA RICONTATTARE">DA RICONTATTARE</option>
-<option value="TRATTATIVA IN CORSO">TRATTATIVA IN CORSO</option>
-<option value="INVIATO LINK PER APPUNTAMENTO">INVIATO LINK PER APPUNTAMENTO</option>
-<option value="NON HA ANCORA RISPOSTO">NON HA ANCORA RISPOSTO</option>
-<option value="NON VUOLE ESSERE RICONTATTATO">NON VUOLE ESSERE RICONTATTATO</option>
-<option value="NO">NO</option>
-<option value="SI">SI</option>
-<option value="VENDUTO">VENDUTO</option>
-<option value="NOLEGGIATO">NOLEGGIATO</option>
-<option value="CAPARRA">CAPARRA</option>
-<option value="NUMERO ERRATO">NUMERO ERRATO</option>
-<option value="NON ADATTO AL DISPOSITIVO">NON ADATTO AL DISPOSITIVO</option>
-<option value="NON INTER.PREZZO ALTO">NON INTER.PREZZO ALTO</option>
-<option value="NO RECAPITO TELEFONICO">NO RECAPITO TELEFONICO</option>
-<option value="RECUPERATO">RECUPERATO</option>
-<option value="RINNOVO NOLEGGIO">RINNOVO NOLEGGIO</option>
-<option value="CALIBRAZIONE">CALIBRAZIONE</option>
-<option value="ATP Monza Open">ATP Monza Open</option>
-<option value="TEST ATP">TEST ATP</option>
-<option value="web">web</option>
-<option value="CONTO VENDITA">CONTO VENDITA</option>
-<option value="noleggio professionale">noleggio professionale</option>
-<option value="resi e segnalazioni">resi e segnalazioni</option>
-<option value="passato a terzi">passato a terzi</option>
-<option value="deceduto">deceduto</option>
-<option value="Gol">Gol</option>
-            </select></div>
-          </div>
-          <div class="fg" style="margin-bottom:16px;"><label>⬇️ Nuovo stato da assegnare *</label>
-            <div class="sw"><select id="nuovo-stato">
-              <option value="">— Seleziona nuovo stato —</option>
-<option value="HARBUR">HARBUR</option>
-<option value="DA RICONTATTARE">DA RICONTATTARE</option>
-<option value="TRATTATIVA IN CORSO">TRATTATIVA IN CORSO</option>
-<option value="INVIATO LINK PER APPUNTAMENTO">INVIATO LINK PER APPUNTAMENTO</option>
-<option value="NON HA ANCORA RISPOSTO">NON HA ANCORA RISPOSTO</option>
-<option value="NON VUOLE ESSERE RICONTATTATO">NON VUOLE ESSERE RICONTATTATO</option>
-<option value="NO">NO</option>
-<option value="SI">SI</option>
-<option value="VENDUTO">VENDUTO</option>
-<option value="NOLEGGIATO">NOLEGGIATO</option>
-<option value="CAPARRA">CAPARRA</option>
-<option value="NUMERO ERRATO">NUMERO ERRATO</option>
-<option value="NON ADATTO AL DISPOSITIVO">NON ADATTO AL DISPOSITIVO</option>
-<option value="NON INTER.PREZZO ALTO">NON INTER.PREZZO ALTO</option>
-<option value="NO RECAPITO TELEFONICO">NO RECAPITO TELEFONICO</option>
-<option value="RECUPERATO">RECUPERATO</option>
-<option value="RINNOVO NOLEGGIO">RINNOVO NOLEGGIO</option>
-<option value="CALIBRAZIONE">CALIBRAZIONE</option>
-<option value="ATP Monza Open">ATP Monza Open</option>
-<option value="TEST ATP">TEST ATP</option>
-<option value="web">web</option>
-<option value="CONTO VENDITA">CONTO VENDITA</option>
-<option value="noleggio professionale">noleggio professionale</option>
-<option value="resi e segnalazioni">resi e segnalazioni</option>
-<option value="passato a terzi">passato a terzi</option>
-<option value="deceduto">deceduto</option>
-<option value="Gol">Gol</option>
-            </select></div>
-          </div>
-          <!-- PILLOLE COLORATE per selezione rapida -->
-          <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Selezione rapida stato:</label>
-            <div class="stato-preview" id="stato-pills"><span class="stato-pill" style="background:#9b59b6" onclick="selectStato(\"HARBUR\")">HARBUR</span>
-<span class="stato-pill" style="background:#f39c12" onclick="selectStato(\"DA RICONTATTARE\")">DA RICONTATTARE</span>
-<span class="stato-pill" style="background:#f1c40f" onclick="selectStato(\"TRATTATIVA IN CORSO\")">TRATTATIVA IN CORSO</span>
-<span class="stato-pill" style="background:#2ecc71" onclick="selectStato(\"INVIATO LINK PER APPUNTAMENTO\")">INVIATO LINK PER APPUNTAMENTO</span>
-<span class="stato-pill" style="background:#e91e8c" onclick="selectStato(\"NON HA ANCORA RISPOSTO\")">NON HA ANCORA RISPOSTO</span>
-<span class="stato-pill" style="background:#e67e22" onclick="selectStato(\"NON VUOLE ESSERE RICONTATTATO\")">NON VUOLE ESSERE RICONTATTATO</span>
-<span class="stato-pill" style="background:#1abc9c" onclick="selectStato(\"NO\")">NO</span>
-<span class="stato-pill" style="background:#3498db" onclick="selectStato(\"SI\")">SI</span>
-<span class="stato-pill" style="background:#27ae60" onclick="selectStato(\"VENDUTO\")">VENDUTO</span>
-<span class="stato-pill" style="background:#00bcd4" onclick="selectStato(\"NOLEGGIATO\")">NOLEGGIATO</span>
-<span class="stato-pill" style="background:#e91e8c" onclick="selectStato(\"CAPARRA\")">CAPARRA</span>
-<span class="stato-pill" style="background:#9c27b0" onclick="selectStato(\"NUMERO ERRATO\")">NUMERO ERRATO</span>
-<span class="stato-pill" style="background:#95a5a6" onclick="selectStato(\"NON ADATTO AL DISPOSITIVO\")">NON ADATTO AL DISPOSITIVO</span>
-<span class="stato-pill" style="background:#00acc1" onclick="selectStato(\"NON INTER.PREZZO ALTO\")">NON INTER.PREZZO ALTO</span>
-<span class="stato-pill" style="background:#009688" onclick="selectStato(\"NO RECAPITO TELEFONICO\")">NO RECAPITO TELEFONICO</span>
-<span class="stato-pill" style="background:#cddc39" onclick="selectStato(\"RECUPERATO\")">RECUPERATO</span>
-<span class="stato-pill" style="background:#607d8b" onclick="selectStato(\"RINNOVO NOLEGGIO\")">RINNOVO NOLEGGIO</span>
-<span class="stato-pill" style="background:#e91e63" onclick="selectStato(\"CALIBRAZIONE\")">CALIBRAZIONE</span>
-<span class="stato-pill" style="background:#ef5350" onclick="selectStato(\"ATP Monza Open\")">ATP Monza Open</span>
-<span class="stato-pill" style="background:#455a64" onclick="selectStato(\"TEST ATP\")">TEST ATP</span>
-<span class="stato-pill" style="background:#00bfa5" onclick="selectStato(\"web\")">web</span>
-<span class="stato-pill" style="background:#1565c0" onclick="selectStato(\"CONTO VENDITA\")">CONTO VENDITA</span>
-<span class="stato-pill" style="background:#e65100" onclick="selectStato(\"noleggio professionale\")">noleggio professionale</span>
-<span class="stato-pill" style="background:#f44336" onclick="selectStato(\"resi e segnalazioni\")">resi e segnalazioni</span>
-<span class="stato-pill" style="background:#00acc1" onclick="selectStato(\"passato a terzi\")">passato a terzi</span>
-<span class="stato-pill" style="background:#1976d2" onclick="selectStato(\"deceduto\")">deceduto</span>
-<span class="stato-pill" style="background:#42a5f5" onclick="selectStato(\"Gol\")">Gol</span></div>
-          </div>
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Oppure scegli rapidamente:</label>
+          <div class="stato-pills" id="stato-pills">⏳ Caricamento stati...</div>
         </div>
 
-        <!-- LISTA CONTATTI -->
         <div class="sel-bar">
-          <div class="sel-count" id="sel-count">0 selezionati</div>
+          <span class="sel-count" id="sel-count">0 selezionati</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm btn-primary" onclick="selAll()">☑️ Seleziona tutti</button>
-            <button class="btn btn-sm btn-danger" onclick="selNone()">✖️ Deseleziona</button>
-            <button class="btn btn-sm btn-ok" id="btn-update" onclick="updateStati()" disabled>✅ Aggiorna stati</button>
+            <button class="btn btn-sm btn-primary" onclick="selAll()">☑️ Tutti</button>
+            <button class="btn btn-sm btn-danger" onclick="selNone()">✖️ Nessuno</button>
+            <button class="btn btn-sm btn-ok" id="btn-update" onclick="updateStati()" disabled>✅ Aggiorna</button>
           </div>
         </div>
-        <div class="rubrica-list" id="rubrica-list"><div class="empty">⏳ Caricamento contatti...</div></div>
+        <div class="rubrica-list" id="rubrica-list"><div class="empty">⏳ Caricamento...</div></div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -300,27 +224,39 @@ const DOMANDE_REC = "recibDeWFDUtxfdOl";
 const F_NOTES     = "fldZf60LmjT8vQ0Zo";
 const PASS        = "harbur2026";
 
-const STATI_COLORS = {"HARBUR":"#9b59b6","DA RICONTATTARE":"#f39c12","TRATTATIVA IN CORSO":"#f1c40f","INVIATO LINK PER APPUNTAMENTO":"#2ecc71","NON HA ANCORA RISPOSTO":"#e91e8c","NON VUOLE ESSERE RICONTATTATO":"#e67e22","NO":"#1abc9c","SI":"#3498db","VENDUTO":"#27ae60","NOLEGGIATO":"#00bcd4","CAPARRA":"#e91e8c","NUMERO ERRATO":"#9c27b0","NON ADATTO AL DISPOSITIVO":"#95a5a6","NON INTER.PREZZO ALTO":"#00acc1","NO RECAPITO TELEFONICO":"#009688","RECUPERATO":"#cddc39","RINNOVO NOLEGGIO":"#607d8b","CALIBRAZIONE":"#e91e63","ATP Monza Open":"#ef5350","TEST ATP":"#455a64","web":"#00bfa5","CONTO VENDITA":"#1565c0","noleggio professionale":"#e65100","resi e segnalazioni":"#f44336","passato a terzi":"#00acc1","deceduto":"#1976d2","Gol":"#42a5f5"};
+const AT_COLORS={
+  cyanLight2:"#00bcd4",tealLight2:"#009688",greenLight2:"#4caf50",yellowLight2:"#cddc39",
+  orangeLight2:"#ff9800",orangeLight1:"#ff5722",blueLight2:"#42a5f5",pinkLight2:"#e91e8c",
+  purpleLight2:"#9c27b0",grayLight2:"#9e9e9e",blueLight1:"#1e88e5",cyanLight1:"#00acc1",
+  tealLight1:"#00897b",greenLight1:"#43a047",yellowLight1:"#c0ca33",pinkLight1:"#e91e63",
+  grayLight1:"#757575",orangeDark1:"#e65100",blueBright:"#1976d2",cyanBright:"#00bfa5",
+  pinkDark1:"#880e4f",redBright:"#f44336",tealBright:"#00bfa5",blueDark1:"#0d47a1",
+  redLight2:"#ef9a9a",grayDark1:"#424242",purpleLight1:"#ab47bc",greenBright:"#00c853",
+  yellowBright:"#ffd600",redDark1:"#b71c1c"
+};
 
-let questions=[], rubrica=[], filteredRubrica=[], selectedIds=new Set();
+let questions=[], rubrica=[], filteredRubrica=[], selectedIds=new Set(), statiMap={};
 
-// ── LOGIN ──────────────────────────────────────
+// ── PIN LOGIN ──────────────────────────────────
+function pinKey(e,idx){
+  const val=document.getElementById("p"+idx).value;
+  if(val && idx<7) document.getElementById("p"+(idx+1)).focus();
+  if(e.key==="Backspace" && !val && idx>0) document.getElementById("p"+(idx-1)).focus();
+  if(e.key==="Enter") doLogin();
+}
+
 function doLogin(){
-  if(document.getElementById("pwd-input").value.trim()===PASS){
+  const code=[...Array(8)].map((_,i)=>document.getElementById("p"+i).value).join("");
+  if(code===PASS){
     document.getElementById("login-screen").style.display="none";
     document.getElementById("admin-screen").style.display="block";
     loadAll();
   } else {
     document.getElementById("login-err").classList.add("on");
-    document.getElementById("pwd-input").value="";
-    document.getElementById("pwd-input").focus();
+    [...Array(8)].forEach((_,i)=>document.getElementById("p"+i).value="");
+    document.getElementById("p0").focus();
   }
 }
-document.getElementById("pwd-input").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
-// Pulisci campo password al caricamento per evitare autocomplete del browser
-window.addEventListener("load", function(){
-  setTimeout(()=>{ document.getElementById("pwd-input").value=""; }, 100);
-});
 
 // ── TABS ──────────────────────────────────────
 function showTab(id,btn){
@@ -330,81 +266,13 @@ function showTab(id,btn){
   btn.classList.add("active");
 }
 
-// ── LOAD ALL ──────────────────────────────────
-function loadAll(){
-  loadDomande();
-  loadStatiDaAirtable();
-}
-
-// ══════════════════════════════════════════════
-// STATI — caricati dinamicamente da Airtable
-// ══════════════════════════════════════════════
-async function loadStatiDaAirtable(){
-  try{
-    // Usa Meta API per leggere le scelte del campo Status
-    const res=await fetch(
-      "https://api.airtable.com/v0/meta/bases/"+BASE_ID+"/tables",
-      {mode:"cors",headers:{"Authorization":"Bearer "+API_KEY,"x-airtable-client-queue-size":"5"}}
-    );
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const data=await res.json();
-    const rubricaTable=data.tables.find(t=>t.id===RUBRICA_TBL);
-    const statusField=rubricaTable&&rubricaTable.fields&&rubricaTable.fields.find(f=>f.id==="fld5EpJuoZLFEqeJ6");
-    if(!statusField||!statusField.config||!statusField.config.choices) throw new Error("Campo non trovato");
-    const choices=statusField.config.choices;
-    aggiornaStatiUI(choices);
-  }catch(e){
-    console.warn("Uso stati statici:", e.message);
-    loadRubrica(); // fallback: usa quelli già presenti
-  }
-}
-
-const AIRTABLE_COLORS={
-  "cyanLight2":"#00bcd4","tealLight2":"#009688","greenLight2":"#4caf50",
-  "yellowLight2":"#cddc39","orangeLight2":"#ff9800","orangeLight1":"#ff5722",
-  "blueLight2":"#42a5f5","pinkLight2":"#e91e8c","purpleLight2":"#9c27b0",
-  "grayLight2":"#9e9e9e","blueLight1":"#1e88e5","cyanLight1":"#00acc1",
-  "tealLight1":"#00897b","greenLight1":"#43a047","yellowLight1":"#c0ca33",
-  "pinkLight1":"#e91e63","grayLight1":"#757575","orangeDark1":"#e65100",
-  "blueBright":"#1976d2","cyanBright":"#00bfa5","pinkDark1":"#880e4f",
-  "redBright":"#f44336","tealBright":"#00bfa5","blueDark1":"#0d47a1",
-  "redLight2":"#ef9a9a","grayDark1":"#424242","purpleLight1":"#ab47bc",
-  "greenBright":"#00c853","yellowBright":"#ffd600","redDark1":"#b71c1c"
-};
-
-function aggiornaStatiUI(choices){
-  // Mappa colori dinamica
-  window.STATI_DYN={};
-  choices.forEach(s=>{ window.STATI_DYN[s.name]=AIRTABLE_COLORS[s.color]||"#607d8b"; });
-
-  // Aggiorna select filter
-  const fs=document.getElementById("filter-stato");
-  const fv=fs.value;
-  fs.innerHTML='<option value="">— Tutti gli stati —</option>'+
-    choices.map(s=>'<option value="'+s.name+'"'+(s.name==="HARBUR"?' selected':'')+'>'+s.name+'</option>').join("");
-  if(fv) fs.value=fv;
-
-  // Aggiorna select nuovo stato
-  const ns=document.getElementById("nuovo-stato");
-  const nv=ns.value;
-  ns.innerHTML='<option value="">— Seleziona nuovo stato —</option>'+
-    choices.map(s=>'<option value="'+s.name+'">'+s.name+'</option>').join("");
-  if(nv) ns.value=nv;
-
-  // Aggiorna pillole
-  document.getElementById("stato-pills").innerHTML=choices.map(s=>{
-    const col=AIRTABLE_COLORS[s.color]||"#607d8b";
-    return '<span class="stato-pill" style="background:'+col+'" onclick="selectStato(this,''+s.name.replace(/'/g,"\'")+'')">'+s.name+'</span>';
-  }).join("");
-
-  loadRubrica();
-}
+function loadAll(){ loadDomande(); loadStati(); }
 
 // ══════════════════════════════════════════════
 // DOMANDE
 // ══════════════════════════════════════════════
 async function loadDomande(){
-  showSync("sync-d","⏳ Caricamento domande...",false,true);
+  sync("sync-d","⏳ Caricamento domande...","info",true);
   try{
     const res=await fetch("https://api.airtable.com/v0/"+BASE_ID+"/"+LAVAGNA_TBL+"/"+DOMANDE_REC,
       {mode:"cors",headers:{"Authorization":"Bearer "+API_KEY}});
@@ -412,8 +280,8 @@ async function loadDomande(){
     const data=await res.json();
     questions=JSON.parse(data.fields[F_NOTES]||"[]");
     renderDomande();
-    showSync("sync-d","✅ "+questions.length+" domande caricate",false,false);
-  }catch(e){showSync("sync-d","❌ "+e.message,true,false);}
+    sync("sync-d","✅ "+questions.length+" domande caricate","ok",false);
+  }catch(e){ sync("sync-d","❌ "+e.message,"err",false); }
 }
 
 async function saveDomande(){
@@ -429,11 +297,11 @@ function renderDomande(){
   const n=questions.length;
   document.getElementById("q-count").textContent=n;
   const st=document.getElementById("q-status");
-  if(n>=15){st.textContent="✅ Quiz completo!";st.className="status ok";}
-  else{st.textContent="⚠️ Mancano "+(15-n)+" domande";st.className="status warn";}
+  st.textContent=n>=15?"✅ Quiz completo!":"⚠️ Mancano "+(15-n)+" domande";
+  st.className="status "+(n>=15?"ok":"warn");
+  const colors={A:"#e74c3c",B:"#3498db",C:"#2ecc71",D:"#f39c12"};
   const list=document.getElementById("q-list");
   if(!n){list.innerHTML='<div class="empty">📭 Nessuna domanda. Aggiungine una!</div>';return;}
-  const colors={A:"#e74c3c",B:"#3498db",C:"#2ecc71",D:"#f39c12"};
   list.innerHTML=questions.map((q,i)=>`
     <div class="q-card">
       <div class="q-num">${i+1}</div>
@@ -466,24 +334,69 @@ async function addQuestion(){
     ["new-d","new-a","new-b","new-c","new-e"].forEach(id=>document.getElementById(id).value="");
     document.getElementById("new-ok").value="";
     showToast("✅ Domanda "+questions.length+"/15 salvata!");
-    showSync("sync-d","✅ Salvato — "+questions.length+" domande totali",false,false);
+    sync("sync-d","✅ Salvato — "+questions.length+" domande","ok",false);
     window.scrollTo({top:0,behavior:"smooth"});
-  }catch(e){questions.pop();showToast("❌ Errore: "+e.message);}
-  btn.disabled=false;btn.textContent="✅ Salva Domanda su Airtable";
+  }catch(ex){questions.pop();showToast("❌ "+ex.message);}
+  btn.disabled=false;btn.textContent="✅ Salva Domanda";
 }
 
 async function deleteQ(idx){
   if(!confirm("Eliminare questa domanda?"))return;
-  const removed=questions.splice(idx,1);
+  const rem=questions.splice(idx,1);
   try{await saveDomande();renderDomande();showToast("🗑 Domanda eliminata");}
-  catch(e){questions.splice(idx,0,...removed);showToast("❌ Errore: "+e.message);}
+  catch(e){questions.splice(idx,0,...rem);showToast("❌ "+e.message);}
 }
 
 // ══════════════════════════════════════════════
-// RUBRICA + STATO
+// STATI — caricati da Airtable Meta API
+// ══════════════════════════════════════════════
+async function loadStati(){
+  try{
+    const res=await fetch("https://api.airtable.com/v0/meta/bases/"+BASE_ID+"/tables",
+      {mode:"cors",headers:{"Authorization":"Bearer "+API_KEY}});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    const tbl=data.tables.find(t=>t.id===RUBRICA_TBL);
+    const fld=tbl&&tbl.fields&&tbl.fields.find(f=>f.id==="fld5EpJuoZLFEqeJ6");
+    const choices=(fld&&fld.config&&fld.config.choices)||[];
+    renderStati(choices);
+    loadRubrica();
+  }catch(e){
+    console.warn("Meta API fallback:",e.message);
+    loadRubrica();
+  }
+}
+
+function renderStati(choices){
+  // Mappa colori
+  choices.forEach(s=>{ statiMap[s.name]=AT_COLORS[s.color]||"#607d8b"; });
+
+  // Select filter
+  const fs=document.getElementById("filter-stato");
+  fs.innerHTML='<option value="HARBUR" selected>HARBUR</option><option value="">— Tutti —</option>'+
+    choices.filter(s=>s.name!=="HARBUR").map(s=>'<option value="'+s.name+'">'+s.name+'</option>').join("");
+
+  // Select nuovo stato
+  document.getElementById("nuovo-stato").innerHTML=
+    '<option value="">— Seleziona —</option>'+
+    choices.map(s=>'<option value="'+s.name+'">'+s.name+'</option>').join("");
+
+  // Pillole
+  document.getElementById("stato-pills").innerHTML=
+    choices.map(s=>'<span class="stato-pill" style="background:'+(AT_COLORS[s.color]||"#607d8b")+'" onclick="pickStato(this,''+s.name.replace(/'/g,"\'")+'')">'  +s.name+'</span>').join("");
+}
+
+function pickStato(el,name){
+  document.getElementById("nuovo-stato").value=name;
+  document.querySelectorAll(".stato-pill").forEach(p=>p.classList.remove("sel"));
+  el.classList.add("sel");
+}
+
+// ══════════════════════════════════════════════
+// RUBRICA
 // ══════════════════════════════════════════════
 async function loadRubrica(){
-  showSync("sync-s","⏳ Caricamento contatti da Airtable...",false,true);
+  sync("sync-s","⏳ Caricamento contatti...","info",true);
   rubrica=[];
   let offset="";
   try{
@@ -495,21 +408,21 @@ async function loadRubrica(){
       const data=await res.json();
       rubrica.push(...data.records);
       offset=data.offset||"";
-    } while(offset);
-    showSync("sync-s","✅ "+rubrica.length+" contatti caricati",false,false);
+    }while(offset);
+    sync("sync-s","✅ "+rubrica.length+" contatti caricati","ok",false);
     filterRubrica();
-  }catch(e){showSync("sync-s","❌ "+e.message,true,false);}
+  }catch(e){sync("sync-s","❌ "+e.message,"err",false);}
 }
 
 function filterRubrica(){
   const f=document.getElementById("filter-stato").value;
-  filteredRubrica=f?rubrica.filter(r=>(r.fields["fld5EpJuoZLFEqeJ6"]||"")=== f):rubrica;
+  filteredRubrica=f?rubrica.filter(r=>(r.fields["fld5EpJuoZLFEqeJ6"]||"")===f):rubrica;
   selectedIds=new Set();
   renderRubrica();
 }
 
 function renderRubrica(){
-  updateSelCount();
+  updateCount();
   const list=document.getElementById("rubrica-list");
   if(!filteredRubrica.length){list.innerHTML='<div class="empty">📭 Nessun contatto trovato.</div>';return;}
   list.innerHTML=filteredRubrica.map(r=>{
@@ -517,87 +430,57 @@ function renderRubrica(){
     const email=r.fields["fldO0RdkbUbkWFPLB"]||"";
     const tel=r.fields["fldddgGgkQbofsaCg"]||"";
     const stato=r.fields["fld5EpJuoZLFEqeJ6"]||"";
-    const color=(window.STATI_DYN&&window.STATI_DYN[stato])||STATI_COLORS[stato]||"#95a5a6";
-    const checked=selectedIds.has(r.id)?"checked":"";
-    return `<div class="rubrica-row">
-      <input type="checkbox" ${checked} onchange="toggleSel('${r.id}',this.checked)">
-      <div class="rubrica-nome">${nome}<br><span class="rubrica-email">${email}${tel?" · "+tel:""}</span></div>
-      <span class="rubrica-stato" style="background:${color}">${stato||"—"}</span>
-    </div>`;
+    const col=statiMap[stato]||"#9e9e9e";
+    return '<div class="rubrica-row">'+
+      '<input type="checkbox" '+(selectedIds.has(r.id)?"checked":"")+' onchange="toggleSel(''+r.id+'',this.checked)">'+
+      '<div class="rubrica-nome">'+nome+'<br><span class="rubrica-sub">'+email+(tel?" · "+tel:"")+'</span></div>'+
+      '<span class="rubrica-stato" style="background:'+col+'">'+stato+'</span></div>';
   }).join("");
 }
 
-function toggleSel(id,checked){
-  if(checked) selectedIds.add(id);
-  else selectedIds.delete(id);
-  updateSelCount();
-}
-
-function selAll(){
-  filteredRubrica.forEach(r=>selectedIds.add(r.id));
-  renderRubrica();
-}
-function selNone(){
-  selectedIds.clear();
-  renderRubrica();
-}
-function updateSelCount(){
+function toggleSel(id,v){v?selectedIds.add(id):selectedIds.delete(id);updateCount();}
+function selAll(){filteredRubrica.forEach(r=>selectedIds.add(r.id));renderRubrica();}
+function selNone(){selectedIds.clear();renderRubrica();}
+function updateCount(){
   const n=selectedIds.size;
   document.getElementById("sel-count").textContent=n+" selezionat"+(n===1?"o":"i");
   document.getElementById("btn-update").disabled=n===0;
 }
 
-function selectStato(el,name){
-  document.getElementById("nuovo-stato").value=name;
-  document.querySelectorAll(".stato-pill").forEach(p=>{
-    p.classList.toggle("selected",p.textContent.trim()===name);
-  });
-}
-
 async function updateStati(){
-  const nuovoStato=document.getElementById("nuovo-stato").value;
-  if(!nuovoStato){showToast("⚠️ Seleziona un nuovo stato!");return;}
+  const ns=document.getElementById("nuovo-stato").value;
+  if(!ns){showToast("⚠️ Seleziona un nuovo stato!");return;}
   if(!selectedIds.size){showToast("⚠️ Seleziona almeno un contatto!");return;}
-  if(!confirm("Aggiornare "+selectedIds.size+" contatti a stato \""+nuovoStato+"\"?"))return;
-
+  if(!confirm("Aggiornare "+selectedIds.size+" contatti → '"+ns+"'?"))return;
   const btn=document.getElementById("btn-update");
   btn.disabled=true;btn.textContent="Aggiornamento...";
-  showSync("sync-s","⏳ Aggiornamento "+selectedIds.size+" contatti...",false,true);
-
+  sync("sync-s","⏳ Aggiornamento in corso...","info",true);
   const ids=[...selectedIds];
-  // Airtable permette max 10 record per PATCH
   const chunks=[];
   for(let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i,i+10));
-
-  let updated=0, errors=0;
+  let ok=0,err=0;
   for(const chunk of chunks){
     try{
       const res=await fetch("https://api.airtable.com/v0/"+BASE_ID+"/"+RUBRICA_TBL,{
         method:"PATCH",mode:"cors",
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+API_KEY},
-        body:JSON.stringify({records:chunk.map(id=>({id,fields:{"fld5EpJuoZLFEqeJ6":nuovoStato}}))})
+        body:JSON.stringify({records:chunk.map(id=>({id,fields:{"fld5EpJuoZLFEqeJ6":ns}}))})
       });
-      if(res.ok) updated+=chunk.length;
-      else errors+=chunk.length;
-    }catch(e){errors+=chunk.length;}
+      if(res.ok) ok+=chunk.length; else err+=chunk.length;
+    }catch(e){err+=chunk.length;}
   }
-
-  if(updated>0){
-    showToast("✅ "+updated+" contatti aggiornati a '"+nuovoStato+"'!");
-    showSync("sync-s","✅ "+updated+" contatti → "+nuovoStato,false,false);
-    selectedIds.clear();
-    await loadRubrica();
-  }
-  if(errors>0) showToast("❌ "+errors+" errori durante l'aggiornamento");
-  btn.disabled=false;btn.textContent="✅ Aggiorna stati";
+  showToast(ok?"✅ "+ok+" contatti → '"+ns+"'":"❌ Errore aggiornamento");
+  sync("sync-s",ok?"✅ "+ok+" aggiornati":"❌ "+err+" errori",ok?"ok":"err",false);
+  selectedIds.clear();
+  await loadRubrica();
+  btn.disabled=false;btn.textContent="✅ Aggiorna";
 }
 
 // ── UTILS ──────────────────────────────────────
-function showSync(id,msg,isErr,persistent){
+function sync(id,msg,type,persist){
   const el=document.getElementById(id);
-  el.textContent=msg;
-  el.className="sync-bar show"+(isErr?" error":"");
-  if(!persistent&&!isErr) setTimeout(()=>el.classList.remove("show"),4000);
+  el.textContent=msg;el.className="sync-bar show "+type;
+  if(!persist) setTimeout(()=>el.classList.remove("show"),4000);
 }
 function showToast(msg){
   const t=document.getElementById("toast");
