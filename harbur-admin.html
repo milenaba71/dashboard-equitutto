@@ -127,6 +127,8 @@ header{background:var(--navy);height:70px;display:flex;align-items:center;justif
       <input class="pin-digit" id="p5" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,5)">
       <input class="pin-digit" id="p6" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,6)">
       <input class="pin-digit" id="p7" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,7)">
+      <input class="pin-digit" id="p8" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,8)">
+      <input class="pin-digit" id="p9" type="text" maxlength="1" inputmode="text" onkeyup="pinKey(event,9)">
     </div>
     <button class="btn btn-primary" style="width:100%;padding:13px;" onclick="doLogin()">🔓 Accedi</button>
     <p style="margin-top:16px;font-size:11px;color:#bbb;">Codice: <strong style="color:var(--soft);">harbur2026</strong></p>
@@ -240,20 +242,20 @@ let questions=[], rubrica=[], filteredRubrica=[], selectedIds=new Set(), statiMa
 // ── PIN LOGIN ──────────────────────────────────
 function pinKey(e,idx){
   const val=document.getElementById("p"+idx).value;
-  if(val && idx<7) document.getElementById("p"+(idx+1)).focus();
+  if(val && idx<9) document.getElementById("p"+(idx+1)).focus();
   if(e.key==="Backspace" && !val && idx>0) document.getElementById("p"+(idx-1)).focus();
   if(e.key==="Enter") doLogin();
 }
 
 function doLogin(){
-  const code=[...Array(8)].map((_,i)=>document.getElementById("p"+i).value).join("");
+  const code=[...Array(10)].map((_,i)=>document.getElementById("p"+i).value).join("");
   if(code===PASS){
     document.getElementById("login-screen").style.display="none";
     document.getElementById("admin-screen").style.display="block";
     loadAll();
   } else {
     document.getElementById("login-err").classList.add("on");
-    [...Array(8)].forEach((_,i)=>document.getElementById("p"+i).value="");
+    [...Array(10)].forEach((_,i)=>document.getElementById("p"+i).value="");
     document.getElementById("p0").focus();
   }
 }
