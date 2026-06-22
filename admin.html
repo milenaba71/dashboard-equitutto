@@ -1,1586 +1,444 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang='it'>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EQUISTASI · Admin Dashboard</title>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Admin Quiz HARBUR</title>
+
 <style>
-  :root {
-    --bg:#f0f4f8; --surface:#fff; --surface2:#e8eef5; --border:#d0dae8;
-    --accent:#003d7a; --accent2:#0072bc; --green:#27ae60; --orange:#e67e22;
-    --red:#e74c3c; --gold:#f0a500; --text:#1a2a3a; --muted:#6b7f96;
-    --r:12px; --r-sm:8px;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; min-height:100vh; }
-
-  /* LOGIN */
-  #login { display:flex; align-items:center; justify-content:center; min-height:100vh; background:radial-gradient(ellipse at 60% 20%,#1e3a6e 0%,#0f1825 70%); }
-  .login-box { background:#fff; border-radius:20px; padding:48px 40px; width:100%; max-width:420px; box-shadow:0 32px 64px rgba(0,0,0,.4); }
-  .login-logo { text-align:center; margin-bottom:32px; }
-  .login-logo .brand { font-size:26px; font-weight:800; color:var(--accent); }
-  .login-logo .sub { font-size:13px; color:var(--muted); margin-top:4px; }
-  .login-logo .badge { display:inline-block; background:rgba(231,76,60,.1); color:var(--red); font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; margin-top:8px; }
-  .inp { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:15px; color:var(--text); outline:none; margin-bottom:14px; }
-  .inp:focus { border-color:var(--accent); }
-  .btn-login { width:100%; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
-  .btn-login:hover { opacity:.9; }
-  .login-err { background:rgba(231,76,60,.1); border:1px solid rgba(231,76,60,.3); color:var(--red); border-radius:8px; padding:10px 14px; font-size:13px; margin-top:12px; display:none; }
-
-  /* APP */
-  #app { display:none; }
-  .topbar { background:var(--accent); height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,.2); }
-  .topbar-brand { color:#fff; font-size:18px; font-weight:800; display:flex; align-items:center; gap:10px; }
-  .topbar-brand .admin-badge { background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px; }
-  .topbar-right { display:flex; align-items:center; gap:12px; }
-  .btn-logout { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.25); border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; }
-
-  .main { max-width:1400px; margin:0 auto; padding:28px 24px; }
-
-  /* TABS */
-  .tabs { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:4px; margin-bottom:24px; flex-wrap:wrap; }
-  .tab { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); transition:all .15s; border:none; background:none; }
-  .tab.active { background:var(--accent); color:#fff; }
-  .tab:hover:not(.active) { background:var(--surface2); color:var(--accent); }
-
-  /* KPI GRID */
-  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
-  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; }
-  .kpi::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; border-radius:var(--r) var(--r) 0 0; }
-  .kpi.blue::before   { background:var(--accent); }
-  .kpi.green::before  { background:var(--green); }
-  .kpi.orange::before { background:var(--orange); }
-  .kpi.gold::before   { background:var(--gold); }
-  .kpi.red::before    { background:var(--red); }
-  .kpi-ico { font-size:20px; margin-bottom:8px; }
-  .kpi-val { font-size:28px; font-weight:800; letter-spacing:-1px; color:var(--accent); }
-  .kpi-lbl { font-size:12px; color:var(--muted); margin-top:4px; }
-
-  /* CLASSIFICA */
-  .rank-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:24px; }
-  .rank-header { padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:space-between; }
-  .rank-title { font-size:14px; font-weight:700; color:var(--accent); }
-  .rank-table { width:100%; border-collapse:collapse; }
-  .rank-table th { text-align:left; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding:12px 22px; border-bottom:2px solid var(--accent); }
-  .rank-table td { padding:13px 22px; font-size:13px; border-bottom:1px solid var(--border); }
-  .rank-table tr:last-child td { border-bottom:none; }
-  .rank-table tr:hover td { background:var(--surface2); }
-  .rank-num { font-weight:800; color:var(--accent); font-size:16px; }
-  .rank-nome { font-weight:700; }
-  .progress-mini { height:8px; background:var(--surface2); border-radius:100px; overflow:hidden; min-width:80px; }
-  .progress-mini-fill { height:100%; border-radius:100px; }
-
-  /* RUBRICA ADMIN */
-  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; }
-  .panel-header { padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-  .panel-title { font-size:14px; font-weight:700; color:var(--accent); }
-  .panel-body { padding:0; }
-
-  .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:14px 22px; border-bottom:1px solid var(--border); }
-  .search-inp { flex:1; min-width:200px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; color:var(--text); outline:none; }
-  .search-inp:focus { border-color:var(--accent); }
-  .sel-filter { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--text); outline:none; cursor:pointer; }
-
-  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
-  .data-table th { text-align:left; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding:10px 16px; border-bottom:2px solid var(--accent); white-space:nowrap; position:sticky; top:64px; background:var(--surface); z-index:10; cursor:pointer; user-select:none; }
-  .data-table th:hover { color:var(--accent2); }
-  .data-table td { padding:10px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
-  .data-table tr:hover td { background:var(--surface2); }
-  .data-table tr:last-child td { border-bottom:none; }
-  .nome-cell { font-weight:700; color:var(--accent); }
-  .sub-cell  { font-size:11px; color:var(--muted); margin-top:2px; }
-
-  .badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; white-space:nowrap; }
-  .badge-blue   { background:rgba(0,61,122,.1);    color:var(--accent); }
-  .badge-green  { background:rgba(39,174,96,.12);  color:var(--green); }
-  .badge-orange { background:rgba(230,126,34,.12); color:var(--orange); }
-  .badge-red    { background:rgba(231,76,60,.12);  color:var(--red); }
-  .badge-gold   { background:rgba(240,165,0,.12);  color:var(--gold); }
-
-  .commerciale-tag { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; border:1px solid; white-space:nowrap; }
-
-  .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:60px auto; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
-  .empty { text-align:center; color:var(--muted); padding:40px; font-size:14px; }
-
-  /* LINK UTENTI */
-  .link-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:0; overflow:hidden; margin-bottom:24px; }
-  .link-row { display:grid; grid-template-columns:160px 1fr auto; align-items:center; gap:16px; padding:14px 22px; border-bottom:1px solid var(--border); font-size:13px; }
-  .link-row:last-child { border-bottom:none; }
-  .link-row:hover { background:var(--surface2); }
-  .link-url { font-family:monospace; font-size:11px; color:var(--accent2); word-break:break-all; }
-  .btn-copy { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; color:var(--accent); white-space:nowrap; }
-  .btn-copy:hover { border-color:var(--accent); }
-  .btn-copy.copied { border-color:var(--green); color:var(--green); }
-
-  /* ATTIVITÀ */
-  .att-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
-  @media(max-width:700px){ .att-grid { grid-template-columns:1fr; } }
-
-  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
-  .toast.show { opacity:1; transform:translateY(0); }
-  .toast.error { background:var(--red); }
-
-  /* Editing inline */
-  .edit-inp { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:12px; outline:none; width:100%; }
-  .edit-sel { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:12px; outline:none; width:100%; }
-  .edit-ta  { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:6px 8px; color:var(--text); font-size:12px; outline:none; width:100%; resize:vertical; min-height:60px; font-family:inherit; }
-  .btn-save   { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; margin-top:4px; margin-right:4px; }
-  .btn-cancel { background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; color:var(--muted); margin-top:4px; }
-  .editable { cursor:pointer; border-radius:4px; padding:2px 4px; }
-  .editable:hover { background:var(--surface2); outline:1px dashed var(--border); }
-
-  /* Modal nuovo contatto */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .modal-box { background:#fff; border-radius:16px; padding:28px; max-width:540px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,.3); }
-  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
-  .form-group { display:flex; flex-direction:column; gap:5px; }
-  .form-group label { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; }
-  .form-group input, .form-group select, .form-group textarea { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; font-family:inherit; }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent); }
-  .form-full { grid-column:1/-1; }
-  .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:8px; }
-  .btn-primary:disabled { opacity:.5; }
-
-  /* Carrello prodotti con tab */
-  .cart-modal { max-width:720px !important; }
-  .cart-tabs { display:flex; gap:3px; background:var(--surface2); border-radius:10px; padding:4px; margin-bottom:16px; }
-  .cart-tab { flex:1; padding:8px 6px; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; border:none; background:none; color:var(--muted); text-align:center; transition:all .15s; }
-  .cart-tab.active { background:#fff; color:var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.1); }
-  .cart-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; max-height:340px; overflow-y:auto; padding:2px; }
-  .cart-item { background:var(--surface2); border:2px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all .15s; position:relative; }
-  .cart-item:hover { border-color:var(--accent2); }
-  .cart-item.sel { border-color:var(--accent); background:rgba(0,61,122,.06); }
-  .cart-item.sel::after { content:'✓'; position:absolute; top:6px; right:8px; color:var(--accent); font-weight:800; font-size:13px; }
-  .cart-nome  { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; line-height:1.3; }
-  .cart-prezzo { font-size:15px; font-weight:800; color:var(--accent); margin-top:6px; }
-  .cart-link  { font-size:10px; color:#635bff; text-decoration:none; display:inline-flex; align-items:center; gap:3px; margin-top:4px; background:rgba(99,91,255,.1); padding:2px 7px; border-radius:4px; }
-  .cart-total { background:rgba(0,61,122,.06); border:1px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
-  .cart-stripe-row { display:flex; align-items:center; justify-content:space-between; background:rgba(99,91,255,.05); border:1px solid rgba(99,91,255,.2); border-radius:8px; padding:10px 14px; margin-top:8px; gap:10px; }
-
-  @media(max-width:600px){ .main { padding:16px; } .link-row { grid-template-columns:1fr; } }
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;700;800&family=Open+Sans:wght@400;500;600&display=swap');
+:root{--navy:#0B2545;--blue:#1B4F9B;--yellow:#F5C800;--ok:#1A7A4A;--err:#C0392B;--bg:#F2F6FA;--white:#fff;--brd:#D2E0EC;--soft:#4A6278;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);min-height:100vh;}
+header{background:var(--navy);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 36px;}
+.logo img{height:40px;}
+.hbadge{color:var(--yellow);font-family:'Raleway',sans-serif;font-weight:700;font-size:14px;}
+#ls{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 70px);}
+.box{background:var(--white);border-radius:14px;padding:44px 48px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(11,37,69,.13);border-top:4px solid var(--yellow);text-align:center;}
+.box h2{font-family:'Raleway',sans-serif;font-weight:800;font-size:22px;color:var(--navy);margin-bottom:8px;}
+.box p{font-size:13px;color:var(--soft);margin-bottom:24px;}
+.box input{width:100%;padding:14px;border:2px solid var(--brd);border-radius:8px;font-size:16px;margin-bottom:14px;outline:none;text-align:center;font-family:'Open Sans',sans-serif;}
+.box input:focus{border-color:var(--blue);}
+.emsg{color:var(--err);font-size:13px;margin-bottom:10px;display:none;}
+.emsg.on{display:block;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:13px 22px;border:none;border-radius:8px;font-family:'Raleway',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;width:100%;}
+.bp{background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;}
+.bp:hover{opacity:.9;}
+.bd{background:var(--err);color:#fff;}
+.bok{background:var(--ok);color:#fff;}
+.bsm{padding:7px 14px;font-size:12px;width:auto;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+#as{display:none;padding:32px 24px 60px;}
+.wrap{max-width:960px;margin:0 auto;}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.top h1{font-family:'Raleway',sans-serif;font-weight:800;font-size:24px;color:var(--navy);}
+.tabs{display:flex;gap:4px;margin-bottom:24px;background:var(--white);border-radius:10px;padding:6px;box-shadow:0 2px 12px rgba(11,37,69,.08);}
+.tab{flex:1;padding:10px;border:none;border-radius:7px;font-family:'Raleway',sans-serif;font-weight:700;font-size:14px;cursor:pointer;background:transparent;color:var(--soft);transition:all .2s;}
+.tab.active{background:var(--navy);color:#fff;}
+.cnt{background:var(--white);border-radius:10px;padding:16px 24px;margin-bottom:24px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 12px rgba(11,37,69,.08);border-left:4px solid var(--yellow);}
+.cn{font-family:'Raleway',sans-serif;font-weight:800;font-size:36px;color:var(--navy);}
+.cl{font-size:13px;color:var(--soft);}
+.cst{margin-left:auto;font-size:14px;font-weight:700;}
+.cst.ok{color:var(--ok);}.cst.w{color:var(--err);}
+.card{background:var(--white);border-radius:12px;padding:28px 32px;margin-bottom:24px;box-shadow:0 4px 20px rgba(11,37,69,.09);border-top:3px solid var(--blue);}
+.card h3{font-family:'Raleway',sans-serif;font-weight:700;font-size:16px;color:var(--navy);margin-bottom:20px;}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.8px;}
+.fg input,.fg select{width:100%;padding:10px 14px;border:1.5px solid var(--brd);border-radius:7px;font-family:'Open Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;appearance:none;}
+.fg input:focus,.fg select:focus{border-color:var(--blue);}
+.sw{position:relative;}.sw::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--soft);pointer-events:none;}
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.abl{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:5px;text-transform:uppercase;}
+.bdg{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;}
+.bA{background:#e74c3c;}.bB{background:#3498db;}.bC{background:#2ecc71;}.bD{background:#f39c12;}
+.ql{display:flex;flex-direction:column;gap:12px;}
+.qc{background:var(--white);border-radius:10px;padding:18px 22px;box-shadow:0 2px 12px rgba(11,37,69,.07);display:flex;gap:14px;align-items:flex-start;border-left:4px solid var(--brd);}
+.qn{width:34px;height:34px;border-radius:7px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Raleway',sans-serif;font-weight:800;font-size:14px;flex-shrink:0;}
+.qb{flex:1;}
+.qt{font-weight:600;font-size:14px;color:var(--navy);margin-bottom:8px;line-height:1.4;}
+.qag{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.qa{padding:5px 10px;border-radius:5px;font-size:12px;border:1.5px solid var(--brd);display:flex;align-items:center;gap:6px;}
+.qa.ok{border-color:var(--ok);background:#e8f5ef;font-weight:700;color:var(--ok);}
+.emp{text-align:center;padding:40px;color:var(--soft);font-size:14px;background:var(--white);border-radius:10px;}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.pill{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;opacity:.75;border:3px solid transparent;transition:all .2s;}
+.pill:hover{opacity:1;}
+.pill.sel{opacity:1;border-color:rgba(0,0,0,.35);box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.rl{display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto;}
+.rr{background:var(--bg);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.rr input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--blue);}
+.rn{flex:1;font-size:13px;font-weight:600;color:var(--navy);line-height:1.3;}
+.rs{font-size:11px;color:var(--soft);font-weight:400;}
+.rp{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;}
+.sb{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.sc{font-size:13px;color:var(--soft);font-weight:600;}
+.sync{border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;display:none;}
+.sync.on{display:block;}
+.sync.ok{background:#e8f5ef;color:var(--ok);border:1px solid #b8dfc9;}
+.sync.er{background:#fdecea;color:var(--err);border:1px solid #f5c6c2;}
+.sync.in{background:#e8f0fe;color:var(--blue);border:1px solid #c5d3f8;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:14px 22px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;border-left:4px solid var(--yellow);}
+.toast.on{transform:translateY(0);opacity:1;}
+@media(max-width:560px){.ag{grid-template-columns:1fr;}.qag{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="brand">Equistasi®</div>
-      <div class="sub">Pannello Amministratore</div>
-      <div class="badge">🔐 Accesso riservato</div>
-    </div>
-    <input class="inp" type="password" id="inp-token" placeholder="Inserisci il token admin…" autocomplete="off">
-    <button class="btn-login" onclick="doLogin()">Accedi</button>
-    <div class="login-err" id="login-err">Token non valido</div>
+<header>
+  <a href="#" class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAC2CAMAAAAWeRmZAAABUFBMVEX///8pI1z/7QAfZKkoKGImN3QnMW0nLmleWYQgW54mNHAoK2YmO3giUpMlPXsebbT19PfJx9Y8NmojSYkkQ4IiT5AeaK6Uka0hV5lfVkUfZakiUZKQqcogWp0kRIIjS4vd3OW+vc6fnbaSmbcxK2KQpMVQS3p/e53q6e9JRHVoZIyFgqIzLWNzb5REP3HS0d2tqsDDwdFkX4lWUX5ZYY9Wc6RTiL3/8kv/816xr8PBytzf5O3W3+sndLf/+rjz4gW2qB//+JX/9ob//dnAsRv/9Xl5j7axwNdVeKpgg7KEn8OcttTA0+d2ptGlxeFclsmNgjFuZD///un/8TenmSaajSv/9Gb///T/+rD/+8U2MFZEPVFLQ05YT0jVxRJ/dDd4hqyNttpBUYZGWY1kdaE8aqRCgr1SksizzuaIrtJ0lsA6ZZ+FeTXk1Sw9N1N0ajyooNxkAAAam0lEQVR4nO2d93/TuBvH26NAusAJlEDhWicdcTOaNC2UtCkbCpRx8GUfx5UCZdz6/3/72rEtybZsa9iWQ593Xj0uivVIlvWxtjQyAgAAAAAAAGSIoRezoqf6XgGAC6NaXxzNkBXVNwwA7BiNTNVhsar6ngGAlU7m8hgdA4UAQ4LWylwepkDGoJYFDAd1FfqYBIUAw4GK8sMUCCgEGAo6KvQxOnYSFAIMA1pTmUBAIUD+KSvRx+jYiZNQhgBDQEmNQCZPnIAyBMg/FTX6GJ2cOAFlCJB/asoEMgFlCJB/CqoEcnwCyhAg/yhqgpgCOQ5lCJB7NEX6GD05dZwsQ5ZVJwQA0FAnkFNTUIYAuUehQE55yxBQCJBDlAnkxNlTUIYAuUehQM5CGQLkHpUCgTIEyD3qBHJmDsoQIPcoFIhXIZZAQCFA3lAmkIn5M1CGALlHoUBMhUA7BMg56gQyM+8vQyYnV1sdQ3WKAACBMoEcv+hTyEajAuIA8oY6gUxjhWzsd9qqEwIAaCgUiK2Qy0tbgUi1FCQEANBQJ5Dz09P3l7Y0Spyq0FIH8oIqgazu7/Vp4jDRm9CXBeQFFQJZbFVCtDFgHXp7gdyQtUBWanF9VTUYDwHyQ4YCWaxXGfqqqjBiCOSIzARSajH15HbwvCxYhQuoJxOBNOtVnS06C7BOHcgVaQuk2W30dObY7HvnZYFCANWkKpBCucgTF2PDP3MRFAIoJjWBcIrDZOsguD4EFAKoJRWBrJfXogY66CxR14eAQgClJC6Q5UbkKGAYW18os9+hDAFUk6RASi2WgQ4a2w+m/bPfoR0C5IGkBFJiGgWks/1j/Pw0XSFQhgBqSUIgzVZPYqnT9sPxX389H6YQKEMApcgKpNnl7q3y8OjHsWPj4+PhCoEyBFCJjEBkqlU23w5nZ49ZCoEyBMgnogIpNQR6cr18e7xz7ty5Y7ZCoAwBcomIQEo1jtkjIeiN2dMmpkIsgUAZAuQUboEU1uT3HjGqzdHR+dOOQqAMAfILr0BWZCtWpjrsU99OnvYpBMoQIH9wCqSpy4W2VsNnIk77FQJlCJA7OAUi06VbLHcXSVuTp5FCoB0C5BQ+gXREg9GrXnEMOHUayhAg53AJpCEUhNGrhZw1HVQIlCFAvuARSF3AfK+2EmHxOJQhQL7hEMgyZweWViyvx5hc39/hbIesp5MMAECHXSAlrvEPrVOI05u9cOTJIV8ZAgoBsoRdIOzTrrS1cjfa1kqNmP/b//h1x1YIlCFA3mAWSI/RYDuuXlWiTY7ffmQxNWEJweKkw+TkQBUOtv9kEwAAomAVSJnJ2lojqkk+WHOoh/uuMMUEBAJkCKNA2DqwlqNMNGMnx9dBIEDeYBMIWwdWO9xAoRzfhInwDgIBFMEkEMYOrDLd93q5yKIvLbp29vMJxGi3dUN67udPw1q51aq1qtuq4+GDSSCMHViU1vky+7qqGps+hkgg7U651qoXVkrBWTbk/ayst8phawjatUKh3mpUBXW0ZkagW6hXCSe9PGAt3JNerPSq5Ybl06RWoV8UN8QV8xBrPnvFVeeXpswiVU0v9jpm3M1UN+k2mNXmpArlXlkEwtiBZfi8rdR6HM+1x5y27DY5qBZk6PpuVCtWW4MG2ZgT6fh/S/VyMLkq7u+rQi/Wmmu/i+9zbNT+BFuVxlqn3Cqsjo75PtQJeCt8dxf813sOZRH1VI4tiihEr1Qb9eWSP+4lnc17z/WxHngEDAJh68AaGekQflZrnBud9CLfsiTpCIS1/KLjffO0W2NilMq+51NCP/nfuCzo2DJ6x2GL3sdq1EpjIaxGmxaFzB9GaRLDPaOp3W2GBcI4e3AVeQikc7xAmI+cdTuhSq2OznxzDiHNFxopCUTmWXvyWnFjUpwTDVIiBv5hQ+Ce1rB3N4btEIvVExGRoqxx6EjcowP5UmmdJGEdcrMxWhGB0MRN4STyEDi2KVYgzDOwNKsMYD8JxEOLXR9pCUTiUXteeY2TcmwQ6W0QzgL3tIa9u29SnWqxfRAZJUqGrUrepQlRc6uc8DDFU/noTESGwpZ7sY0J/09xAmGfgVVZ7DL05dIocjX4UhKI+JNukQ9h/4QshEIMwlXgntawd7cE0WkW21PRMVoImq5K3+YJ3HOgHUx44bjZhZhQdCYrE+j6Kf9PMQLhaDGJ7uVQjJm3lY1AhDP2RNVjZkIerBBDKM8gtrB3N4/rFIvtqZgIUVrpPfnbxOXS/sRx36caDJHOQlwobLnyOLqeVyD0Pr7k0DqRo+8ZCkTwMR943iDV40mA3tgGdhMSSNCkHrSoHcRE54CWyT7J3uQnHM2pqeNT3r8pnfsO6XxmszOFPHAKhLUDSwyjwza5JBOBCD3lgwVPHVc7mEqCOdeogd2EBIK9I4EELe7HxGaD2sOsfZa7x89IddRE+0QLMxiJuPSmVA6pnEI+5gJhROVF5g4sfozopYbZC0TgIX/a9RlZOuVl7vP+0u5Wf5vaUtSMfntrt7Owv3HKj/tcDex0WeCetrD3e47TdsBiPxD6p88Lu1vxVZPQSQBEKmyFXKIR5u8FIkBGOJIFv6+5DTPB+/yjqoSFQFQjsmJaKy+0iqg4UhQI9TGFYmaiXrB5dnCWYG4/LHsE2Fr4RPo8e+A8YuPs2VOOk5BAziL/SCA4EMfiPU/Il/f6AgF5WcLmGFKgTSbZWS6v3vQ+e29XeJoKDphHIKvyWygG0SoN7lZHJgIhk3pPzEZ7znnI1t8+X+ptXSb8zjm5wwhkZz6bROZxnLZN+04ojsUDHOrZT8ySjmIJ3wmDPeLVML9NfPkUXw60iRTjTW8vc8jOvP+ncIFI7hFHQVtryM3gSVEg98j8KSiQ3bkz6LPE61m7TPh26m7b2EVIINjiw5EQi9tEqJ+TmTl5CVuMF8jSGczuyBbxLb6StUTEXfCROcwjOxwCiZjOJoBWLMctUlcrEOLRnBFM7aX5M/Omb+u/AvnZmD+D/DvyMnCUhASCvWOBzLsf2+LWPHZJqMawh4ONFcj2POaB+f0e8d3fwgtwD8ddJHkI5pGli/6fQgXC3BXNgCkO5qlWqgRCPJl5QYHc43i40d6d/Exkn/sCBrcCBkf6fou73gyaBHvYZKxALs/Mz9jMn7fKL+0v9H1mOk6wD+TSm+AiMjTt/ylMIIl1YLWr3WZi4khRIDMEggK5f9H0a/+JNHX3ZpB/J69u4ygJCQR7RyWIad8J5b4TKAqVu1YYwp5jzyROIJcuYuw8/ohwibvn+zjukl0L0yjlz/t/ChFIQS5Ah3a1nqw40hPIDyvnXLw4yD8XRQUyjRDpT9nD3h2BGNhFSCDYOxKI3+Il7HBJIAgaxH3ECGT7fOCWR35gp+mY50Ckt6RAcDwYBbIq31zT0xBHigIhnsv0g0vxUMr/++cRQgLB3t0SBLuICOQR9o4E4rd4CTskJhBs8lH0lUSC/eXmOO0LdoxJRsK7rEAQ4/6fqAKR7cDSO62Q3Xgt1huVSv4Ecp4PWoX9/vlf3Y+QQJBvJJBfzZDsPzGBIP9IIDgMp4qF45yYQHAY0QIhwiau7J/3xzEMIr0lBTKOLLEJRKYDaztSHM52ijkUyK9cfKEVsffHESICeYK9uwLBLlcEDD7C3pFA/Bb3sENiAsEmIwVizOILfxDuD8cZ40Skt6xAELP+n2gCEe7AMnq1VYo9rzgsqvkTyDgPs1QBXMEXSArEkUO2AhEJggarQIjk8rxvtC9ESkflfMKA3DDIyDH8ZP0/UQQisrozbnIVIQ4LngVS2Qjk8TEOvtAf2yG+Qkgg2LsrkIALF4+w9+8jIRa/EbclP8tkwB62GCUQ4nZ91/WJX3YiWsM/8GWHclGeRYYYBCLQgRU9uconDguZ5nt6Apll/LsS0kF/BV8jJBAcxlPbZds6Rd78m52dFRLILPKPBDKL78K+hriznWS23NmzwrA/EQLRdqzbOjaI4WPfb48dd+v3H1Tf9mVE3H9IdSsRaRCIpz//iZzSGd7ooIhjRK4JkpZAzrGy8yTMxhV8kZBAsHdXINhFSCDYOxKI36LmubfHSRQie9hehECeEinqzyLa4TkWG988j+WjhEQIM/6f/AIpCTzakC0R6eKwkJqRpVYgUc/hyrnT7kdIIMg3RSBfBQzSBILDcCw+xS7W5/CjwGxxL3vYWnjmJuJGuapPpnjogLq244370yeiccc2YgUisqqcsiWJKY7wiQLMW2BlKZDTDHz9/ijqCVzBV4oJBOEKhAhawOAj7B0LxG+xz3LjDodfnz7++CQyDbz3ESoQbQdf5K9gWXwnUz00pI/sUd85/Pr4+963kAgR1wVi6s19Qqd0+uavh5ccTpARPV35EEhoJSqar9jC8AiE7dXg5fBjZOsbXxh6GRHoIS2zaIcsj8NzFRs7ZjETNITlGiMQoVM6yR0Vlxk2jOPcpGF4BDKUJYjnZc6V0cLukUEgRMxCriELtvDOg28iUT+98/ibzw7xmz8Ij0AETukcwTsqLjeYdlNsyOkjizaIqECwhaFppJv0ySYxB6cf0+8yvpFONsJpFSyL70RI4Z24T06Lxd3XlMRWIgXCe0qng7XzwgrzVqOy+kitmxd3Ts6KCsTuSZccB7H8o25eFCexcRDkP3QcxEIjBhT4eEp76PHjIERiUytYAw5ng9Gn3ONheOwi8dhkGwfhO6UTw1KtQsgMEaYpkB/j1miq8yc4LnvF9Ot8xASC/Kc4UOgPY0D/Cnbn+hxSnvwe/j2k+kTk0/B+ZfKqqDHMJ18E406MsGDXCIEI7arNiSbZ/khTIM4sK+vfiNm8/torieRcLGKKRnZzsVx2yfkdHHwJKiR2qgkR1EPqBTbfyWAiKjfaJWJSFw9YIdgtQiB8WwYL0ZbYzCRtgbBN4v0rqqwcxunumP6lB5wzmgcEs27cdHdihv2XyPiTE98jBtTNTPzoIZH27CCj2Cl8Nq9QBxYXmnTzI02BDNawzThr2cL+jV6Yc3/6ovsREcgu8p3hgikP2talHw/ufyGWMTEQKARiFkz1idVJ0QP3fTIicYsTjd2HZtz/4oo6epzYJXTBlFgHFg/ViFnw6gXiWZMeSnTj5PLMYIW19SckkBnkP7Ult312i5pmbG/3+4+2tnZ3d/f2Li09vGeJZyaA/1738E+0XH0Z/xy3yHeJCOU8Rw+SZsW93+9veeL+13Qg6m4aYJewNemCHVjsdORGB9MXyJl44rYGuIwvFRII9u48uDR2NZGyaKL19x54k8W/P0/0riaXzsxbe4gM/pbiIK4V2rbCH/etpcveuDsRnEcOMwE/dqZLY484IpCkSo8UBTLYUS3y8yku11/G254JCQR7d/ZcNnDoYhvHIf9IIM7uhXNiW9E5aEvunoYDa76Xa+TOiqZC5wQ/kms+HPr3yD0c923HOfd72L5YqXZg6Y1EF6cr2nr0U3wnBrHJrohAeti7K5Czp9yP2N68yL+7229wb14xtM9E0vhkELk3L/ES4WUuoQNw+wfEU7Wd5pADfevRFDuwtE4CmylmIZDjU1GfwD7VNDbwvtZCAiH2Prddktvd3a0GUXZ3F4PcWN3XlFjCvwQE0uHZADnwjpKKMaZNbEBul34xu7undsjBdrWb3IZxKQuEPPTj8wJJp9Jmq4Fu4HMRRATSCRxrkcn5IIIsYEv73l+IQ1L8x8sYcwKb6GNYTzOIg3hQdt0Jf6edD5LSIQdF2V2qsxVIyPF5PGzgc6eEBIK9uwKZOOF+xI5gQ/73HSfqEWxCFEMtEcez+QXyWfCYIpeEmgLEcWJ25SnyCLY0OrD0NIqOVAXiOcRTcNeK9ZOTpromrY+QQCaRf6fTPatDPEVoh1oiDvj0CaQnes6di8hyVwpl/7sQfw8e4pl4B5bRi9r3J7cCIc+fF6xzruODoXUB7x3s3RXIpPn/9p/IVpdrY8g/EggOQ3LzzDa25DtHpop/8QrEcxq6GGIbivhp4BjaAplE35v+a7VEO7DkT/9QJxACwcdAdEfoAt472HvXdiFW2ogcZlTB3t1xYB07yQokNG7Enk5egbRkzqKnSk4QYkqHLZAx9D0okCQCtGknuYd7OBkIRDAI4nwHXcA7IRAnP2tyUeoEvasUSAW7Lxd4IN+5iVR4AgLB+TYtgWx3WunsxBskA4EIbp1HTOUP35vSaIclObG03+03IaIk0Koh4uOqQaFANFzx5tz62bNGuysX7QEBgeDvi4HA5YOTO3KQmywEUhJKFiLdwxSmW9WwAr2eQLwo3Toe0Zjjn0xKiAEpLjmB9EIthQiESGHear1n2xzBLkaSuj+GKZYgxXLSA4FxZCGQ0XWRbigiZ4S9Ix0R0HoByL1hXH2Rr07eDZM1smbiBpicQIj6pG+cgC6QtWBk2CHngS9KD6gbREugOHAhrPsvlhKIntIJB5FkIpDRZoe/sku+sgvUhK04vy4GjXv2TnJfseT6y2aRKzLetWmuwcQEQkbX16dBFQhRwVoWCI6sosgevqyRZwHqA6e0ShDKhljpk41ATJqRLcdurdxZ873MyMK0RKtHoDehv55Q8VRS0S16dxBrcDysnqerHVXcExLImkd9vpuhCgSXAYu6QIDku0dy5od3XrmdpPh7siVI6l26NDITCAvNbpUoDDqe35YbFd0XCnp3EW0UrRjo4EDtDd+uZc1a9I5jrq922fdkkFjlBaLpxbJv6YKvOKQJhGhFiHWAUAtY/rhXat6kdroLUypBjFEV5EogFl2UDShb5ZcK9VajXKvbxQ5ydvs5l1cpPeNNnOPqgR9X67WySbVXKQao9KrlRjc4TIsb+BSB6J0yM7UCZQzYX+WhCWQl9GpWSMmjFl6FPerl1jqlPeAUftgh0RKkEwwwA3InEPOh644VuU1VXYgqSzuJkSWiZzQoEPkQ/DUeikDw+1+ogjWIORnPWgIPbYDzKkqpBAm+3rIghwLBmUTmZCAXT4duAs08crJdUCDSp9cHOhyCAiFCFT9d3JO0gy69kE3TOXAnGBB34w9WQiBaFuPmQXIpENST05FNlEVfFpJWSIt8xAGBhB0Dzk5gMVFQILh6JNMz4OkCMUYSeBuhYfl0SpCKbPwE70o8xhFIl9ZoKE5u0HQ10ADtSUmu5B2UDAhED/fKRnDcLiAQ7NCUmSiyTbYhrGJWdpecFd01jd2SLEHka4BC5FQgqGakyZiqUZ6HIb4b5WrVZy9pgaxQBmf8AiFqGnJLV8k2b1f+mRFFazolSKqT2sPJq0Bwl43eEEyauk6PXLsmVIp0g1NaAgKR6olcpU77IARiF4co8rJ7SxHtJatKK1X77JJFNXFL/jDFBSLfRBIjtwIhH/9ag3sGTuBtT6J1eCctdKs6zRCWbtnvwBvfRshwRBFdsmjfkVsCSs/ENXAaWNKsiEZ9tFD1RgUP7ASW14oLRMkw+mhaAtGDowq8+PKLVim31lmyX3Ol0Gr09Ngotst1tvbNaqEcOnELvd7dsQSRnulStxxxgBjOGU5/gzPrJYHNnyuuZXtpoUgP3EqrGowHstvU/T+JC0TJMPpoWgJJC00vVnqdatUaqkLZe90dvKr2ijrfE2ivmdbK5UatVffOfKm3arWGaTBug4lid3B5GQXbrnXZlmWYIZgBdCrF2ILA6JVr3W4Nq7RiZuV1vrlkdBx9rztRqLbYot61RmvLnV4lbK1B206VRvDWhAWiZhh96ARCggryBGZsDxuanoydYmvVrCAlY4sJYYEkMSR2tASChxwyOGgCSAhhgSRw0scREwhuvKa9ETKQHKLPStEw+jALBJW5K6pjArAjKpCKKn0Mr0DQeF9KO/UBaSAqkGQOwzlSAkFzO1Pb6hVIHlGBqJnJO9QCQWORvKvLAYWICkRZG314BeJOPWhCG32IEH1YimYqDrNA3BHmIzgKMsSICiSZtXNHSyAj7drq6DLoY6gQLu4TO3PwCAkEGD6EBaIrmu0OAgGyRLzBaCR79CAIBMgjUj0qlZq1c00p20F1EAiQIcl1ORp6e7A3U2cwtbvRsidRryfeVgGBABmSWZ+8UVyrlhsJbOYLAgEyJPNBq3avLLfvBwgEyBAlo7pt0V0NQCBAxqia9lARnswFAgEyRN28oDXB5jsIBMgQhRPnBHdYA4EAGaJ0ZmlFpE8LBAJkiNqp14ZAhxYIBMgQxWsTdP4yBAQCZIjqxTtr8YoAgQDqUC0Q/pVXIBAgQ5QLROMdMwSBABmiXCDcWzSCQIAMUS8Q3g34QSBAhuRAIJxFCAgEyJAcCISzFQICATIkBwJhLEIu/Pfb38/eg0CATIkWyOvXz5/fvn377du31968eXPT5Natu3fvvjK5evXqpsX/bH6R5fqHOy/+fBcmjpcf3Mtu/BEa2Ws3725uvrp17XXiqQQcSQa5f5D37Zxv5Xonx0vnd0Hu/PY+oI7fX173XLN5m3Ivz28Rcd68lnlaAj8Pr5/fNkVx0ywKLEH8Y3LdJGMlhHPjmUcez+4EL7nrv6VrVy3n/21efWXe06b1v29VpCzw86ERefHdv7+//+OPCxeePfvvvz///vu3316+fPHixY0bd+7c+WAyEFIWEvnn5YV/zdi8v/D3jQ8owA8v/3z27IX79S4hgNu3bKfnyOXtq19+ufqccrcAwIk2ys+7d+/+/ff339+/H8gpIZ79didcfddfuDWvP5BGNu/evHbt5s27dtXqqrfe9dyUyKs3RGPkNugFEEFEIKnxx8t/aPL48Cc55/ffW8ErXgWz/21LOZu33tweef321q03CpIW+ClQpgY6uIRAhccF7xWlkdc3r5JXbN4MKR2ev7l7ddMsaN5C6QEIo+yswVCeoT7dX67f+C+wYMQeB7n95tarzc2rZjVLcfoBPzmq9qCO5J3dLvmd9hscgQlkyXrWmV+WuuoUA44UZdUZnpeG6hQDjhT8a14VA0dgApmSy0ZIODBXEcgW3hV9ioEaFpAt3IvClbJoqE4v4KhRUZ3peSirTi3g6NFQnevZgT5eQAFd1fmelYLqlAKOJi3VOZ+NQh4WCANHkaEYLoT2B6CMYkF19o+j0FadRsCRpihzcGDalGpF1ekDAO1Oo17IHfVGR1edMsDR4f9ECtLnuot07AAAAABJRU5ErkJggg==" alt="Equistasi"></a>
+  <div class="hbadge">Admin Quiz HARBUR</div>
+</header>
+
+<div id="ls">
+  <div class="box">
+    <h2>Accesso Admin</h2>
+    <p>Inserisci la password per accedere</p>
+    <div class="emsg" id="emsg">Password errata</div>
+    <input type="text" id="pwd" placeholder="harbur2026" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn bp" onclick="login()">Accedi</button>
+    <p style="margin-top:16px;font-size:11px;color:#bbb;">Password: <strong>harbur2026</strong></p>
   </div>
 </div>
 
-<!-- APP -->
-<div id="app">
-  <div class="topbar">
-    <div class="topbar-brand">
-      Equistasi® <span class="admin-badge">ADMIN</span>
+<div id="as">
+  <div class="wrap">
+    <div class="top">
+      <h1>Admin Quiz HARBUR</h1>
+      <button class="btn bp bsm" onclick="loadAll()">Aggiorna</button>
     </div>
-    <div class="topbar-right">
-      <span style="color:rgba(255,255,255,.6);font-size:13px" id="last-update"></span>
-      <button class="btn-logout" onclick="createProposteTable()" id="btn-crea-tabella"
-        style="background:rgba(240,165,0,.3);border-color:rgba(240,165,0,.5)">
-        ⚙️ Crea tabella Proposte
-      </button>
-      <button class="btn-logout" onclick="location.reload()">🔄 Aggiorna</button>
-      <button class="btn-logout" onclick="doLogout()">Esci</button>
-    </div>
-  </div>
-
-  <div class="main">
-    <!-- TABS -->
     <div class="tabs">
-      <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
-      <button class="tab" onclick="showTab('classifica')">🏆 Classifica</button>
-      <button class="tab" onclick="showTab('prodotti')">🛒 Prodotti proposti</button>
-      <button class="tab" onclick="showTab('rubrica')">👥 Tutti i contatti</button>
-      <button class="tab" onclick="showTab('links')">🔗 Link utenti</button>
+      <button class="tab active" id="tbd" onclick="showTab('d')">Domande Quiz</button>
+      <button class="tab" id="tbs" onclick="showTab('s')">Stato Contatti</button>
     </div>
 
-    <div id="tab-overview"><div class="spinner"></div></div>
-    <div id="tab-classifica" style="display:none"></div>
-    <div id="tab-prodotti"   style="display:none"></div>
-    <div id="tab-rubrica"    style="display:none"></div>
-    <div id="tab-links"      style="display:none"></div>
+    <div id="td">
+      <div class="sync" id="sd"></div>
+      <div class="cnt">
+        <div><div class="cn" id="qcount">0</div><div class="cl">domande</div></div>
+        <div><div class="cn" style="color:var(--blue)">/15</div><div class="cl">obiettivo</div></div>
+        <div class="cst" id="qst"></div>
+      </div>
+      <div class="ql" id="ql"><div class="emp">Caricamento...</div></div>
+      <div class="card" style="margin-top:24px;">
+        <h3>Aggiungi domanda</h3>
+        <div class="fg"><label>Domanda *</label><input type="text" id="nd" placeholder="Testo della domanda"></div>
+        <div class="ag">
+          <div><div class="abl"><div class="bdg bA">A</div>Risposta A *</div><input type="text" id="na" placeholder="Prima risposta"></div>
+          <div><div class="abl"><div class="bdg bB">B</div>Risposta B *</div><input type="text" id="nb" placeholder="Seconda risposta"></div>
+          <div><div class="abl"><div class="bdg bC">C</div>Risposta C *</div><input type="text" id="nc" placeholder="Terza risposta"></div>
+          <div><div class="abl"><div class="bdg bD">D</div>Risposta D *</div><input type="text" id="ne" placeholder="Quarta risposta"></div>
+        </div>
+        <div class="fg"><label>Risposta corretta *</label>
+          <div class="sw"><select id="nok"><option value="">Seleziona</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+        </div>
+        <button class="btn bp" id="btnadd" onclick="addQ()" style="margin-top:6px;">Salva Domanda</button>
+      </div>
+    </div>
+
+    <div id="ts" style="display:none;">
+      <div class="sync" id="ss"></div>
+      <div class="card">
+        <h3>Cambia Stato Contatti</h3>
+        <p style="font-size:13px;color:var(--soft);margin-bottom:16px;">Filtra, seleziona e aggiorna lo stato direttamente su Airtable.</p>
+        <div class="fg"><label>Filtra per stato</label>
+          <div class="sw"><select id="fst" onchange="filterR()">
+            <option value="HARBUR" selected>HARBUR</option>
+            <option value="">Tutti</option>
+          </select></div>
+        </div>
+        <div class="fg"><label>Nuovo stato</label>
+          <div class="sw"><select id="nst"><option value="">Seleziona</option></select></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Selezione rapida:</label>
+          <div class="pills" id="pills">Caricamento...</div>
+        </div>
+        <div class="sb">
+          <span class="sc" id="selct">0 selezionati</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn bp bsm" onclick="selAll()">Tutti</button>
+            <button class="btn bd bsm" onclick="selNone()">Nessuno</button>
+            <button class="btn bok bsm" id="btnupd" onclick="updateS()" disabled>Aggiorna</button>
+          </div>
+        </div>
+        <div class="rl" id="rl"><div class="emp">Caricamento...</div></div>
+      </div>
+    </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
+
 <script>
-// ══════════════════════════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════════════════════════
-const PROXY       = 'https://equitutto-proxy.equistasi.workers.dev';
-const ADMIN_TOKEN = 'z2PrzMEdYTm1f6Otlf0aS4l2nLcANM45';
-const BASE_URL    = 'https://milenaba71.github.io/dashboard-equitutto/';
-
-// Tabella Proposte Prodotti (junction table)
-const TABLE_PROPOSTE  = 'tblNf8akGNQD23UjH';
-const FLD_PP_NOME     = 'fldWe4dM6FbXxN07z'; // Nome proposta
-const FLD_PP_QTA      = 'fldw2aCMC8pVKbJ2N'; // Quantità
-const FLD_PP_PREZZO   = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
-const FLD_PP_DATA     = 'fld6mOpX0RZAz9XYR'; // Data proposta
-const FLD_PP_NOTE     = 'fldZ1U0yPLvPg0o46'; // Note proposta
-const FLD_PP_CONTATTO = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
-const FLD_PP_PRODOTTO = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
-// In Rubrica: fld6PwFFS7oHlswjO = "Proposte" (link a Proposte Prodotti)
-// In Negozio: fldogqPYB5quSxjPM = "Proposte" (link a Proposte Prodotti)
-
-let allProposte = []; // cache locale proposte
-
-const COMMERCIALI = {
-  'Marco Costantini':    { token:'Y1kTz-Z37STfXCcBuX6umQ',  equipoint:['Marco Costantini'] },
-  'Giacomo Frassica':    { token:'HJU8VtX1SrrHef7cC3znRQ',  equipoint:['GIACOMO FRASSICA'] },
-  'Stefano Marcandalli': { token:'okN6y20sU0K93vCUmP00Mw',  equipoint:['MARCANDALLI STEFANO'] },
-  'Andrea Filippi':      { token:'W_0Jmv-Q2HAzz5y2eG-ncw',  equipoint:['FFM DI ANDREA FILIPPI'] },
-  'Haleh Sadeghi':       { token:'9WZxEAPd_IHj-qMH8lRSnw',  equipoint:['sadeghi Haleh'] },
-  'Milena Baroni':       { token:'US0Jm8nK3EWK5GsgZ9hu2Q',  equipoint:['Milena'] },
-  'Paola Zerla':         { token:'M3jlO0U72vG_TMDqLtrrYQ',  equipoint:['Paola'] },
-  'Bernardino Cicconi':  { token:'MJ7EcrQhIlsQdXHp23Y1VQ',  equipoint:['BERNARDINO CICCONI'] },
-  'Stefano Ferrari':     { token:'oMcHTvGoYN99xpjeeKFl3g',   equipoint:['STEFANO FERRARI'] },
-  'Iris':                { token:'P1qQL-NIJcEs1a0hRCfTyw',   equipoint:['Iris'] },
-  'Stella':              { token:'LxbWQVdg_kRd-Dn1hsK5yA',   equipoint:['stella'] },
-  'Medical Service':     { token:'st1Cnh4yvsC_bS975EKsmFBQn5TAkg', equipoint:['MEDICAL SERVICE'] },
+var AK = 'pat2OTaowokXbRMMA.f4392c6f404307e57068f68fd182ebc4e76ea5872ec8f832d0d7272127dc457b';
+var BID = 'appI8mMIC0khEkLqK';
+var RT = 'tbllNx7iSqpAtbQde';
+var LT = 'tblzUmqPMBlpQHfi4';
+var DR = 'recibDeWFDUtxfdOl';
+var FN = 'fldZf60LmjT8vQ0Zo';
+var PW = 'harbur2026';
+var AC = {
+  cyanLight2:'#00bcd4',tealLight2:'#009688',greenLight2:'#4caf50',yellowLight2:'#cddc39',
+  orangeLight2:'#ff9800',orangeLight1:'#ff5722',blueLight2:'#42a5f5',pinkLight2:'#e91e8c',
+  purpleLight2:'#9c27b0',grayLight2:'#9e9e9e',blueLight1:'#1e88e5',cyanLight1:'#00acc1',
+  tealLight1:'#00897b',greenLight1:'#43a047',yellowLight1:'#c0ca33',pinkLight1:'#e91e63',
+  grayLight1:'#757575',orangeDark1:'#e65100',blueBright:'#1976d2',cyanBright:'#00bfa5',
+  pinkDark1:'#880e4f',redBright:'#f44336',tealBright:'#00bfa5',blueDark1:'#0d47a1',
+  redLight2:'#ef9a9a',grayDark1:'#424242',purpleLight1:'#ab47bc',greenBright:'#00c853',
+  yellowBright:'#ffd600'
 };
-
-const COMM_COLORS = [
-  '#003d7a','#0072bc','#27ae60','#e67e22','#e74c3c',
-  '#f0a500','#7c5cbf','#14b8a6','#db2777','#64748b','#0891b2'
-];
-
-// ── helpers ──────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const fmt = n => '€ ' + Math.round(n||0).toLocaleString('it-IT');
-const col = p => p>=100?'#27ae60':p>=50?'#e67e22':'#e74c3c';
-
-function showToast(msg, isError=false) {
-  const t=$('toast'); t.textContent=msg; t.className='toast'+(isError?' error':'')+' show';
-  setTimeout(()=>t.className='toast',3000);
-}
-
-async function proxyPatch(table, recordId, fields) {
-  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
-  const res = await fetch(url, {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ fields }),
-  });
-  return res.json();
-}
-
-async function proxyPost(table, fields) {
-  const url = `${PROXY}?table=${encodeURIComponent(table)}`;
-  const res = await fetch(url, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ fields }),
-  });
-  return res.json();
-}
-
-// Helper per leggere campi proposte
-function getPropField(p, fieldId, ...names) {
-  if (p.fields?.[fieldId] !== undefined) return p.fields[fieldId];
-  for (const n of names) if (p.fields?.[n] !== undefined) return p.fields[n];
-  return p.cellValuesByFieldId?.[fieldId];
-}
-
-// Helper per leggere campi prodotto (supporta nome e field ID)
-const prodNome   = p => p.fields['Nome prodotto']   || p.fields['fldJWkKD8emiesXgV'] || '—';
-const prodPrezzo = p => Number(p.fields['Prezzo (€)'] || p.fields['fldFVAOHfQMaMmudW'] || 0);
-const prodCat    = p => {
-  const c = p.fields['Categoria'] || p.fields['flddZwalfEpfYsRIZ'];
-  if (!c) return 'altro';
-  if (typeof c === 'object' && c.name) return c.name.toLowerCase().trim();
-  if (typeof c === 'string') return c.toLowerCase().trim();
-  return 'altro';
-};
-async function createProposteTable() {
-  const btn = $('btn-crea-tabella');
-  if (btn) { btn.textContent = '⏳ Creazione...'; btn.disabled = true; }
-
-  try {
-    const res = await fetch(`${PROXY}?meta=createTable`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Proposte Prodotti',
-        description: 'Tabella intermedia prodotti proposti con quantità per ogni contatto',
-        fields: [
-          { name: 'Nome proposta',   type: 'singleLineText' },
-          { name: 'Quantità',        type: 'number',   options: { precision: 0 } },
-          { name: 'Prezzo unitario', type: 'number',   options: { precision: 2 } },
-          { name: 'Data proposta',   type: 'date',     options: { dateFormat: { name: 'european' } } },
-          { name: 'Note proposta',   type: 'multilineText' },
-        ]
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.id) {
-      showToast('✅ Tabella "Proposte Prodotti" creata! ID: ' + data.id);
-      if (btn) {
-        btn.textContent = '✅ Tabella creata!';
-        btn.style.background = 'rgba(39,174,96,.4)';
-        btn.style.borderColor = 'rgba(39,174,96,.6)';
-      }
-      console.log('Nuova tabella ID:', data.id);
-      console.log('Dati tabella:', JSON.stringify(data, null, 2));
-    } else if (data.error) {
-      throw new Error(data.error.message || JSON.stringify(data.error));
-    } else {
-      throw new Error(JSON.stringify(data));
-    }
-  } catch(e) {
-    showToast('❌ Errore: ' + e.message, true);
-    if (btn) { btn.textContent = '⚙️ Crea tabella Proposte'; btn.disabled = false; }
-    console.error('Errore creazione tabella:', e);
-  }
-}
-
-// ── Auth ─────────────────────────────────────────────────────
-function doLogin() {
-  const val = $('inp-token').value.trim();
-  if (val !== ADMIN_TOKEN) {
-    $('login-err').style.display='block'; return;
-  }
-  sessionStorage.setItem('eq_admin','1');
-  $('login').style.display = 'none';
-  $('app').style.display   = 'block';
-  loadAll();
-}
-
-function doLogout() {
-  sessionStorage.removeItem('eq_admin');
-  location.reload();
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key==='Enter' && $('login').style.display!=='none') doLogin();
-});
-
-// ── Proxy ────────────────────────────────────────────────────
-async function proxyGet(table, qs='') {
-  const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
-  const res = await fetch(url);
-  const d   = await res.json();
-  return d.records || [];
-}
-
-// ── TABS ─────────────────────────────────────────────────────
-function showTab(name) {
-  ['overview','classifica','prodotti','rubrica','links'].forEach(t => {
-    $('tab-'+t).style.display = t===name ? '' : 'none';
-  });
-  document.querySelectorAll('.tab').forEach((btn,i) => {
-    btn.classList.toggle('active', ['overview','classifica','prodotti','rubrica','links'][i]===name);
-  });
-}
-
-// ── DATI GLOBALI ─────────────────────────────────────────────
-let allRubrica   = [];
-let allObiettivi = [];
-let allProdNegozio = [];
-
-async function loadAll() {
-  [allRubrica, allObiettivi, allProdNegozio, allProposte] = await Promise.all([
-    proxyGet('tbllNx7iSqpAtbQde',
-      'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
-      '&fields[]=Codice+Equipoint&fields[]=Preso+appuntamento' +
-      '&fields[]=Data+Vendita&fields[]=data+scadenza+noleggio' +
-      '&fields[]=STATO+NOLEGGIO&fields[]=DATA+ATTIVITA' +
-      '&fields[]=Valore+raggiunto&fields[]=recapito+telefonico' +
-      '&fields[]=Notes&fields[]=DATA+DI+CREAZIONE+DATO&maxRecords=5000'),
-    proxyGet('tblTAA7KFUVtcPnZt',
-      'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
-      '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
-    proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
-    proxyGet(TABLE_PROPOSTE, 'maxRecords=5000'),
-  ]);
-
-  $('last-update').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT');
-
-  renderOverview();
-  renderClassifica();
-  renderProdotti();
-  renderRubrica();
-  renderLinks();
-
-  // DEBUG temporaneo
-  if (allProdNegozio[0]) {
-    const p0 = allProdNegozio[0];
-    const cat = prodCat(p0);
-    const nome = prodNome(p0);
-    showToast(`✅ ${allProdNegozio.length} prodotti. Es: "${nome}" cat="${cat}"`);
-    console.log('🔍 Primo prodotto fields:', JSON.stringify(p0.fields, null, 2));
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  OVERVIEW
-// ══════════════════════════════════════════════════════════════
-function renderOverview() {
-  const oggi  = new Date(); oggi.setHours(0,0,0,0);
-  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
-
-  const totContatti   = allRubrica.length;
-  const totVendite    = allRubrica.filter(r=>{const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita'];}).length;
-  const totNoleggi    = allRubrica.filter(r=>{const s=r.fields['STATO NOLEGGIO']; if(!s) return false; const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); return t.includes('attiv')||t.includes('corso');}).length;
-  const totScadenze   = allRubrica.filter(r=>{const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30;}).length;
-  const totTrattative = allRubrica.filter(r=>(r.fields['Status']||'').toUpperCase().includes('TRATTATIVA')).length;
-
-  const fatt2026 = allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26') && (r.fields['Tipo Obiettivo']?.name||'')!=='Calibrazione')
-    .reduce((s,r)=>s+(r.fields['Valore Raggiunto']||0),0);
-  const obj2026  = allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26') && (r.fields['Valore Obiettivo']||0)>0 && (r.fields['Tipo Obiettivo']?.name||'')!=='Calibrazione')
-    .reduce((s,r)=>s+(r.fields['Valore Obiettivo']||0),0);
-  const perc = obj2026>0 ? Math.round(fatt2026/obj2026*100) : 0;
-
-  // Contatti per commerciale
-  const perComm = {};
-  Object.keys(COMMERCIALI).forEach(nome => perComm[nome] = { tot:0, vendite:0, trattative:0, ricontattare:0 });
-  allRubrica.forEach(r => {
-    const codice = r.fields['Codice Equipoint'];
-    const val    = typeof codice==='object' ? codice?.name : codice;
-    if (!val) return;
-    const nome = Object.keys(COMMERCIALI).find(n => COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
-    if (!nome) return;
-    perComm[nome].tot++;
-    const s = (r.fields['Status']||'').toUpperCase();
-    if (s.includes('VENDUTO')||r.fields['Data Vendita']) perComm[nome].vendite++;
-    if (s.includes('TRATTATIVA')) perComm[nome].trattative++;
-    if (s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA')) perComm[nome].ricontattare++;
-  });
-
-  const commRows = Object.entries(perComm)
-    .sort((a,b)=>b[1].vendite-a[1].vendite)
-    .map(([nome,v],i)=>`
-      <tr>
-        <td><span style="background:${COMM_COLORS[i]};color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px">${nome.split(' ')[0]}</span></td>
-        <td class="rank-num">${v.tot}</td>
-        <td><span class="badge badge-green">${v.vendite}</span></td>
-        <td><span class="badge badge-gold">${v.trattative}</span></td>
-        <td><span class="badge badge-orange">${v.ricontattare}</span></td>
-      </tr>`).join('');
-
-  $('tab-overview').innerHTML = `
-    <div class="kpi-grid">
-      <div class="kpi blue">  <div class="kpi-ico">👥</div><div class="kpi-val">${totContatti.toLocaleString('it-IT')}</div><div class="kpi-lbl">Contatti totali</div></div>
-      <div class="kpi green"> <div class="kpi-ico">💰</div><div class="kpi-val">${totVendite}</div><div class="kpi-lbl">Vendite totali</div></div>
-      <div class="kpi gold">  <div class="kpi-ico">🤝</div><div class="kpi-val">${totTrattative}</div><div class="kpi-lbl">Trattative in corso</div></div>
-      <div class="kpi orange"><div class="kpi-ico">📦</div><div class="kpi-val">${totNoleggi}</div><div class="kpi-lbl">Noleggi attivi</div></div>
-      <div class="kpi red">   <div class="kpi-ico">⚠️</div><div class="kpi-val">${totScadenze}</div><div class="kpi-lbl">Scadono 30gg</div></div>
-      <div class="kpi blue">  <div class="kpi-ico">💶</div><div class="kpi-val">${fmt(fatt2026)}</div><div class="kpi-lbl">Fatturato 2026</div></div>
-    </div>
-
-    <!-- Barra obiettivo globale -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:24px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
-        <div>
-          <div style="font-size:15px;font-weight:700;color:var(--accent)">Obiettivo Team 2026</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:3px">${fmt(fatt2026)} su ${fmt(obj2026)}</div>
-        </div>
-        <div style="font-size:32px;font-weight:800;color:${col(perc)}">${perc}%</div>
-      </div>
-      <div style="background:var(--surface2);border-radius:100px;height:14px;overflow:hidden">
-        <div style="width:${Math.min(perc,100)}%;height:100%;background:${col(perc)};border-radius:100px;transition:width 1s ease"></div>
-      </div>
-    </div>
-
-    <!-- Contatti per commerciale -->
-    <div class="rank-card">
-      <div class="rank-header"><div class="rank-title">👥 Contatti per commerciale</div></div>
-      <table class="rank-table">
-        <tr><th>Commerciale</th><th>Totale</th><th>Vendite</th><th>Trattative</th><th>Da ricontattare</th></tr>
-        ${commRows}
-      </table>
-    </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CLASSIFICA
-// ══════════════════════════════════════════════════════════════
-function renderClassifica() {
-  const MESI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
-  const nomi = Object.keys(COMMERCIALI);
-
-  const perNome = {};
-  nomi.forEach(n => perNome[n] = { fatt:0, obj:0 });
-
-  allObiettivi.filter(r=>(r.fields['MESE']||'').includes('26')).forEach(r => {
-    const mese = (r.fields['MESE']||'').toUpperCase();
-    const comm = r.fields['Name (from Commerciale)'];
-    const arr  = comm ? (Array.isArray(comm)?comm:[comm]) : [];
-    const nome = nomi.find(n => arr.some(c=>c.toUpperCase().includes(n.split(' ')[0].toUpperCase())) || MESI.some(m=>mese.includes(m)&&mese.includes(n.split(' ')[0].toUpperCase())));
-    if (!nome) return;
-    perNome[nome].fatt += r.fields['Valore Raggiunto']||0;
-    if ((r.fields['Valore Obiettivo']||0)>0) perNome[nome].obj += r.fields['Valore Obiettivo']||0;
-  });
-
-  const sorted = Object.entries(perNome).filter(([,v])=>v.obj>0||v.fatt>0).sort((a,b)=>b[1].fatt-a[1].fatt);
-  const medals = ['🥇','🥈','🥉'];
-
-  const rows = sorted.map(([nome,v],i) => {
-    const perc = v.obj>0 ? Math.round(v.fatt/v.obj*100) : 0;
-    const c    = col(perc);
-    return `<tr>
-      <td style="font-size:18px">${medals[i]||i+1}</td>
-      <td><div class="rank-nome">${esc(nome)}</div></td>
-      <td style="font-weight:800;color:var(--accent)">${fmt(v.fatt)}</td>
-      <td style="color:var(--muted)">${fmt(v.obj)}</td>
-      <td style="font-weight:700;color:${c}">${perc}%</td>
-      <td>
-        <div class="progress-mini" style="width:120px">
-          <div class="progress-mini-fill" style="width:${Math.min(perc,100)}%;background:${c}"></div>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-
-  const totFatt = sorted.reduce((s,[,v])=>s+v.fatt,0);
-  const totObj  = sorted.reduce((s,[,v])=>s+v.obj,0);
-
-  $('tab-classifica').innerHTML = `
-    <div class="rank-card">
-      <div class="rank-header">
-        <div class="rank-title">🏆 Classifica Fatturato 2026</div>
-        <div style="font-size:13px;color:var(--muted)">Team: ${fmt(totFatt)} / ${fmt(totObj)}</div>
-      </div>
-      <table class="rank-table">
-        <tr><th>#</th><th>Commerciale</th><th>Fatturato</th><th>Obiettivo</th><th>%</th><th>Avanzamento</th></tr>
-        ${rows}
-        <tr style="background:var(--accent)">
-          <td></td>
-          <td style="font-weight:700;color:#fff">TOTALE TEAM</td>
-          <td style="font-weight:800;color:#fff">${fmt(totFatt)}</td>
-          <td style="color:rgba(255,255,255,.7)">${fmt(totObj)}</td>
-          <td style="font-weight:800;color:#fff">${totObj>0?Math.round(totFatt/totObj*100):0}%</td>
-          <td></td>
-        </tr>
-      </table>
-    </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PRODOTTI PROPOSTI
-// ══════════════════════════════════════════════════════════════
-function renderProdotti() {
-  // Mappa id prodotto → dati prodotto
-  const prodMap = {};
-  allProdNegozio.forEach(p => {
-    prodMap[p.id] = {
-      nome: prodNome(p),
-      prezzo: prodPrezzo(p),
-      cat: prodCat(p),
-    };
-  });
-
-  const CATS = ['noleggio','vendita dispositivi','accessori','calibrazione','assicurazione','corsi','altro'];
-  const CAT_ICONS = { 'noleggio':'📦','vendita dispositivi':'💰','accessori':'🔧','calibrazione':'⚙️','assicurazione':'🛡️','corsi':'📚','altro':'📌' };
-  const CAT_COLS  = { 'noleggio':'#0072bc','vendita dispositivi':'#27ae60','accessori':'#e67e22','calibrazione':'#7c5cbf','assicurazione':'#34c77b','corsi':'#003d7a','altro':'#6b7f96' };
-
-  // Per ogni commerciale, somma prodotti proposti per categoria
-  const nomi = Object.keys(COMMERCIALI);
-  const perComm = {};
-  nomi.forEach(nome => {
-    perComm[nome] = { tot: 0, valore: 0, cats: {} };
-    CATS.forEach(c => perComm[nome].cats[c] = { n: 0, valore: 0, prodotti: {} });
-  });
-
-  allRubrica.forEach(r => {
-    const codice = r.fields['Codice Equipoint'];
-    const val    = typeof codice==='object' ? (codice?.name||'') : (codice||'');
-    const nome   = nomi.find(n => COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
-    if (!nome) return;
-
-    // Usa nuova tabella Proposte Prodotti
-    const props = allProposte.filter(p => {
-      const cl = getPropField(p, FLD_PP_CONTATTO, 'CONTATTO');
-      return Array.isArray(cl) && cl.some(c => c.id === r.id);
-    });
-    if (!props.length) return;
-
-    props.forEach(p => {
-      const pl     = getPropField(p, FLD_PP_PRODOTTO, 'PRODOTTO', 'Prodotto')
-                  || getPropField(p, 'fldpVAKpMGRRjnDnt', 'negozio');
-      const prodId = Array.isArray(pl) ? pl[0]?.id : null;
-      const prod   = prodId ? prodMap[prodId] : null;
-      if (!prod) return;
-      const cat = prod.cat;
-      const qta = getPropField(p, FLD_PP_QTA, 'Quantità') || 1;
-      perComm[nome].tot++;
-      perComm[nome].valore += prod.prezzo * qta;
-      if (!perComm[nome].cats[cat]) perComm[nome].cats[cat] = { n:0, valore:0, prodotti:{} };
-      perComm[nome].cats[cat].n++;
-      perComm[nome].cats[cat].valore += prod.prezzo * qta;
-      if (!perComm[nome].cats[cat].prodotti[prod.nome]) perComm[nome].cats[cat].prodotti[prod.nome] = { n:0, valore:0, prezzo:prod.prezzo };
-      perComm[nome].cats[cat].prodotti[prod.nome].n++;
-      perComm[nome].cats[cat].prodotti[prod.nome].valore += prod.prezzo * qta;
-    });
-  });
-
-  // Totali globali per categoria
-  const totGlob = {};
-  CATS.forEach(c => totGlob[c] = { n:0, valore:0 });
-  Object.values(perComm).forEach(v => {
-    CATS.forEach(c => {
-      totGlob[c].n     += v.cats[c]?.n||0;
-      totGlob[c].valore += v.cats[c]?.valore||0;
-    });
-  });
-  const totValoreGlob = CATS.reduce((s,c)=>s+totGlob[c].valore,0);
-
-  // KPI globali CLICCABILI
-  const kpiHtml = [...CATS.filter(c=>totGlob[c].n>0), '__totale__'].map(c => {
-    if (c==='__totale__') return `
-      <div style="background:var(--accent);border-radius:var(--r);padding:18px;color:#fff;cursor:pointer"
-        onclick="openCatDetail('__totale__')">
-        <div style="font-size:18px;margin-bottom:6px">💶</div>
-        <div style="font-size:22px;font-weight:800">${fmt(totValoreGlob)}</div>
-        <div style="font-size:11px;opacity:.7;margin-top:2px;text-transform:uppercase">Totale proposto</div>
-        <div style="font-size:10px;opacity:.6;margin-top:4px">Clicca per dettaglio →</div>
-      </div>`;
-    return `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .15s"
-        onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''"
-        onclick="openCatDetail('${c}')">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${CAT_COLS[c]}"></div>
-        <div style="font-size:18px;margin-bottom:6px">${CAT_ICONS[c]}</div>
-        <div style="font-size:22px;font-weight:800;color:${CAT_COLS[c]}">${totGlob[c].n}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.5px">${c}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-top:4px">${fmt(totGlob[c].valore)}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Clicca per dettaglio →</div>
-      </div>`;
-  }).join('');
-
-  // Salva dati DOPO aver calcolato tutto — spostato più in basso
-  // window._prodData viene salvato dopo topProd
-
-  // Tabella per commerciale
-  const commRows = nomi.filter(n=>perComm[n].tot>0)
-    .sort((a,b)=>perComm[b].valore-perComm[a].valore)
-    .map((nome,i) => {
-      const d = perComm[nome];
-      const catCells = CATS.map(c => {
-        const cd = d.cats[c];
-        if (!cd||!cd.n) return `<td style="text-align:center;color:var(--muted);font-size:12px">—</td>`;
-        // tooltip con lista prodotti
-        const prodList = Object.entries(cd.prodotti).sort((a,b)=>b[1].n-a[1].n)
-          .map(([nome,v])=>`${nome} (×${v.n})`).join(', ');
-        return `<td style="text-align:center">
-          <div style="font-weight:800;color:${CAT_COLS[c]};font-size:14px">${cd.n}</div>
-          <div style="font-size:10px;color:var(--muted)">${fmt(cd.valore)}</div>
-          <div style="font-size:9px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(prodList)}">${esc(prodList.substring(0,30))||''}</div>
-        </td>`;
-      }).join('');
-      return `<tr>
-        <td><span style="background:${COMM_COLORS[i]};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px">${esc(nome.split(' ')[0])}</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(nome.split(' ').slice(1).join(' '))}</span></td>
-        <td style="font-weight:800;color:var(--accent);text-align:center">${d.tot}</td>
-        <td style="font-weight:800;color:var(--green)">${fmt(d.valore)}</td>
-        ${catCells}
-      </tr>`;
-    }).join('');
-
-  // Prodotti più proposti in assoluto
-  const topProd = {};
-  allRubrica.forEach(r => {
-    const props = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'];
-    if (!props||!Array.isArray(props)) return;
-    props.forEach(p => {
-      const prod = prodMap[p.id];
-      if (!prod) return;
-      if (!topProd[prod.nome]) topProd[prod.nome] = { n:0, valore:0, cat:prod.cat, prezzo:prod.prezzo };
-      topProd[prod.nome].n++;
-      topProd[prod.nome].valore += prod.prezzo;
-    });
-  });
-  const topList = Object.entries(topProd).sort((a,b)=>b[1].n-a[1].n).slice(0,10);
-
-  // Salva dati per uso nel drawer — DOPO che topProd è stato calcolato
-  window._prodData = { prodMap, perComm, CATS, CAT_ICONS, CAT_COLS, totGlob, topProd };
-
-  const topHtml = topList.map(([nome,v],i)=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:16px;font-weight:800;color:var(--muted);min-width:24px">${i+1}</div>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:13px">${esc(nome)}</div>
-        <div style="font-size:11px;color:${CAT_COLS[v.cat]||'var(--muted)'};margin-top:2px">${CAT_ICONS[v.cat]||''} ${v.cat}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-weight:800;color:var(--accent);font-size:14px">${v.n}×</div>
-        <div style="font-size:11px;color:var(--muted)">${fmt(v.valore)}</div>
-      </div>
-    </div>`).join('');
-
-  $('tab-prodotti').innerHTML = `
-    <!-- KPI per categoria -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:16px">
-      ${kpiHtml}
-    </div>
-
-    <!-- Drawer dettaglio categoria -->
-    <div id="cat-drawer" style="display:none;background:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:22px;margin-bottom:20px"></div>
-
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;margin-bottom:24px">
-
-      <!-- Tabella per commerciale -->
-      <div class="rank-card">
-        <div class="rank-header">
-          <div class="rank-title">🛒 Prodotti proposti per commerciale</div>
-          <div style="font-size:12px;color:var(--muted)">Clicca sulla cella per i dettagli</div>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="rank-table" style="min-width:700px">
-            <tr>
-              <th>Commerciale</th>
-              <th style="text-align:center">Tot.</th>
-              <th>Valore</th>
-              ${CATS.map(c=>`<th style="text-align:center;color:${CAT_COLS[c]}">${CAT_ICONS[c]} ${c}</th>`).join('')}
-            </tr>
-            ${commRows||'<tr><td colspan="10" class="empty">Nessun prodotto proposto</td></tr>'}
-            <tr style="background:var(--surface2);font-weight:700">
-              <td>TOTALE</td>
-              <td style="text-align:center">${Object.values(perComm).reduce((s,v)=>s+v.tot,0)}</td>
-              <td style="color:var(--green)">${fmt(totValoreGlob)}</td>
-              ${CATS.map(c=>`<td style="text-align:center;font-weight:800;color:${CAT_COLS[c]}">${totGlob[c].n||'—'}</td>`).join('')}
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <!-- Top prodotti -->
-      <div class="rank-card">
-        <div class="rank-header"><div class="rank-title">🏆 Top 10 prodotti proposti</div></div>
-        <div style="padding:0 20px 8px">
-          ${topHtml||'<div class="empty">Nessun dato</div>'}
-        </div>
-      </div>
-
-    </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════
-//  DRAWER DETTAGLIO CATEGORIA
-// ══════════════════════════════════════════════════════════════
-function openCatDetail(cat) {
-  const data = window._prodData;
-  if (!data) return;
-  const { prodMap, CAT_ICONS, CAT_COLS } = data;
-
-  const drawer = $('cat-drawer');
-  if (!drawer) return;
-
-  if (drawer.dataset.open === cat) {
-    drawer.style.display='none'; drawer.dataset.open=''; return;
-  }
-  drawer.dataset.open = cat;
-  drawer.style.display = 'block';
-
-  const isTot = cat === '__totale__';
-  const col   = isTot ? 'var(--accent)' : (CAT_COLS[cat]||'var(--accent)');
-  const ico   = isTot ? '💶' : (CAT_ICONS[cat]||'📦');
-  const label = isTot ? 'Tutti i prodotti' : cat;
-
-  // Raccoglie record — usa name dal linked record se non trova in prodMap
-  const records = [];
-  allRubrica.forEach(r => {
-    const props = r.fields['prodott proposti'] || r.fields['fldMKXo8Ss8Fljvvj'];
-    if (!props||!Array.isArray(props)) return;
-    props.forEach(p => {
-      // cerca prima nella mappa per ID, poi usa il name inline
-      const prod = prodMap[p.id] || { nome: p.name||'—', prezzo:0, cat:'altro' };
-      if (!isTot && prod.cat !== cat) return;
-      const codice   = r.fields['Codice Equipoint'];
-      const val      = typeof codice==='object'?(codice?.name||''):(codice||'');
-      const nomeComm = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()))||'—';
-      records.push({ cliente: r.fields['Nome e cognome']||'—', comm: nomeComm, prod: prod.nome, cat: prod.cat, prezzo: prod.prezzo });
-    });
-  });
-
-  const byProd = {};
-  records.forEach(rec => {
-    if (!byProd[rec.prod]) byProd[rec.prod] = { n:0, valore:0, cat:rec.cat, clienti:[] };
-    byProd[rec.prod].n++;
-    byProd[rec.prod].valore += rec.prezzo;
-    byProd[rec.prod].clienti.push(rec.cliente);
-  });
-
-  const prodRows = Object.entries(byProd).sort((a,b)=>b[1].n-a[1].n).map(([nome,v])=>`
-    <tr>
-      <td style="font-weight:700;padding:8px 4px;border-bottom:1px solid var(--border)">${esc(nome)}</td>
-      <td style="text-align:center;font-weight:800;color:${CAT_COLS[v.cat]||col};padding:8px 4px;border-bottom:1px solid var(--border)">${v.n}</td>
-      <td style="font-weight:700;color:var(--accent);padding:8px 4px;border-bottom:1px solid var(--border)">${fmt(v.valore)}</td>
-      <td style="font-size:11px;color:var(--muted);padding:8px 4px;border-bottom:1px solid var(--border)">${esc(v.clienti.slice(0,3).join(', ')+(v.clienti.length>3?` +${v.clienti.length-3} altri`:''))}</td>
-    </tr>`).join('');
-
-  const byComm = {};
-  records.forEach(rec => {
-    if (!byComm[rec.comm]) byComm[rec.comm] = { n:0, valore:0 };
-    byComm[rec.comm].n++;
-    byComm[rec.comm].valore += rec.prezzo;
-  });
-
-  const commRows = Object.entries(byComm).sort((a,b)=>b[1].n-a[1].n).map(([nome,v])=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="background:${COMM_COLORS[Object.keys(COMMERCIALI).indexOf(nome)]||'#999'};color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;min-width:60px;text-align:center">${esc(nome.split(' ')[0])}</span>
-      <div style="flex:1;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden">
-        <div style="width:${records.length>0?Math.round(v.n/records.length*100):0}%;height:100%;background:${col};border-radius:4px"></div>
-      </div>
-      <span style="font-weight:800;color:${col};min-width:30px;text-align:right">${v.n}</span>
-      <span style="font-size:12px;color:var(--muted);min-width:80px;text-align:right">${fmt(v.valore)}</span>
-    </div>`).join('');
-
-  const totValore = records.reduce((s,r)=>s+r.prezzo,0);
-
-  drawer.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:28px">${ico}</span>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:${col};text-transform:uppercase">${esc(label)}</div>
-          <div style="font-size:13px;color:var(--muted)">${records.length} proposte · ${fmt(totValore)}</div>
-        </div>
-      </div>
-      <button onclick="document.getElementById('cat-drawer').style.display='none';document.getElementById('cat-drawer').dataset.open=''"
-        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:24px">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.7px">Dettaglio per prodotto</div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <tr style="border-bottom:2px solid ${col}">
-            <th style="text-align:left;padding-bottom:8px;color:${col};font-size:11px;text-transform:uppercase">Prodotto</th>
-            <th style="text-align:center;padding-bottom:8px;color:${col};font-size:11px">Qtà</th>
-            <th style="text-align:left;padding-bottom:8px;color:${col};font-size:11px">Valore</th>
-            <th style="text-align:left;padding-bottom:8px;color:${col};font-size:11px">Clienti</th>
-          </tr>
-          ${prodRows||'<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">Nessun dato</td></tr>'}
-        </table>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.7px">Per commerciale</div>
-        ${commRows||'<div style="color:var(--muted);font-size:13px;padding:20px 0">Nessun dato</div>'}
-      </div>
-    </div>`;
-
-  drawer.scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-
-let rubricaFiltrata = [];
-let sortField = 'DATA DI CREAZIONE DATO';
-let sortDir   = -1;
-
-function renderRubrica() {
-  rubricaFiltrata = [...allRubrica];
-  $('tab-rubrica').innerHTML = `
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">👥 Tutti i contatti (${allRubrica.length.toLocaleString('it-IT')})</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:13px;color:var(--muted)" id="rubrica-count"></div>
-          <button onclick="openNewContactModal()"
-            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">
-            ➕ Nuovo contatto
-          </button>
-        </div>
-      </div>
-      <div class="filter-bar">
-        <input class="search-inp" id="rb-search" placeholder="🔍 Cerca nome, telefono, note…" oninput="filterRubrica()">
-        <select class="sel-filter" id="rb-comm" onchange="filterRubrica()">
-          <option value="">Tutti i commerciali</option>
-          ${Object.keys(COMMERCIALI).map(n=>`<option>${esc(n)}</option>`).join('')}
-        </select>
-        <select class="sel-filter" id="rb-stato" onchange="filterRubrica()">
-          <option value="">Tutti gli stati</option>
-          ${[...new Set(allRubrica.map(r=>r.fields['Status']).filter(Boolean))].sort().map(s=>`<option>${esc(s)}</option>`).join('')}
-        </select>
-        <input type="date" class="sel-filter" id="rb-da" onchange="filterRubrica()" title="Dal">
-        <input type="date" class="sel-filter" id="rb-a"  onchange="filterRubrica()" title="Al">
-      </div>
-      <div style="overflow-x:auto">
-        <table class="data-table" id="rb-table">
-          <thead><tr>
-            <th onclick="sortRubrica('Nome e cognome')">Nome ↕</th>
-            <th>Commerciale ✏️</th>
-            <th>Stato ✏️</th>
-            <th>Telefono ✏️</th>
-            <th onclick="sortRubrica('DATA DI CREAZIONE DATO')">Creato ↕</th>
-            <th onclick="sortRubrica('DATA ATTIVITA')">Ultima att. ↕</th>
-            <th>Note ✏️</th>
-            <th>Carrello 🛒</th>
-          </tr></thead>
-          <tbody id="rb-body"></tbody>
-        </table>
-        <div id="admin-pbar"></div>
-      </div>
-    </div>`;
-  filterRubrica();
-}
-
-// Gestione click editing
-document.addEventListener('click', function(e) {
-  // Badge stato cliccabile
-  const statEl = e.target.closest('[data-edit-stato]');
-  if (statEl) {
-    const td    = statEl.closest('td');
-    const recId = statEl.dataset.id;
-    const cur   = statEl.dataset.value||'';
-    const STATI = ['DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO','INVIATO LINK PER APPUNTAMENTO','CAPARRA','VENDUTO','NOLEGGIATO','NON VUOLE ESSERE RICONTATTATO','NON INTER.PREZZO ALTO','NON ADATTO AL DISPOSITIVO','NUMERO ERRATO','NO RECAPITO TELEFONICO','RECUPERATO','RINNOVO NOLEGGIO'];
-    td.innerHTML = `<select class="edit-sel" id="es-${recId}">${STATI.map(s=>`<option ${s===cur?'selected':''}>${esc(s)}</option>`).join('')}</select>
-      <div><button class="btn-save" onclick="saveAdminField('${recId}','Status',document.getElementById('es-${recId}').value)">Salva</button>
-      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
-    return;
-  }
-  // Commerciale cliccabile
-  const commEl = e.target.closest('[data-edit-comm]');
-  if (commEl) {
-    const td    = commEl.closest('td');
-    const recId = commEl.dataset.id;
-    const cur   = commEl.dataset.value||'';
-    const opts  = Object.keys(COMMERCIALI).map(n=>{
-      const eq = COMMERCIALI[n].equipoint[0];
-      return `<option value="${esc(eq)}" ${eq===cur?'selected':''}>${esc(n)}</option>`;
-    }).join('');
-    td.innerHTML = `<select class="edit-sel" id="ec-${recId}"><option value="">— Nessuno —</option>${opts}</select>
-      <div><button class="btn-save" onclick="saveAdminField('${recId}','Codice Equipoint',document.getElementById('ec-${recId}').value)">Salva</button>
-      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
-    return;
-  }
-  // Tel cliccabile
-  const telEl = e.target.closest('[data-edit-tel]');
-  if (telEl) {
-    const td    = telEl.closest('td');
-    const recId = telEl.dataset.id;
-    const cur   = telEl.dataset.value||'';
-    td.innerHTML = `<input class="edit-inp" id="et-${recId}" value="${esc(cur)}" placeholder="+39…">
-      <div><button class="btn-save" onclick="saveAdminField('${recId}','recapito telefonico',document.getElementById('et-${recId}').value)">Salva</button>
-      <button class="btn-cancel" onclick="filterRubrica()">✕</button></div>`;
-    td.querySelector('input').focus();
-    return;
-  }
-  // Note cliccabile
-  const noteEl = e.target.closest('[data-edit-note]');
-  if (noteEl) {
-    const recId = noteEl.dataset.id;
-    const cur   = noteEl.dataset.value||'';
-    const nome  = allRubrica.find(r=>r.id===recId)?.fields['Nome e cognome']||'';
-    // Apre modal centrato invece di inline
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.id = 'note-modal';
-    overlay.innerHTML = `
-      <div class="modal-box" style="max-width:480px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div>
-            <div style="font-size:16px;font-weight:800;color:var(--accent)">📝 Note</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(nome)}</div>
-          </div>
-          <button onclick="document.getElementById('note-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
-        </div>
-        <textarea id="note-ta-${recId}" rows="8"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.6"
-          placeholder="Aggiungi una nota…">${esc(cur)}</textarea>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn-primary" style="margin:0;flex:1"
-            onclick="saveNoteAdmin('${recId}')">💾 Salva</button>
-          <button onclick="document.getElementById('note-modal').remove()"
-            style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:12px 20px;font-size:13px;cursor:pointer">
-            Annulla
-          </button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-    document.getElementById(`note-ta-${recId}`).focus();
-    return;
-  }
-});
-
-async function saveNoteAdmin(recId) {
-  const ta = document.getElementById('note-ta-' + recId);
-  if (!ta) return;
-  const value = ta.value;
-  try {
-    await proxyPatch('tbllNx7iSqpAtbQde', recId, { 'Notes': value });
-    const rec = allRubrica.find(r=>r.id===recId);
-    if (rec) rec.fields['Notes'] = value;
-    document.getElementById('note-modal')?.remove();
-    showToast('✅ Nota salvata!');
-    filterRubrica();
-  } catch(e) {
-    showToast('❌ Errore salvataggio', true);
-  }
-}
-
-async function saveAdminField(recId, field, value) {
-  try {
-    await proxyPatch('tbllNx7iSqpAtbQde', recId, { [field]: value });
-    // aggiorna cache
-    const rec = allRubrica.find(r=>r.id===recId);
-    if (rec) rec.fields[field] = value;
-    showToast('✅ Salvato!');
-    filterRubrica();
-  } catch(e) {
-    showToast('❌ Errore salvataggio', true);
-  }
-}
-
-function filterRubrica() {
-  const q     = ($('rb-search')?.value||'').toLowerCase();
-  const comm  = ($('rb-comm')?.value||'').toLowerCase();
-  const stato = ($('rb-stato')?.value||'').toLowerCase();
-  const da    = $('rb-da')?.value;
-  const a     = $('rb-a')?.value;
-
-  rubricaFiltrata = allRubrica.filter(r => {
-    if (q) {
-      const hay = (r.fields['Nome e cognome']||'')+(r.fields['recapito telefonico']||'')+(r.fields['Notes']||'');
-      if (!hay.toLowerCase().includes(q)) return false;
-    }
-    if (comm) {
-      const codice = r.fields['Codice Equipoint'];
-      const val = typeof codice==='object' ? (codice?.name||'') : (codice||'');
-      const nome = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
-      if (!nome || nome.toLowerCase()!==comm) return false;
-    }
-    if (stato) {
-      if ((r.fields['Status']||'').toLowerCase()!==stato) return false;
-    }
-    if (da||a) {
-      const iso = r.fields['DATA DI CREAZIONE DATO']||r.createdTime||'';
-      const d   = iso ? new Date(iso) : null;
-      if (da && d && d < new Date(da)) return false;
-      if (a  && d && d > new Date(a+'T23:59:59')) return false;
-    }
-    return true;
-  });
-
-  adminPage = 0;
-  sortRubrica(sortField, true);
-  const cnt = $('rubrica-count');
-  if (cnt) cnt.textContent = `${rubricaFiltrata.length.toLocaleString('it-IT')} risultati`;
-}
-
-let adminPage = 0;
-const ADMIN_PAGE_SIZE = 20;
-
-function sortRubrica(field, keepDir=false) {
-  if (!keepDir) sortDir = sortField===field ? -sortDir : -1;
-  sortField = field;
-  rubricaFiltrata.sort((a,b)=>{
-    const va = a.fields[field]||a.createdTime||'';
-    const vb = b.fields[field]||b.createdTime||'';
-    return sortDir * String(va).localeCompare(String(vb));
-  });
-  adminPage = 0;
-  renderAdminPage();
-}
-
-function renderAdminPage() {
-  const start = adminPage * ADMIN_PAGE_SIZE;
-  const slice = rubricaFiltrata.slice(start, start + ADMIN_PAGE_SIZE);
-  const rows = slice.map(r => {
-    const codice   = r.fields['Codice Equipoint'];
-    const val      = typeof codice==='object' ? (codice?.name||'') : (codice||'');
-    const nomeComm = Object.keys(COMMERCIALI).find(n=>COMMERCIALI[n].equipoint.some(e=>e.toLowerCase()===val.toLowerCase()));
-    const commIdx  = nomeComm ? Object.keys(COMMERCIALI).indexOf(nomeComm) : -1;
-    const stato    = r.fields['Status']||'—';
-    const statoUp  = stato.toUpperCase();
-    const bCls     = statoUp.includes('VENDUTO') ? 'badge-green'
-      : statoUp.includes('TRATTATIVA') ? 'badge-gold'
-      : statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA') ? 'badge-orange'
-      : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
-      : 'badge-blue';
-    const creaz = r.fields['DATA DI CREAZIONE DATO']||r.createdTime
-      ? new Date(r.fields['DATA DI CREAZIONE DATO']||r.createdTime).toLocaleDateString('it-IT') : '—';
-    const att   = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
-    const tel   = r.fields['recapito telefonico']||'';
-    const note  = r.fields['Notes']||'';
-    const commEq = COMMERCIALI[nomeComm]?.equipoint[0]||'';
-    const prodProp = r.fields['fld6PwFFS7oHlswjO'] || []; // link a Proposte Prodotti
-    const mieProposte = allProposte.filter(p => Array.isArray(getPropField(p,FLD_PP_CONTATTO,"CONTATTO")) && getPropField(p,FLD_PP_CONTATTO,"CONTATTO").some(c=>c.id===r.id));
-    const nProd    = mieProposte.length;
-    const valProd  = mieProposte.reduce((s,p)=>{
-      const qta    = getPropField(p,FLD_PP_QTA,"Quantità")||1;
-      const prezzo = p.fields[FLD_PP_PREZZO]||0;
-      return s + (qta * prezzo);
-    }, 0);
-
-    return `<tr>
-      <td><div class="nome-cell">${esc(r.fields['Nome e cognome']||'—')}</div><div class="sub-cell">${esc(r.fields['Tipologia cliente']||'')}</div></td>
-      <td>
-        <span class="editable commerciale-tag" data-edit-comm="1" data-id="${r.id}" data-value="${esc(commEq)}"
-          style="color:${COMM_COLORS[commIdx]||'var(--muted)'};border-color:${COMM_COLORS[commIdx]||'var(--border)'}30;background:${COMM_COLORS[commIdx]||'#eee'}15"
-          title="Clicca per cambiare">
-          ${nomeComm ? esc(nomeComm.split(' ')[0]) : '+ assegna'}
-        </span>
-      </td>
-      <td>
-        <span class="badge ${bCls} editable" data-edit-stato="1" data-id="${r.id}" data-value="${esc(stato)}"
-          title="Clicca per modificare">${esc(stato)}</span>
-      </td>
-      <td style="font-size:12px">
-        <span class="editable" data-edit-tel="1" data-id="${r.id}" data-value="${esc(tel)}" title="Clicca per modificare">
-          ${tel ? `📞 ${esc(tel)}` : '<span style="color:var(--muted)">+ aggiungi</span>'}
-        </span>
-      </td>
-      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${creaz}</td>
-      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${att}</td>
-      <td style="max-width:200px">
-        <span class="editable" data-edit-note="1" data-id="${r.id}" data-value="${esc(note)}"
-          style="font-size:11px;color:var(--muted);display:block;white-space:pre-wrap;word-break:break-word;line-height:1.4"
-          title="Clicca per modificare">
-          ${note ? esc(note.substring(0,80))+(note.length>80?'…':'') : '<em>+ nota</em>'}
-        </span>
-      </td>
-      <td>
-        <button onclick="openCartModal('${r.id}')"
-          style="background:${nProd>0?'rgba(0,114,188,.1)':'var(--surface2)'};border:1px solid ${nProd>0?'#0072bc':'var(--border)'};color:${nProd>0?'#0072bc':'var(--muted)'};border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-          🛒 ${nProd>0 ? `${nProd} · ${fmt(valProd)}` : '+ Proponi'}
-        </button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  const tbody = $('rb-body');
-  if (tbody) tbody.innerHTML = rows || '<tr><td colspan="8" class="empty">Nessun risultato</td></tr>';
-
-  // Paginazione
-  const total = rubricaFiltrata.length;
-  const pages = Math.ceil(total / ADMIN_PAGE_SIZE);
-  const pbar  = $('admin-pbar');
-  if (!pbar) return;
-  if (pages <= 1) { pbar.innerHTML=''; return; }
-
-  const s = adminPage * ADMIN_PAGE_SIZE + 1;
-  const e = Math.min((adminPage+1)*ADMIN_PAGE_SIZE, total);
-  let btns = '';
-  const delta = 2;
-  let prev = -1;
-  for (let i=0; i<pages; i++) {
-    if (i===0||i===pages-1||(i>=adminPage-delta&&i<=adminPage+delta)) {
-      if (prev!==-1&&i-prev>1) btns+=`<span style="color:var(--muted);padding:0 4px">…</span>`;
-      btns+=`<button onclick="goAdminPage(${i})"
-        style="min-width:32px;height:32px;border-radius:6px;border:1px solid ${i===adminPage?'var(--accent)':'var(--border)'};background:${i===adminPage?'var(--accent)':'var(--surface2)'};color:${i===adminPage?'#fff':'var(--text)'};font-size:13px;font-weight:${i===adminPage?'800':'500'};cursor:pointer">
-        ${i+1}</button>`;
-      prev=i;
-    }
-  }
-  pbar.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 0;border-top:1px solid var(--border);flex-wrap:wrap">
-    <button onclick="goAdminPage(${adminPage-1})" ${adminPage===0?'disabled':''} style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${adminPage===0?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${adminPage===0?'not-allowed':'pointer'}">←</button>
-    ${btns}
-    <button onclick="goAdminPage(${adminPage+1})" ${adminPage>=pages-1?'disabled':''} style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${adminPage>=pages-1?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${adminPage>=pages-1?'not-allowed':'pointer'}">→</button>
-    <span style="font-size:12px;color:var(--muted);margin-left:8px">${s}–${e} di ${total}</span>
-  </div>`;
-}
-
-function goAdminPage(page) {
-  const pages = Math.ceil(rubricaFiltrata.length / ADMIN_PAGE_SIZE);
-  if (page<0||page>=pages) return;
-  adminPage = page;
-  renderAdminPage();
-  $('rb-body')?.closest('table')?.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function filterRubricaAndRender() {
-  adminPage = 0;
-  sortRubrica(sortField, true);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CARRELLO PRODOTTI CON TAB
-// ══════════════════════════════════════════════════════════════
-const STRIPE_LINKS = {
-  'KITNOLO 10GG':              'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h',
-  'KITNOLO 30GG':              'https://buy.stripe.com/dRmcN5fXw09aaqM02fafS0e',
-  'KITNOLO 41GG':              'https://buy.stripe.com/28E4gzcLk6xy6aw5mzafS0f',
-  'KITNOLO 60GG':              'https://buy.stripe.com/eVqeVddPo5tudCY9CPafS0i',
-  'KITNOLO 90GG':              'https://buy.stripe.com/9B6cN5bHgg888iEdT5afS0j',
-  'KIT SILICON 3 DISPOSITIVI': 'https://buy.stripe.com/bJefZhaDc3lm6awbKXafS0k',
-  'KIT GEL 3 DISPOSITIVI':     'https://buy.stripe.com/dRm6oH12C2hieH23erafS0l',
-  'SILICON SINGOLO':           'https://buy.stripe.com/fZuaEX7r03lm56s7uHafS0m',
-  'GEL SINGOLO':               'https://buy.stripe.com/aFaaEX9z87BC7eAbKXafS0n',
-  'CALIBRAZIONE':              'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o',
-  'DISPOSITIVO NOLO SMARRITO': 'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p',
-};
-
-// Ordine giorni per i noleggi
-const NOLO_ORDER = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
-
-let cartRecId   = null;
-let cartSelIds  = new Map(); // prodId → { id: proposta_id|null, qta, prezzo }
-let cartTabAct  = 'noleggio';
-
-function openCartModal(recId) {
-  cartRecId  = recId;
-  const rec  = allRubrica.find(r=>r.id===recId);
-  if (!rec) return;
-
-  // Carica proposte esistenti per questo contatto
-  cartSelIds = new Map();
-  allProposte.filter(p => Array.isArray(getPropField(p,FLD_PP_CONTATTO,"CONTATTO")) && getPropField(p,FLD_PP_CONTATTO,"CONTATTO").some(c=>c.id===recId))
-    .forEach(p => {
-      const prodLinks = getPropField(p,FLD_PP_PRODOTTO,"negozio","PRODOTTO");
-      if (prodLinks && prodLinks.length > 0) {
-        const prodId = prodLinks[0].id;
-        cartSelIds.set(prodId, {
-          propId:  p.id,
-          qta:     getPropField(p,FLD_PP_QTA,"Quantità") || 1,
-          prezzo:  p.fields[FLD_PP_PREZZO] || (allProdNegozio.find(x=>x.id===prodId)?.fields['Prezzo (€)']||0),
-          note:    p.fields[FLD_PP_NOTE] || ''
-        });
-      }
-    });
-
-  cartTabAct = 'noleggio';
-  document.getElementById('cart-modal')?.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.id = 'cart-modal';
-  overlay.innerHTML = `<div class="modal-box cart-modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--accent)">🛒 Prodotti proposti</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(rec.fields['Nome e cognome']||'')}</div>
-      </div>
-      <button onclick="document.getElementById('cart-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
-    </div>
-    <div id="cart-body">${buildCartBody()}</div>
-  </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-}
-
-function buildCartBody() {
-  const TABS = [
-    { id:'noleggio',            label:'📦 Noleggi' },
-    { id:'singolo',             label:'🔬 Singolo' },
-    { id:'kit',                 label:'📦 Kit x3' },
-    { id:'accessori',           label:'🔧 Accessori' },
-    { id:'calibrazione',        label:'⚙️ Calibraz.' },
-    { id:'assicurazione',       label:'🛡️ Assicur.' },
-    { id:'altro',               label:'📌 Altro' },
-  ];
-
-  const tabsHtml = TABS.map(t=>`
-    <button class="cart-tab ${t.id===cartTabAct?'active':''}"
-      onclick="switchCartTab('${t.id}')">${t.label}</button>`).join('');
-
-  // Filtra prodotti per tab attivo
-  let prods = [];
-  if (cartTabAct === 'noleggio') {
-    prods = (allProdNegozio||[]).filter(p=>(prodCat(p))===cartTabAct)
-      .sort((a,b)=>(NOLO_ORDER[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER[b.fields['Nome prodotto']?.trim()]||99));
-  } else if (cartTabAct === 'singolo') {
-    prods = (allProdNegozio||[]).filter(p=>{
-      const nome = (prodNome(p)).toUpperCase();
-      return (prodCat(p))==='vendita dispositivi' && nome.includes('SINGOLO');
-    });
-  } else if (cartTabAct === 'kit') {
-    prods = (allProdNegozio||[]).filter(p=>{
-      const nome = (prodNome(p)).toUpperCase();
-      return (prodCat(p))==='vendita dispositivi' && (nome.includes('KIT') || (!nome.includes('SINGOLO') && !nome.includes('KITNOLO')));
-    });
-  } else if (cartTabAct === 'calibrazione') {
-    prods = (allProdNegozio||[]).filter(p=>(prodCat(p))==='calibrazione');
-  } else if (cartTabAct === 'assicurazione') {
-    prods = (allProdNegozio||[]).filter(p=>(prodCat(p))==='assicurazione');
-  } else if (cartTabAct === 'accessori') {
-    // accessori: cerotti e rocchetti prima, poi custodie e bpack
-    prods = (allProdNegozio||[]).filter(p=>(prodCat(p))==='accessori')
-      .sort((a,b)=>{
-        const na = (a.fields['Nome prodotto']||'').toUpperCase();
-        const nb = (b.fields['Nome prodotto']||'').toUpperCase();
-        const ordA = na.includes('CEROTTI')?0:na.includes('ROCCH')?1:na.includes('TASCH')?2:3;
-        const ordB = nb.includes('CEROTTI')?0:nb.includes('ROCCH')?1:nb.includes('TASCH')?2:3;
-        return ordA - ordB;
-      });
+var qs=[], rb=[], frb=[], sel=new Set(), sc={};
+
+function login() {
+  var v = document.getElementById('pwd').value.trim();
+  if (v === PW) {
+    document.getElementById('ls').style.display = 'none';
+    document.getElementById('as').style.display = 'block';
+    loadAll();
   } else {
-    prods = (allProdNegozio||[]).filter(p=>(prodCat(p))===cartTabAct);
+    document.getElementById('emsg').classList.add('on');
+    document.getElementById('pwd').value = '';
+    document.getElementById('pwd').focus();
   }
-
-  const itemsHtml = prods.map(p=>{
-    const entry  = cartSelIds.get(p.id);
-    const sel    = !!entry;
-    const qta    = entry?.qta || 1;
-    const nome   = prodNome(p);
-    const prezzo = prodPrezzo(p);
-    const stripe = STRIPE_LINKS[nome.trim().toUpperCase()]||STRIPE_LINKS[nome.trim()]||null;
-    return `<div class="cart-item ${sel?'sel':''}" onclick="toggleCartItem('${p.id}',${prezzo})">
-      ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
-      <div class="cart-nome">${esc(nome)}</div>
-      <div class="cart-prezzo">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
-      ${sel ? `<div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;margin-top:8px">
-        <button onclick="event.stopPropagation();changeQta('${p.id}',-1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800;font-size:14px">−</button>
-        <span style="font-weight:800;font-size:14px;color:var(--accent);min-width:20px;text-align:center">${qta}</span>
-        <button onclick="event.stopPropagation();changeQta('${p.id}',1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800;font-size:14px">+</button>
-        <span style="font-size:11px;color:var(--muted)">= €${(prezzo*qta).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
-      </div>` : ''}
-      ${stripe?`<a class="cart-link" href="${stripe}" target="_blank" onclick="event.stopPropagation()">💳 Stripe</a>`:''}
-    </div>`;
-  }).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Nessun prodotto in questa categoria</div>';
-
-  // Totale con quantità
-  const selProds = (allProdNegozio||[]).filter(p=>cartSelIds.has(p.id));
-  const totale   = selProds.reduce((s,p)=>{
-    const entry = cartSelIds.get(p.id);
-    return s + ((entry?.qta||1) * (prodPrezzo(p)));
-  }, 0);
-  const nSel = cartSelIds.size;
-
-  const linksHtml = selProds
-    .filter(p=>STRIPE_LINKS[(prodNome(p)).trim().toUpperCase()]||STRIPE_LINKS[(prodNome(p)).trim()])
-    .map(p=>{
-      const url = STRIPE_LINKS[(prodNome(p)).trim().toUpperCase()]||STRIPE_LINKS[(prodNome(p)).trim()];
-      return `<div class="cart-stripe-row">
-        <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(prodNome(p))}</div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✅ Copiato!'))"
-            style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copia</button>
-          <a href="https://wa.me/?text=${encodeURIComponent('Ecco il link per '+p.fields['Nome prodotto']+': '+url)}" target="_blank"
-            style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none">📲 WA</a>
-        </div>
-      </div>`;
-    }).join('');
-
-  return `
-    <div class="cart-tabs">${tabsHtml}</div>
-    <div class="cart-grid">${itemsHtml}</div>
-    <div class="cart-total">
-      <div>
-        <div style="font-size:11px;color:var(--muted)">Totale proposta</div>
-        <div style="font-size:22px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;color:var(--muted)">${nSel} prodotti</div>
-        <button onclick="saveCart()"
-          style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer">
-          💾 Salva su Airtable
-        </button>
-      </div>
-    </div>
-    ${linksHtml ? `<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">💳 Link pagamento</div>${linksHtml}</div>` : ''}`;
 }
 
-function switchCartTab(tab) {
-  cartTabAct = tab;
-  const body = document.getElementById('cart-body');
-  if (body) body.innerHTML = buildCartBody();
+function showTab(t) {
+  document.getElementById('td').style.display = t === 'd' ? 'block' : 'none';
+  document.getElementById('ts').style.display = t === 's' ? 'block' : 'none';
+  document.getElementById('tbd').classList.toggle('active', t === 'd');
+  document.getElementById('tbs').classList.toggle('active', t === 's');
 }
 
-function toggleCartItem(prodId, prezzo) {
-  if (cartSelIds.has(prodId)) cartSelIds.delete(prodId);
-  else cartSelIds.set(prodId, { propId: null, qta: 1, prezzo: prezzo||0 });
-  const body = document.getElementById('cart-body');
-  if (body) body.innerHTML = buildCartBody();
-}
+function loadAll() { loadQ(); loadStati(); }
 
-function changeQta(prodId, delta) {
-  const entry = cartSelIds.get(prodId);
-  if (!entry) return;
-  const nuovaQta = Math.max(1, (entry.qta||1) + delta);
-  cartSelIds.set(prodId, { ...entry, qta: nuovaQta });
-  const body = document.getElementById('cart-body');
-  if (body) body.innerHTML = buildCartBody();
-}
-
-async function saveCart() {
-  if (!cartRecId) return;
+async function loadQ() {
+  sy('sd', 'Caricamento domande...', 'in', true);
   try {
-    const ops = [];
-    for (const [prodId, entry] of cartSelIds.entries()) {
-      const prod   = (allProdNegozio||[]).find(p=>p.id===prodId);
-      const nome   = prod ? prodNome(prod) : '';
-      const prezzo = prod ? prodPrezzo(prod) : 0;
-      const fields = {
-        'Nome proposta':   nome,
-        'Quantità':        entry.qta||1,
-        'Prezzo unitario': prezzo,
-        'CONTATTO':        [cartRecId],
-        'negozio':         [prodId],
-      };
-      if (entry.propId) {
-        // aggiorna proposta esistente
-        ops.push(proxyPatch(TABLE_PROPOSTE, entry.propId, fields));
-      } else {
-        // crea nuova proposta
-        ops.push(proxyPost(TABLE_PROPOSTE, fields).then(res=>{
-          if (res.id) {
-            allProposte.push(res);
-            cartSelIds.set(prodId, { ...entry, propId: res.id });
-          }
-        }));
+    var r = await fetch('https://api.airtable.com/v0/' + BID + '/' + LT + '/' + DR,
+      {mode:'cors', headers:{'Authorization':'Bearer ' + AK}});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    qs = JSON.parse(d.fields[FN] || '[]');
+    renderQ();
+    sy('sd', qs.length + ' domande caricate', 'ok', false);
+  } catch(e) { sy('sd', 'Errore: ' + e.message, 'er', false); }
+}
+
+async function saveQ() {
+  var r = await fetch('https://api.airtable.com/v0/' + BID + '/' + LT + '/' + DR, {
+    method:'PATCH', mode:'cors',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer ' + AK},
+    body: JSON.stringify({fields:{[FN]: JSON.stringify(qs)}})
+  });
+  if (!r.ok) { var e = await r.json(); throw new Error(e.error ? e.error.message : 'Errore'); }
+}
+
+function renderQ() {
+  var n = qs.length;
+  document.getElementById('qcount').textContent = n;
+  var st = document.getElementById('qst');
+  st.textContent = n >= 15 ? 'Completo!' : 'Mancano ' + (15 - n);
+  st.className = 'cst ' + (n >= 15 ? 'ok' : 'w');
+  var cl = {A:'#e74c3c',B:'#3498db',C:'#2ecc71',D:'#f39c12'};
+  var list = document.getElementById('ql');
+  if (!n) { list.innerHTML = '<div class="emp">Nessuna domanda</div>'; return; }
+  var html = '';
+  for (var i = 0; i < qs.length; i++) {
+    var q = qs[i];
+    var ans = '';
+    var lets = ['A','B','C','D'];
+    var vals = [q.a, q.b, q.c, q.e];
+    for (var j = 0; j < 4; j++) {
+      var l = lets[j];
+      var isOk = q.c_ok === l;
+      ans += '<div class="qa ' + (isOk ? 'ok' : '') + '">' +
+        '<span style="background:' + cl[l] + ';color:#fff;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:800;">' + l + '</span>' +
+        vals[j] + (isOk ? ' ✓' : '') + '</div>';
+    }
+    html += '<div class="qc"><div class="qn">' + (i+1) + '</div>' +
+      '<div class="qb"><div class="qt">' + q.d + '</div><div class="qag">' + ans + '</div></div>' +
+      '<div><button class="btn bd bsm" onclick="delQ(' + i + ')">Elimina</button></div></div>';
+  }
+  list.innerHTML = html;
+}
+
+async function addQ() {
+  var d = document.getElementById('nd').value.trim();
+  var a = document.getElementById('na').value.trim();
+  var b = document.getElementById('nb').value.trim();
+  var c = document.getElementById('nc').value.trim();
+  var e = document.getElementById('ne').value.trim();
+  var ok = document.getElementById('nok').value;
+  if (!d||!a||!b||!c||!e||!ok) { toast('Compila tutti i campi!'); return; }
+  var btn = document.getElementById('btnadd');
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
+  qs.push({d:d, a:a, b:b, c:c, e:e, c_ok:ok});
+  try {
+    await saveQ();
+    renderQ();
+    ['nd','na','nb','nc','ne'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('nok').value = '';
+    toast('Domanda ' + qs.length + '/15 salvata!');
+    sy('sd', qs.length + ' domande salvate', 'ok', false);
+    window.scrollTo({top:0, behavior:'smooth'});
+  } catch(ex) { qs.pop(); toast('Errore: ' + ex.message); }
+  btn.disabled = false; btn.textContent = 'Salva Domanda';
+}
+
+async function delQ(i) {
+  if (!confirm('Eliminare questa domanda?')) return;
+  var rem = qs.splice(i, 1);
+  try { await saveQ(); renderQ(); toast('Domanda eliminata'); }
+  catch(e) { qs.splice(i, 0, rem[0]); toast('Errore: ' + e.message); }
+}
+
+async function loadStati() {
+  try {
+    var r = await fetch('https://api.airtable.com/v0/meta/bases/' + BID + '/tables',
+      {mode:'cors', headers:{'Authorization':'Bearer ' + AK}});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    var tbl = null;
+    for (var i = 0; i < d.tables.length; i++) {
+      if (d.tables[i].id === RT) { tbl = d.tables[i]; break; }
+    }
+    var fld = null;
+    if (tbl) {
+      for (var j = 0; j < tbl.fields.length; j++) {
+        if (tbl.fields[j].id === 'fld5EpJuoZLFEqeJ6') { fld = tbl.fields[j]; break; }
       }
     }
-    // Elimina proposte rimosse
-    const daEliminare = allProposte.filter(p => {
-      const prodLinks = getPropField(p,FLD_PP_PRODOTTO,"negozio","PRODOTTO");
-      const contLinks = getPropField(p,FLD_PP_CONTATTO,"CONTATTO");
-      return Array.isArray(contLinks) && contLinks.some(c=>c.id===cartRecId)
-          && Array.isArray(prodLinks) && prodLinks.length > 0
-          && !cartSelIds.has(prodLinks[0].id);
-    });
-    daEliminare.forEach(p => {
-      ops.push(fetch(`${PROXY}?table=${TABLE_PROPOSTE}&recordId=${p.id}`, { method:'DELETE' }));
-      allProposte = allProposte.filter(x=>x.id!==p.id);
-    });
-
-    await Promise.all(ops);
-    document.getElementById('cart-modal')?.remove();
-    showToast('✅ Prodotti salvati!');
-    filterRubrica();
-  } catch(e) { showToast('❌ Errore: ' + e.message, true); console.error(e); }
-}
-
-// ── Nuovo contatto (admin) ────────────────────────────────────
-function openNewContactModal() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.id = 'nc-modal';
-  const commOpts = Object.entries(COMMERCIALI).map(([n,v])=>`<option value="${esc(v.equipoint[0])}">${esc(n)}</option>`).join('');
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-size:18px;font-weight:800;color:var(--accent)">➕ Nuovo contatto</div>
-        <button onclick="document.getElementById('nc-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
-      </div>
-      <div class="form-grid">
-        <div class="form-group form-full">
-          <label>Nome e Cognome *</label>
-          <input id="nc-nome" type="text" placeholder="Mario Rossi" required>
-        </div>
-        <div class="form-group">
-          <label>Assegna a commerciale</label>
-          <select id="nc-comm"><option value="">— Nessuno —</option>${commOpts}</select>
-        </div>
-        <div class="form-group">
-          <label>Telefono</label>
-          <input id="nc-tel" type="tel" placeholder="+39 333…">
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input id="nc-email" type="email" placeholder="email@esempio.it">
-        </div>
-        <div class="form-group">
-          <label>Stato</label>
-          <select id="nc-stato">
-            ${['DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO','VENDUTO','NOLEGGIATO'].map(s=>`<option>${s}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Tipologia cliente</label>
-          <input id="nc-tipo" type="text" placeholder="Paziente, Medico…">
-        </div>
-        <div class="form-group form-full">
-          <label>Note</label>
-          <textarea id="nc-note" rows="3" placeholder="Aggiungi una nota…"></textarea>
-        </div>
-      </div>
-      <div id="nc-err" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
-      <button class="btn-primary" id="nc-save" onclick="saveNewContactAdmin()">💾 Salva su Airtable</button>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-  document.getElementById('nc-nome').focus();
-}
-
-async function saveNewContactAdmin() {
-  const nome  = document.getElementById('nc-nome')?.value.trim();
-  const comm  = document.getElementById('nc-comm')?.value;
-  const tel   = document.getElementById('nc-tel')?.value.trim();
-  const email = document.getElementById('nc-email')?.value.trim();
-  const stato = document.getElementById('nc-stato')?.value;
-  const tipo  = document.getElementById('nc-tipo')?.value.trim();
-  const note  = document.getElementById('nc-note')?.value.trim();
-  const errEl = document.getElementById('nc-err');
-  const btn   = document.getElementById('nc-save');
-
-  if (!nome) { errEl.textContent='⚠️ Nome obbligatorio'; errEl.style.display='block'; return; }
-
-  btn.disabled=true; btn.textContent='⏳ Salvataggio…'; errEl.style.display='none';
-
-  const fields = { 'Nome e cognome': nome };
-  if (comm)  fields['Codice Equipoint'] = comm;
-  if (tel)   fields['recapito telefonico'] = tel;
-  if (email) fields['E-Mail'] = email;
-  if (stato) fields['Status'] = stato;
-  if (tipo)  fields['Tipologia cliente'] = tipo;
-  if (note)  fields['Notes'] = note;
-
-  try {
-    const data = await proxyPost('tbllNx7iSqpAtbQde', fields);
-    if (data.id) {
-      allRubrica.unshift({ id:data.id, createdTime:new Date().toISOString(), fields });
-      document.getElementById('nc-modal').remove();
-      showToast('✅ Contatto aggiunto!');
-      renderRubrica();
-    } else throw new Error(data.error?.message||'Errore');
+    var ch = (fld && fld.config && fld.config.choices) ? fld.config.choices : [];
+    renderStati(ch);
   } catch(e) {
-    btn.disabled=false; btn.textContent='💾 Salva su Airtable';
-    errEl.textContent='❌ '+e.message; errEl.style.display='block';
+    console.warn('Meta API:', e.message);
   }
+  loadR();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  LINK UTENTI
-// ══════════════════════════════════════════════════════════════
-function renderLinks() {
-  const rows = Object.entries(COMMERCIALI).map(([nome, info], idx) => {
-    const link  = `${BASE_URL}?token=${info.token}`;
-    const safeId = 'copy-' + idx;
-    return `<div class="link-row">
-      <div style="font-weight:700;color:var(--accent)">${esc(nome)}</div>
-      <div class="link-url">${esc(link)}</div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="btn-copy" id="${safeId}"
-          onclick="copyLink('${link}','${safeId}')">📋 Copia</button>
-        <a href="https://wa.me/?text=${encodeURIComponent('Ciao '+nome.split(' ')[0]+'! Ecco il link della tua dashboard: '+link)}"
-          target="_blank"
-          style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
-          📲 WA
-        </a>
-      </div>
-    </div>`;
-  }).join('');
-
-  $('tab-links').innerHTML = `
-    <div class="link-card">
-      <div class="rank-header">
-        <div class="rank-title">🔗 Link dashboard per ogni commerciale</div>
-        <div style="font-size:13px;color:var(--muted)">Invia via WhatsApp o copia il link</div>
-      </div>
-      ${rows}
-    </div>`;
+function renderStati(ch) {
+  var fst = document.getElementById('fst');
+  var nst = document.getElementById('nst');
+  var pills = document.getElementById('pills');
+  var fOpts = '<option value="HARBUR" selected>HARBUR</option><option value="">Tutti</option>';
+  var nOpts = '<option value="">Seleziona</option>';
+  var pillsHtml = '';
+  for (var i = 0; i < ch.length; i++) {
+    var s = ch[i];
+    var col = AC[s.color] || '#607d8b';
+    sc[s.name] = col;
+    if (s.name !== 'HARBUR') fOpts += '<option value="' + s.name + '">' + s.name + '</option>';
+    nOpts += '<option value="' + s.name + '">' + s.name + '</option>';
+    pillsHtml += '<span class="pill" style="background:' + col + '" data-stato="' + s.name + '" onclick="pickS(this)">' + s.name + '</span>';
+  }
+  fst.innerHTML = fOpts;
+  nst.innerHTML = nOpts;
+  pills.innerHTML = pillsHtml;
 }
 
-function copyLink(url, btnId) {
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = $(btnId);
-    if (btn) { btn.textContent='✅ Copiato!'; btn.classList.add('copied'); }
-    showToast('✅ Link copiato!');
-    setTimeout(()=>{ const b=$(btnId); if(b){b.textContent='📋 Copia';b.classList.remove('copied');} },2500);
-  }).catch(()=>showToast('❌ Errore copia',true));
+function pickS(el) {
+  var name = el.getAttribute('data-stato');
+  document.getElementById('nst').value = name;
+  document.querySelectorAll('.pill').forEach(function(p){ p.classList.remove('sel'); });
+  el.classList.add('sel');
 }
 
-// ── INIT ─────────────────────────────────────────────────────
-if (sessionStorage.getItem('eq_admin')==='1') {
-  $('login').style.display = 'none';
-  $('app').style.display   = 'block';
-  loadAll();
+async function loadR() {
+  sy('ss', 'Caricamento contatti...', 'in', true);
+  rb = []; var off = '';
+  try {
+    do {
+      var url = 'https://api.airtable.com/v0/' + BID + '/' + RT +
+        '?pageSize=100' +
+        (off ? '&offset=' + off : '');
+      var r = await fetch(url, {mode:'cors', headers:{'Authorization':'Bearer ' + AK}});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      rb = rb.concat(d.records);
+      off = d.offset || '';
+    } while (off);
+    sy('ss', rb.length + ' contatti caricati', 'ok', false);
+    filterR();
+  } catch(e) { sy('ss', 'Errore: ' + e.message, 'er', false); }
+}
+
+function filterR() {
+  var f = document.getElementById('fst').value;
+  frb = f ? rb.filter(function(r){ return (r.fields['fld5EpJuoZLFEqeJ6']||'') === f; }) : rb;
+  sel = new Set();
+  renderR();
+}
+
+function renderR() {
+  updSel();
+  var list = document.getElementById('rl');
+  if (!frb.length) { list.innerHTML = '<div class="emp">Nessun contatto trovato</div>'; return; }
+  var html = '';
+  for (var i = 0; i < frb.length; i++) {
+    var r = frb[i];
+    var n = r.fields['fld6bfoJlK5cIiAp8'] || r.fields['Nome e cognome'] || '—';
+    var e = r.fields['fldO0RdkbUbkWFPLB'] || r.fields['E-Mail'] || '';
+    var t = r.fields['fldddgGgkQbofsaCg'] || r.fields['recapito telefonico'] || '';
+    var s = r.fields['fld5EpJuoZLFEqeJ6'] || r.fields['Status'] || '';
+    var col = sc[s] || '#9e9e9e';
+    html += '<div class="rr">' +
+      '<input type="checkbox" ' + (sel.has(r.id) ? 'checked' : '') + ' onchange="togSel(\"' + r.id + '\",this.checked)">' +
+      '<div class="rn">' + n + '<br><span class="rs">' + e + (t ? ' · ' + t : '') + '</span></div>' +
+      '<span class="rp" style="background:' + col + '">' + (s || '—') + '</span></div>';
+  }
+  list.innerHTML = html;
+}
+
+function togSel(id, v) { v ? sel.add(id) : sel.delete(id); updSel(); }
+function selAll() { frb.forEach(function(r){ sel.add(r.id); }); renderR(); }
+function selNone() { sel.clear(); renderR(); }
+function updSel() {
+  var n = sel.size;
+  document.getElementById('selct').textContent = n + (n === 1 ? ' selezionato' : ' selezionati');
+  document.getElementById('btnupd').disabled = n === 0;
+}
+
+async function updateS() {
+  var ns = document.getElementById('nst').value;
+  if (!ns) { toast('Seleziona uno stato!'); return; }
+  if (!sel.size) { toast('Seleziona almeno un contatto!'); return; }
+  if (!confirm('Aggiornare ' + sel.size + ' contatti a "' + ns + '"?')) return;
+  var btn = document.getElementById('btnupd');
+  btn.disabled = true; btn.textContent = 'Aggiornamento...';
+  sy('ss', 'Aggiornamento in corso...', 'in', true);
+  var ids = Array.from(sel);
+  var ok = 0, err = 0;
+  for (var i = 0; i < ids.length; i += 10) {
+    var chunk = ids.slice(i, i + 10);
+    try {
+      var r = await fetch('https://api.airtable.com/v0/' + BID + '/' + RT, {
+        method:'PATCH', mode:'cors',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer ' + AK},
+        body: JSON.stringify({records: chunk.map(function(id){ return {id:id, fields:{'fld5EpJuoZLFEqeJ6':ns}}; })})
+      });
+      if (r.ok) ok += chunk.length; else err += chunk.length;
+    } catch(e) { err += chunk.length; }
+  }
+  toast(ok ? ok + ' contatti aggiornati!' : 'Errore aggiornamento');
+  sy('ss', ok ? ok + ' aggiornati a "' + ns + '"' : err + ' errori', ok ? 'ok' : 'er', false);
+  sel.clear();
+  await loadR();
+  btn.disabled = false; btn.textContent = 'Aggiorna';
+}
+
+function sy(id, msg, type, persist) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'sync on ' + type;
+  if (!persist) setTimeout(function(){ el.classList.remove('on'); }, 4000);
+}
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); }, 3500);
 }
 </script>
+
 </body>
 </html>
 
