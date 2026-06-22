@@ -1541,58 +1541,86 @@ async function saveIdxCart() {
   if (btn) { btn.textContent = '⏳ Salvo...'; btn.disabled = true; }
   try {
     const ops = [];
+
+    // Salva/aggiorna prodotti selezionati
     for (const [prodId, entry] of idxCartSelIds.entries()) {
-      const prod   = allProdotti.find(p=>p.id===prodId);
+      // Salta le proposte senza prodotto (prefisso 'prop_')
+      if (prodId.startsWith('prop_')) {
+        if (entry.propId) {
+          // Aggiorna quantità proposta esistente senza prodotto
+          ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, {
+            'Quantità': entry.qta || 1,
+          }));
+        }
+        continue;
+      }
+      const prod = (allProdotti||[]).find(function(p){ return p.id === prodId; });
       const fields = {
-        'CONTATTO':        [idxCartRecId],
-        'negozio':         [prodId],
-        'Quantità':        entry.qta||1,
-        'Prezzo unitario': prod ? prodPrezzo(prod) : 0,
+        [FLD_IDX_CONTATTO]: [idxCartRecId],
+        [FLD_IDX_PRODOTTO]: [prodId],
+        'Quantità':         entry.qta || 1,
+        'Prezzo unitario':  prod ? prodPrezzo(prod) : (entry.prezzo || 0),
       };
       if (entry.propId) {
         ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
       } else {
         ops.push(
-          proxyPost(TABLE_PROPOSTE_IDX, fields).then(res => {
+          proxyPost(TABLE_PROPOSTE_IDX, fields).then(function(res) {
             if (res.id) {
-              // Normalizza fields
-              const normalized = {
-                ...res,
-                fields: Object.keys(res.fields||{}).length > 0 ? res.fields : (res.cellValuesByFieldId || fields)
-              };
-              allProposte.push(normalized);
+              const merged = { ...res, fields: { ...(res.cellValuesByFieldId||{}), ...(res.fields||{}), ...fields } };
+              allProposte.push(merged);
               idxCartSelIds.set(prodId, { ...entry, propId: res.id });
             } else {
-              console.error('❌ POST fallito:', JSON.stringify(res));
-              throw new Error(res.error?.message || 'Errore POST');
+              throw new Error((res.error && res.error.message) || 'Errore POST proposta');
             }
           })
         );
       }
     }
 
-    // Elimina proposte rimosse
-    const daEliminare = allProposte.filter(p => {
-      const cl = p.fields?.[FLD_IDX_CONTATTO] || p.cellValuesByFieldId?.[FLD_IDX_CONTATTO];
-      const pl = p.fields?.[FLD_IDX_PRODOTTO] || p.cellValuesByFieldId?.[FLD_IDX_PRODOTTO];
-      return Array.isArray(cl) && cl.some(c=>c.id===idxCartRecId)
-          && Array.isArray(pl) && pl.length > 0
-          && !idxCartSelIds.has(pl[0].id);
+    // Elimina proposte rimosse — fix: gestisce sia stringhe che oggetti nel campo CONTATTO
+    const daEliminare = allProposte.filter(function(p) {
+      var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+      if (!Array.isArray(cl)) return false;
+      // Verifica che questa proposta appartenga al contatto corrente
+      var isThisContact = cl.some(function(x) {
+        var cid = (typeof x === 'object' && x !== null) ? x.id : x;
+        return cid === idxCartRecId;
+      });
+      if (!isThisContact) return false;
+      // Verifica che il prodotto non sia più nel carrello
+      var pl = p.fields[FLD_IDX_PRODOTTO] || p.fields['negozio'] || [];
+      if (!Array.isArray(pl) || pl.length === 0) {
+        // Proposta senza prodotto: controlla se è nel carrello come 'prop_XXX'
+        return !idxCartSelIds.has('prop_' + p.id);
+      }
+      var prodId = (typeof pl[0] === 'object' && pl[0] !== null) ? pl[0].id : pl[0];
+      return !idxCartSelIds.has(prodId);
     });
-    daEliminare.forEach(p => {
+
+    daEliminare.forEach(function(p) {
       ops.push(proxyDelete(TABLE_PROPOSTE_IDX, p.id));
-      allProposte = allProposte.filter(x=>x.id!==p.id);
+      allProposte = allProposte.filter(function(x){ return x.id !== p.id; });
     });
 
     await Promise.all(ops);
 
     // Ricarica proposte aggiornate da Airtable
     const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
-    allProposte = nuoveProposte.map(p => {
+    allProposte = nuoveProposte.map(function(p) {
       const cv = p.cellValuesByFieldId || {};
       const f  = p.fields || {};
-      return { ...p, fields: { ...cv, ...f } };
+      return { ...p, fields: { ...f, ...cv } };
     });
+
+    // Aggiorna Valore raggiunto nella rubrica
+    try {
+      const propContatto = getProposteContatto(idxCartRecId);
+      const totVal = getValoreProposte(propContatto);
+      await proxyPatch(TABLE_RUBRICA, idxCartRecId, { 'Valore raggiunto': totVal });
+      const recUp = allMiei.find(function(r){ return r.id === idxCartRecId; });
+      if (recUp) recUp.fields['Valore raggiunto'] = totVal;
+    } catch(e2) { console.warn('Aggiornamento valore raggiunto:', e2); }
 
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
