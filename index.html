@@ -463,6 +463,9 @@ document.addEventListener('click', function(e) {
     } else if (isTextarea) {
       el = $(`ei-${recId}`);
       value = el ? el.value : '';
+    } else if (saveBtn.dataset.date === '1') {
+      el = $(`ed-${recId}`);
+      value = el ? el.value : '';
     } else {
       el = $(`ei-${recId}`);
       value = el ? el.value.trim() : '';
@@ -477,6 +480,24 @@ document.addEventListener('click', function(e) {
         refreshDrawer();
       })
       .catch(() => { showToast('❌ Errore nel salvataggio', true); refreshDrawer(); });
+    return;
+  }
+
+  // Click su data editabile
+  const dateEl = e.target.closest('[data-date-edit]');
+  if (dateEl) {
+    const td    = dateEl.closest('td');
+    const recId = dateEl.dataset.id;
+    const field = dateEl.dataset.field;
+    const curr  = dateEl.dataset.value || '';
+    td.innerHTML = `
+      <input type="date" class="edit-input" id="ed-${recId}" value="${curr}"
+        style="font-size:12px;padding:4px 8px">
+      <div style="margin-top:6px;display:flex;gap:4px">
+        <button class="btn-save" data-save="${recId}" data-field="${field}" data-date="1">Salva</button>
+        <button class="btn-cancel" data-cancel="1">Annulla</button>
+      </div>`;
+    td.querySelector('input[type=date]').focus();
     return;
   }
 
@@ -732,7 +753,17 @@ function renderTable(lista) {
           🛒 ${nProd>0 ? `${nProd} prod · ${fmt(valProd)}` : '+ Proponi'}
         </button>
       </td>
-      <td style="white-space:nowrap;color:var(--muted);font-size:12px;">${dataUltTel}</td>
+      <td style="white-space:nowrap;font-size:13px">
+        <span class="editable"
+          data-date-edit="1"
+          data-id="${id}"
+          data-field="data ultima telefonata"
+          data-value="${r.fields['data ultima telefonata']||''}"
+          title="Clicca per modificare"
+          style="color:${dataUltTel!=='—'?'var(--text)':'var(--muted)'};cursor:pointer">
+          ${dataUltTel}
+        </span>
+      </td>
     </tr>`;
   }).join('');
 
@@ -747,7 +778,7 @@ function renderTable(lista) {
         <th>Note ✏️</th>
         <th>Scadenza</th>
         <th>Appuntamento</th>
-        <th>Ult. telefonata</th>
+        <th>Ult. Tel. 📞</th>
         <th>Prodotti 🛒</th>
       </tr>
       <tbody id="tbl-body">${rows}</tbody>
