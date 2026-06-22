@@ -663,6 +663,7 @@ function renderTable(lista) {
     const tel      = r.fields['recapito telefonico'] || '';
     const note     = r.fields['Notes'] || '';
     const dataAtt  = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const dataUltTel = r.fields['data ultima telefonata'] ? new Date(r.fields['data ultima telefonata']).toLocaleDateString('it-IT') : '—';
     const dataCreaz= r.fields['DATA DI CREAZIONE DATO'] ? new Date(r.fields['DATA DI CREAZIONE DATO']).toLocaleDateString('it-IT') : (r.createdTime ? new Date(r.createdTime).toLocaleDateString('it-IT') : '—');
     const dataCreazISO = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
     const scad     = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
@@ -731,6 +732,7 @@ function renderTable(lista) {
           🛒 ${nProd>0 ? `${nProd} prod · ${fmt(valProd)}` : '+ Proponi'}
         </button>
       </td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:12px;">${dataUltTel}</td>
     </tr>`;
   }).join('');
 
@@ -745,6 +747,7 @@ function renderTable(lista) {
         <th>Note ✏️</th>
         <th>Scadenza</th>
         <th>Appuntamento</th>
+        <th>Ult. telefonata</th>
         <th>Prodotti 🛒</th>
       </tr>
       <tbody id="tbl-body">${rows}</tbody>
@@ -907,7 +910,8 @@ async function loadData(utente) {
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
-        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita&maxRecords=3000'),
+        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
+        '&fields[]=data+ultima+telefonata&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
