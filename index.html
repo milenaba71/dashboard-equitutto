@@ -309,45 +309,52 @@ function getPropField(p, fieldId, ...names) {
 
 // Helper per calcolare proposte di un contatto
 function getProposteContatto(recId) {
-  return allProposte.filter(p => {
-    const f = p.fields || {};
-    // Cerca in tutti i possibili campi contatto (field ID e nome)
-    const cl = f['fldgWb7KAXQ1i5sRC'] || f['CONTATTO'] || f['Contatto']
-            || f['fldBq5MM457raLunf'] || f['Nome e cognome'] || f['contatto'];
+  return allProposte.filter(function(p) {
+    var f = p.fields || {};
+    // Cerca in tutti i possibili campi contatto
+    var cl = f['fldgWb7KAXQ1i5sRC'] || f['CONTATTO'] || f['Contatto'] || f['contatto'];
     if (Array.isArray(cl)) {
-      return cl.some(c => {
+      return cl.some(function(c) {
+        // Può essere stringa "recXXX" o oggetto {id:"recXXX", name:"..."}
+        if (typeof c === 'string') return c === recId;
         if (typeof c === 'object' && c !== null) return c.id === recId;
-        return c === recId;
+        return false;
       });
     }
-    // Caso in cui sia stringa (nome)
-    if (typeof cl === 'string') {
-      const rec = allMiei.find(r => r.id === recId);
-      return rec && cl === (rec.fields['Nome e cognome'] || '');
+    // Fallback: cerca per nome tramite lookup
+    var nomi = f['fldBq5MM457raLunf'] || f['Nome e cognome'] || [];
+    if (Array.isArray(nomi)) {
+      var rec = allMiei.find(function(r){ return r.id === recId; });
+      if (rec) {
+        var nomeRec = rec.fields['Nome e cognome'] || '';
+        return nomi.some(function(n){ return n === nomeRec; });
+      }
     }
     return false;
   });
 }
 
 function getProdottoDaProposta(p) {
-  const f = p.fields || {};
-  return f['fldpVAKpMGRRjnDnt'] || f['negozio'] || f['PRODOTTO'];
+  var f = p.fields || {};
+  return f['fldpVAKpMGRRjnDnt'] || f['negozio'] || f['PRODOTTO'] || null;
 }
 
 function getValoreProposte(props) {
-  return props.reduce((s, p) => {
-    const pl     = getProdottoDaProposta(p);
-    const prodId = Array.isArray(pl) ? pl[0]?.id : null;
-    const prod   = prodId ? allProdotti.find(x => x.id === prodId) : null;
-    const f      = p.fields || {};
-    const qta    = parseFloat(f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1);
-    // Usa prima il prezzo dal prodotto, poi il prezzo diretto dalla proposta, poi Totale riga
-    const prezzoUnitario = f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0;
-    const totaleRiga     = f['fldtdDMFRqF9FLf9v'] || f['Totale riga'] || 0;
-    const prezzo = prod ? prodPrezzo(prod) : (prezzoUnitario || 0);
-    // Se c'è il totale riga diretto, usalo; altrimenti prezzo x qta
-    const valore = totaleRiga ? parseFloat(totaleRiga) : (parseFloat(prezzo) * qta);
-    return s + valore;
+  return props.reduce(function(s, p) {
+    var f = p.fields || {};
+    // 1. Usa Totale riga (formula Airtable) se disponibile
+    var totaleRiga = parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0);
+    if (totaleRiga > 0) return s + totaleRiga;
+    // 2. Calcola da prezzo unitario x quantità
+    var qta = parseFloat(f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1);
+    var prezzoUnitario = parseFloat(f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0);
+    if (prezzoUnitario > 0) return s + (prezzoUnitario * qta);
+    // 3. Fallback: cerca nel prodotto collegato
+    var pl = getProdottoDaProposta(p);
+    var prodId = Array.isArray(pl) ? (pl[0] && pl[0].id ? pl[0].id : pl[0]) : null;
+    var prod = prodId ? (allProdotti||[]).find(function(x){ return x.id === prodId; }) : null;
+    var prezzo = prod ? prodPrezzo(prod) : 0;
+    return s + (prezzo * qta);
   }, 0);
 }
 
@@ -670,9 +677,13 @@ function getListaByTipo(tipo) {
       return t.includes('attiv')||t.includes('corso')||t.includes('noleggi'); 
     });
     case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
-    case 'proposti':     return allMiei.filter(r=>{
-      const mieP = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(c=>c.id===r.id));
-      if (mieP.length > 0) return true;
+    case 'proposti':     return allMiei.filter(function(r){
+      var hasProp = allProposte.some(function(p) {
+        var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+        if (!Array.isArray(cl)) return false;
+        return cl.some(function(c) { return (typeof c==='object'&&c!==null?c.id:c)===r.id; });
+      });
+      if (hasProp) return true;
       const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
       return Array.isArray(vecchi) && vecchi.length > 0;
     });
@@ -1052,15 +1063,26 @@ async function loadData(utente) {
     const noleggiScad = getListaByTipo('scadenze');
 
     // Calcola totale proposto — filtra solo proposte dei contatti di questo commerciale
-    const mieProposteAll = allProposte.filter(p => {
-      const cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || p.fields['Contatto'] || [];
-      if (Array.isArray(cl)) return allMiei.some(r => cl.some(c => (typeof c === 'object' ? c.id : c) === r.id));
-      return false;
+    const mieProposteAll = allProposte.filter(function(p) {
+      var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || p.fields['Contatto'] || [];
+      if (!Array.isArray(cl)) return false;
+      return allMiei.some(function(r) {
+        return cl.some(function(c) {
+          var cid = (typeof c === 'object' && c !== null) ? c.id : c;
+          return cid === r.id;
+        });
+      });
     });
     const totProposto = getValoreProposte(mieProposteAll);
-    const nConProposte = allMiei.filter(r => {
-      const mieP = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(x=>x.id===r.id));
-      return mieP.length > 0;
+    const nConProposte = allMiei.filter(function(r) {
+      return allProposte.some(function(p) {
+        var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+        if (!Array.isArray(cl)) return false;
+        return cl.some(function(c) {
+          var cid = (typeof c === 'object' && c !== null) ? c.id : c;
+          return cid === r.id;
+        });
+      });
     }).length;
 
     // Aggiorna contatori tab navigazione
@@ -1283,17 +1305,37 @@ function openProdottiPanel(recId) {
   if (!rec) return;
 
   idxCartSelIds = new Map();
-  getProposteContatto(recId).forEach(p => {
-    const prodLinks = getProdottoDaProposta(p);
-    if (prodLinks?.length > 0) {
-      const prodId = prodLinks[0].id;
-      const prod   = allProdotti.find(x=>x.id===prodId);
-      const f      = p.fields || {};
+  getProposteContatto(recId).forEach(function(p) {
+    var prodLinks = getProdottoDaProposta(p);
+    if (prodLinks && prodLinks.length > 0) {
+      // prodLinks può essere array di stringhe ["recXXX"] o di oggetti [{id:"recXXX"}]
+      var prodLink = prodLinks[0];
+      var prodId = (typeof prodLink === 'object' && prodLink !== null) ? prodLink.id : prodLink;
+      var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
+      var f = p.fields || {};
+      var prezzo = prod ? prodPrezzo(prod) : parseFloat(f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0);
       idxCartSelIds.set(prodId, {
         propId: p.id,
         qta:    f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1,
-        prezzo: prod ? prodPrezzo(prod) : 0,
+        prezzo: prezzo,
+        nomeProd: prod ? prodNome(prod) : (prodLink && prodLink.name ? prodLink.name : ('ID:'+prodId)),
+        totRiga: parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0),
       });
+    } else {
+      // Proposta senza prodotto collegato - usa nome proposta e prezzo diretto
+      var f2 = p.fields || {};
+      var nomeProp = f2['Nome proposta'] || f2['fldWe4dM6FbXxN07z'] || 'Proposta';
+      var prezzo2 = parseFloat(f2['fldN4u3S8ngsBAWuL'] || f2['Prezzo unitario'] || 0);
+      var tot2 = parseFloat(f2['fldSVSzsslNzmI8HY'] || f2['Totale riga'] || 0);
+      if (prezzo2 > 0 || tot2 > 0) {
+        idxCartSelIds.set('prop_' + p.id, {
+          propId: p.id,
+          qta: f2['fldw2aCMC8pVKbJ2N'] || f2['Quantità'] || 1,
+          prezzo: prezzo2,
+          nomeProd: nomeProp,
+          totRiga: tot2,
+        });
+      }
     }
   });
   idxCartTab = 'noleggio';
@@ -1335,7 +1377,7 @@ function buildIdxCart() {
     var rows = [];
     idxCartSelIds.forEach(function(entry, prodId) {
       var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
-      var nome = prod ? prodNome(prod) : prodId;
+      var nome = prod ? prodNome(prod) : (entry.nomeProd || prodId);
       var prezzo = prod ? prodPrezzo(prod) : (entry.prezzo || 0);
       var tot = prezzo * entry.qta;
       var safeId = prodId.replace(/'/g, '');
