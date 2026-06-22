@@ -501,6 +501,14 @@ document.addEventListener('click', function(e) {
     return;
   }
 
+  // Click su +/- quantità carrello e rimozione
+  var qtaMinus = e.target.closest('[data-qta-minus]');
+  if (qtaMinus) { changeQtaCart(qtaMinus.dataset.qtaMinus, -1); return; }
+  var qtaPlus = e.target.closest('[data-qta-plus]');
+  if (qtaPlus) { changeQtaCart(qtaPlus.dataset.qtaPlus, 1); return; }
+  var removeCart = e.target.closest('[data-remove-cart]');
+  if (removeCart) { removeFromCart(removeCart.dataset.removeCart); return; }
+
   // Click su Annulla
   if (e.target.closest('[data-cancel]')) {
     refreshDrawer();
@@ -674,6 +682,47 @@ function getListaByTipo(tipo) {
   }
 }
 
+function editDataTel(recId, currVal) {
+  document.querySelectorAll('.date-tel-popup').forEach(function(el){ el.remove(); });
+  var popup = document.createElement('div');
+  popup.className = 'date-tel-popup';
+  popup.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:240px;top:50%;left:50%;transform:translate(-50%,-50%)';
+  popup.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;">📞 Data ultima telefonata</div>' +
+    '<input type="date" id="dtel-input" value="' + currVal + '" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none;margin-bottom:12px;">' +
+    '<div style="display:flex;gap:8px;">' +
+    '<button onclick="saveDataTel(\"' + recId + '\")" style="flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">💾 Salva</button>' +
+    '<button onclick="document.querySelectorAll(\'.date-tel-popup\').forEach(function(el){el.remove();})" style="padding:10px 14px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;">✕</button>' +
+    '</div>';
+  document.body.appendChild(popup);
+  var inp = document.getElementById('dtel-input');
+  if (inp) inp.focus();
+  setTimeout(function() {
+    document.addEventListener('click', function handler(e) {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 100);
+}
+
+async function saveDataTel(recId) {
+  var inp = document.getElementById('dtel-input');
+  var val = inp ? inp.value : '';
+  document.querySelectorAll('.date-tel-popup').forEach(function(el){ el.remove(); });
+  try {
+    var fields = {};
+    fields['data ultima telefonata'] = val || null;
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    var rec = allMiei.find(function(r){ return r.id === recId; });
+    if (rec) rec.fields['data ultima telefonata'] = val;
+    showToast('✅ Data telefonata salvata!');
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore nel salvataggio', true);
+  }
+}
+
 function renderTable(lista) {
   if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
 
@@ -754,13 +803,9 @@ function renderTable(lista) {
         </button>
       </td>
       <td style="white-space:nowrap;font-size:13px">
-        <span class="editable"
-          data-date-edit="1"
-          data-id="${id}"
-          data-field="data ultima telefonata"
-          data-value="${r.fields['data ultima telefonata']||''}"
-          title="Clicca per modificare"
-          style="color:${dataUltTel!=='—'?'var(--text)':'var(--muted)'};cursor:pointer">
+        <span onclick="editDataTel('${id}', '${r.fields['data ultima telefonata']||''}')"
+          title="Clicca per modificare la data"
+          style="color:${dataUltTel!=='—'?'var(--text)':'var(--muted)'};cursor:pointer;text-decoration:underline dotted">
           ${dataUltTel}
         </span>
       </td>
@@ -1284,7 +1329,42 @@ function buildIdxCart() {
     { id:'altro',         label:'📌 Altro' },
   ];
 
-  const tabsHtml = `<div style="display:flex;gap:3px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:16px;flex-wrap:wrap">
+  // Sezione prodotti già selezionati
+  var selectedHtml = '';
+  if (idxCartSelIds.size > 0) {
+    var rows = [];
+    idxCartSelIds.forEach(function(entry, prodId) {
+      var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
+      var nome = prod ? prodNome(prod) : prodId;
+      var prezzo = prod ? prodPrezzo(prod) : (entry.prezzo || 0);
+      var tot = prezzo * entry.qta;
+      var safeId = prodId.replace(/'/g, '');
+      rows.push(
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+        '<div style="font-size:13px;font-weight:600;">' + esc(nome) + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">€ ' + prezzo.toLocaleString('it-IT',{minimumFractionDigits:2}) + ' × ' + entry.qta + ' = <strong>€ ' + tot.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</strong></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;">' +
+        '<button data-qta-minus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">−</button>' +
+        '<span style="font-size:13px;font-weight:700;min-width:22px;text-align:center">' + entry.qta + '</span>' +
+        '<button data-qta-plus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">+</button>' +
+        '<button data-remove-cart="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:none;background:#fdecea;color:#c0392b;cursor:pointer;font-size:14px;font-weight:700;">✕</button>' +
+        '</div></div>'
+      );
+    });
+    var totCarr = 0;
+    idxCartSelIds.forEach(function(e){ totCarr += (e.prezzo || 0) * e.qta; });
+    selectedHtml = '<div style="background:#e8f0fe;border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🛒 Prodotti selezionati (' + idxCartSelIds.size + ')</div>' +
+      rows.join('') +
+      '<div style="margin-top:10px;padding-top:10px;border-top:2px solid var(--accent);display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>' +
+      '<span style="font-size:16px;font-weight:800;color:var(--accent)">€ ' + totCarr.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</span>' +
+      '</div></div>';
+  }
+
+    const tabsHtml = `<div style="display:flex;gap:3px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:16px;flex-wrap:wrap">
     ${TABS.map(t=>`<button style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:${t.id===idxCartTab?'#fff':'none'};color:${t.id===idxCartTab?'var(--accent)':'var(--muted)'};box-shadow:${t.id===idxCartTab?'0 1px 4px rgba(0,0,0,.1)':'none'};transition:all .15s"
       onclick="switchIdxTab('${t.id}')">${t.label}</button>`).join('')}
   </div>`;
@@ -1358,7 +1438,7 @@ function buildIdxCart() {
       </div>`;
     }).join('');
 
-  return `${tabsHtml}${grid}
+  return `${selectedHtml}${tabsHtml}${grid}
     <div style="background:rgba(0,61,122,.06);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="font-size:11px;color:var(--muted)">Totale proposta</div>
@@ -1374,6 +1454,20 @@ function buildIdxCart() {
     </div>
     ${linksHtml?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">💳 Link pagamento</div>${linksHtml}</div>`:''}`;
 }
+
+function changeQtaCart(prodId, delta) {
+  const entry = idxCartSelIds.get(prodId);
+  if (!entry) return;
+  const newQta = Math.max(1, (entry.qta || 1) + delta);
+  idxCartSelIds.set(prodId, Object.assign({}, entry, { qta: newQta }));
+  document.getElementById('idx-cart-body').innerHTML = buildIdxCart();
+}
+
+function removeFromCart(prodId) {
+  idxCartSelIds.delete(prodId);
+  document.getElementById('idx-cart-body').innerHTML = buildIdxCart();
+}
+
 
 function switchIdxTab(tab) {
   idxCartTab = tab;
