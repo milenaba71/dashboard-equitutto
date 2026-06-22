@@ -668,6 +668,7 @@ function getListaByTipo(tipo) {
     case 'trattativa':   return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
     case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
     case 'vendite':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
+    case 'venduto':      return allMiei.filter(r=>{ return (r.fields['Status']||'').toUpperCase()==='VENDUTO'; });
     case 'noleggi':      return allMiei.filter(r=>{ 
       const s = r.fields['STATO NOLEGGIO']; 
       const stato = (r.fields['Status']||'').toUpperCase();
@@ -1154,6 +1155,8 @@ async function loadData(utente) {
           <div class="kpi-ico">📅</div><div class="kpi-val">${getListaByTipo('appuntamenti').length}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse','#27ae60')">
           <div class="kpi-ico">💰</div><div class="kpi-val">${getListaByTipo('vendite').length}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-venduto" onclick="openDrawer('venduto','Stato VENDUTO','#1a7a4a')" style="--kpi-before:#1a7a4a">
+          <div class="kpi-ico">🏆</div><div class="kpi-val">${allMiei.filter(r=>(r.fields['Status']||'').toUpperCase()==='VENDUTO').length}</div><div class="kpi-lbl">Status VENDUTO</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi red"    id="kpi-persi"        onclick="openDrawer('persi','Contatti persi','#e74c3c')">
           <div class="kpi-ico">❌</div><div class="kpi-val">${getListaByTipo('persi').length}</div><div class="kpi-lbl">Non interessati</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#0072bc">
