@@ -194,6 +194,24 @@
   .cl-vals { font-size:11px; color:var(--muted); min-width:130px; text-align:right; white-space:nowrap; }
   .cl-trophy { font-size:16px; min-width:24px; text-align:center; }
   .no-data { text-align:center; color:var(--muted); padding:32px; font-size:13px; }
+
+  /* CONVERSIONE NOLEGGIO → VENDITA */
+  .conv-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .conv-title { font-size:15px; font-weight:800; color:var(--accent); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+  .conv-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:20px; }
+  .conv-kpi { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .conv-kpi-val { font-size:28px; font-weight:800; color:var(--accent); }
+  .conv-kpi-lbl { font-size:12px; color:var(--muted); margin-top:4px; }
+  .conv-kpi.highlight { background:linear-gradient(135deg,#e8f5e9,#f1f8e9); border-color:#27ae60; }
+  .conv-kpi.highlight .conv-kpi-val { color:#27ae60; }
+  .conv-agent-list { display:flex; flex-direction:column; gap:8px; }
+  .conv-agent-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:11px 14px; }
+  .conv-agent-row:hover { background:#eef3fb; }
+  .conv-agent-name { flex:1; font-size:13px; font-weight:700; color:var(--accent); }
+  .conv-bar-wrap { flex:2; height:8px; background:var(--border); border-radius:100px; overflow:hidden; }
+  .conv-bar-fill { height:100%; background:#27ae60; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+  .conv-pct { font-size:14px; font-weight:800; color:#27ae60; min-width:46px; text-align:right; }
+  .conv-nums { font-size:11px; color:var(--muted); min-width:80px; text-align:right; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -1083,8 +1101,126 @@ function animateBars() {
   }));
 }
 
+
+// ── CONVERSIONE NOLEGGIO → VENDITA ─────────────────────────────
+let allConvRecords = [];
+
+async function loadConversione() {
+  try {
+    // Carica tutti i record con Status NOLEGGIATO o che hanno CONVERSIONE IN VENDITA valorizzata
+    // Usiamo tutti i record e filtriamo lato client
+    let all = [], cursor = null;
+    do {
+      const qs = 'fields[]=Status&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Codice+Equipoint&maxRecords=5000' + (cursor ? '&offset='+cursor : '');
+      const res = await fetch(`${PROXY}?table=${encodeURIComponent('tbllNx7iSqpAtbQde')}&qs=${encodeURIComponent(qs)}`);
+      const d = await res.json();
+      all = all.concat(d.records || []);
+      cursor = d.offset || null;
+    } while (cursor);
+
+    allConvRecords = all;
+    buildConversioneUI();
+    setTimeout(() => animateConvBars(), 200);
+  } catch(e) {
+    console.error('Conversione error:', e);
+  }
+}
+
+function buildConversioneUI() {
+  const container = document.getElementById('conv-container');
+  if (!container) return;
+
+  // Tutti i noleggiati (Status = NOLEGGIATO)
+  const noleggiati = allConvRecords.filter(r => {
+    const s = (r.fields['fld5EpJuoZLFEqeJ6'] || r.fields['Status'] || '');
+    const nome = typeof s === 'object' ? s.name : s;
+    return nome === 'NOLEGGIATO';
+  });
+
+  // Convertiti = hanno il campo CONVERSIONE IN VENDITA valorizzato (non vuoto, non "-")
+  const convertiti = allConvRecords.filter(r => {
+    const conv = r.fields['fldLFLPIwiHlfarpd'] || r.fields['CONVERSIONE IN VENDITA'];
+    if (!conv) return false;
+    const val = typeof conv === 'object' ? conv.name : conv;
+    return val && val !== '-' && val !== '';
+  });
+
+  const totNol = noleggiati.length;
+  const totConv = convertiti.length;
+  const pctTot = totNol > 0 ? Math.round(totConv / (totNol + totConv) * 100) : 0;
+
+  // Aggrega per agente
+  const agentiMap = {};
+
+  // Conta noleggiati per agente
+  noleggiati.forEach(r => {
+    const eq = r.fields['fldO43iAXPaTsMYA1'] || r.fields['Codice Equipoint'];
+    const nome = eq ? (typeof eq === 'object' ? eq.name : eq) : 'Non assegnato';
+    if (!agentiMap[nome]) agentiMap[nome] = { noleggiati: 0, convertiti: 0 };
+    agentiMap[nome].noleggiati++;
+  });
+
+  // Conta convertiti per agente
+  convertiti.forEach(r => {
+    const eq = r.fields['fldO43iAXPaTsMYA1'] || r.fields['Codice Equipoint'];
+    const nome = eq ? (typeof eq === 'object' ? eq.name : eq) : 'Non assegnato';
+    if (!agentiMap[nome]) agentiMap[nome] = { noleggiati: 0, convertiti: 0 };
+    agentiMap[nome].convertiti++;
+  });
+
+  // Ordina per % conversione
+  const agenti = Object.entries(agentiMap)
+    .filter(([n]) => n !== 'Non assegnato')
+    .map(([nome, d]) => {
+      const tot = d.noleggiati + d.convertiti;
+      const pct = tot > 0 ? Math.round(d.convertiti / tot * 100) : 0;
+      return { nome, ...d, pct };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  const listaHtml = agenti.map((a, i) => {
+    const trophy = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    const c = a.pct >= 30 ? '#27ae60' : a.pct >= 15 ? '#f0a500' : '#e74c3c';
+    return `<div class="conv-agent-row">
+      <div style="font-size:16px;min-width:22px;text-align:center">${trophy}</div>
+      <div style="font-size:14px;font-weight:800;min-width:24px;text-align:center;color:var(--muted)">${i+1}</div>
+      <div class="conv-agent-name">${esc(a.nome)}</div>
+      <div class="conv-bar-wrap"><div class="conv-bar-fill" style="width:0%;background:${c}" data-cw="${a.pct}"></div></div>
+      <div class="conv-pct" style="color:${c}">${a.pct}%</div>
+      <div class="conv-nums">${a.convertiti} / ${a.noleggiati+a.convertiti}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="conv-card">
+      <div class="conv-title">🔄 Conversione Noleggio → Vendita</div>
+      <div class="conv-grid">
+        <div class="conv-kpi">
+          <div class="conv-kpi-val">${totNol}</div>
+          <div class="conv-kpi-lbl">📦 Attualmente noleggiati</div>
+        </div>
+        <div class="conv-kpi highlight">
+          <div class="conv-kpi-val">${totConv}</div>
+          <div class="conv-kpi-lbl">✅ Convertiti in vendita</div>
+        </div>
+        <div class="conv-kpi" style="background:linear-gradient(135deg,#e3f2fd,#f0f7ff);border-color:#0072bc">
+          <div class="conv-kpi-val" style="color:#0072bc">${pctTot}%</div>
+          <div class="conv-kpi-lbl">📊 Tasso conversione globale</div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Classifica per agente (convertiti / totale gestiti)</div>
+      <div class="conv-agent-list">${listaHtml || '<div style="text-align:center;color:var(--muted);padding:20px">Nessun dato disponibile</div>'}</div>
+    </div>`;
+}
+
+function animateConvBars() {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('[data-cw]').forEach(el => { el.style.width = el.dataset.cw + '%'; });
+  }));
+}
+
 // ─── AUTO INIT ────────────────────────────────────────────────────────
-if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); }
+if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); loadConversione(); }
 </script>
 </body>
 </html>
