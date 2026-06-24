@@ -316,6 +316,9 @@ const STATUS_OPTIONS = [
 
 const APPUNTAMENTO_OPTIONS = ['SI','NO','DA FISSARE','FISSATO','RIMANDATO','FATTO'];
 
+const CONVERSIONE_OPTIONS = ['VENDUTO','NOLEGGIATO','-'];
+
+
 const $ = id => document.getElementById(id);
 const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
 const pct  = (a,b) => b>0 ? Math.min(Math.round(a/b*100),100) : 0;
@@ -878,6 +881,14 @@ function renderTable(lista) {
           ${appunto ? esc(appunto) : '<em style="opacity:.5;font-size:11px">+ set</em>'}
         </span>
       </td>
+      <td>${(() => {
+        const cv = r.fields['CONVERSIONE IN VENDITA'];
+        const cvn = cv ? (typeof cv === 'object' ? cv.name : cv) : '';
+        const cvCls = cvn === 'VENDUTO' ? 'badge-green' : cvn === 'NOLEGGIATO' ? 'badge-blue' : '';
+        return cvn && cvn !== '-'
+          ? `<span class="badge ${cvCls} editable" data-stato="1" data-id="${id}" data-field="CONVERSIONE IN VENDITA" data-value="${esc(cvn)}" title="Modifica conversione">${esc(cvn)}</span>`
+          : `<span class="editable" style="font-size:11px;color:var(--muted);opacity:.7" data-stato="1" data-id="${id}" data-field="CONVERSIONE IN VENDITA" data-value="" title="Imposta conversione">+ conv.</span>`;
+      })()}</td>
       <td>
         <button onclick="openProdottiPanel('${id}')"
           style="background:${nProd>0?'rgba(0,114,188,.12)':'var(--surface2)'};border:1px solid ${nProd>0?'#0072bc':'var(--border)'};color:${nProd>0?'#0072bc':'var(--muted)'};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
@@ -905,6 +916,7 @@ function renderTable(lista) {
         <th>Note 👁</th>
         <th>Scadenza</th>
         <th>Appuntamento</th>
+        <th style="white-space:nowrap">Conversione 🔄</th>
         <th>Ult. Tel. 📞</th>
         <th>Prodotti 🛒</th>
       </tr>
@@ -1095,7 +1107,7 @@ async function loadData(utente) {
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=data+ultima+telefonata&maxRecords=3000'),
+        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio&maxRecords=3000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
