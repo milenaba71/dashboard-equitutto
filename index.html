@@ -1171,6 +1171,17 @@ async function loadData(utente) {
 
     const noleggiScad = getListaByTipo('scadenze');
 
+    // Conversione noleggio → vendita
+    const nNoleggiati = getListaByTipo('noleggi').length;
+    const nConvertiti = allMiei.filter(r => {
+      const cv = r.fields['CONVERSIONE IN VENDITA'];
+      const cvn = cv ? (typeof cv === 'object' ? cv.name : cv) : '';
+      return cvn === 'VENDUTO';
+    }).length;
+    const pctConversione = (nNoleggiati + nConvertiti) > 0
+      ? Math.round(nConvertiti / (nNoleggiati + nConvertiti) * 100)
+      : 0;
+
     // Calcola totale proposto — filtra solo proposte dei contatti di questo commerciale
     const mieProposteAll = allProposte.filter(function(p) {
       var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || p.fields['Contatto'] || [];
@@ -1269,6 +1280,12 @@ async function loadData(utente) {
           <div class="kpi-ico">❌</div><div class="kpi-val">${getListaByTipo('persi').length}</div><div class="kpi-lbl">Non interessati</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#0072bc">
           <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivati</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-conversione" onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#27ae60">
+          <div class="kpi-ico">🔄</div>
+          <div class="kpi-val" style="font-size:26px">${pctConversione}%</div>
+          <div class="kpi-lbl">Conversione nol.→vendita</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">${nConvertiti} conv. / ${nNoleggiati+nConvertiti} tot.</div>
+        </div>
         <div class="kpi orange" id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')">
           <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
         <div class="kpi green" id="kpi-proposti" onclick="openDrawer('proposti','Prodotti proposti','#27ae60')" style="--kpi-before:#34c77b">
