@@ -158,6 +158,42 @@
 
   @media(max-width:900px){.layout{flex-direction:column}.sidebar{width:100%;position:static;max-height:300px}}
   @media(max-width:640px){.links-menu{min-width:280px;right:-20px}}
+
+  /* CLASSIFICA MENSILE */
+  .classifica-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .classifica-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .classifica-title { font-size:15px; font-weight:800; color:var(--accent); display:flex; align-items:center; gap:8px; }
+  .mese-selector { display:flex; gap:6px; flex-wrap:wrap; }
+  .mese-btn { padding:6px 14px; border:1.5px solid var(--border); border-radius:100px; font-size:12px; font-weight:600; cursor:pointer; background:var(--surface2); color:var(--muted); transition:all .15s; }
+  .mese-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .mese-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .tipo-toggle { display:flex; gap:4px; background:var(--surface2); border-radius:8px; padding:3px; }
+  .tipo-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; border:none; background:none; color:var(--muted); transition:all .15s; }
+  .tipo-btn.active { background:#fff; color:var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+  .podio { display:grid; grid-template-columns:1fr 1.1fr 1fr; gap:12px; margin-bottom:20px; align-items:end; }
+  .podio-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px 12px; text-align:center; transition:transform .2s; }
+  .podio-item:hover { transform:translateY(-2px); }
+  .podio-item.first { background:linear-gradient(135deg,#fffbea,#fff3c4); border-color:#f0a500; box-shadow:0 4px 16px rgba(240,165,0,.2); }
+  .podio-item.second { background:linear-gradient(135deg,#f5f5f5,#e8e8e8); border-color:#aaa; }
+  .podio-item.third { background:linear-gradient(135deg,#fff3ee,#ffe8dd); border-color:#cd7f32; }
+  .podio-rank { font-size:28px; margin-bottom:6px; }
+  .podio-name { font-size:13px; font-weight:800; color:var(--accent); margin-bottom:4px; }
+  .podio-val { font-size:18px; font-weight:800; color:var(--text); }
+  .podio-obj { font-size:11px; color:var(--muted); margin-top:2px; }
+  .podio-bar-wrap { height:6px; background:var(--border); border-radius:100px; overflow:hidden; margin-top:8px; }
+  .podio-bar-fill { height:100%; border-radius:100px; transition:width 1s cubic-bezier(.4,0,.2,1); }
+  .classifica-list { display:flex; flex-direction:column; gap:8px; }
+  .classifica-row { display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; transition:background .15s; }
+  .classifica-row:hover { background:#eef3fb; }
+  .cl-rank { font-size:16px; font-weight:800; color:var(--muted); min-width:28px; text-align:center; }
+  .cl-name { font-size:13px; font-weight:700; color:var(--accent); flex:1; }
+  .cl-tipo { font-size:10px; color:var(--muted); margin-top:1px; }
+  .cl-bar-wrap { flex:2; height:8px; background:var(--border); border-radius:100px; overflow:hidden; }
+  .cl-bar-fill { height:100%; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+  .cl-pct { font-size:14px; font-weight:800; min-width:52px; text-align:right; }
+  .cl-vals { font-size:11px; color:var(--muted); min-width:130px; text-align:right; white-space:nowrap; }
+  .cl-trophy { font-size:16px; min-width:24px; text-align:center; }
+  .no-data { text-align:center; color:var(--muted); padding:32px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -861,8 +897,194 @@ function openNoteModal(nome, note) {
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
 }
 
+
+// ── CLASSIFICA MENSILE ─────────────────────────────────────────
+let allObiettivi  = [];
+let classMeseAtt  = '';
+let classTipoAtt  = 'Fatturato';
+
+const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+const MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const MESE_EMOJI = ['❄️','💝','🌸','🌿','🌼','☀️','🏖️','⛱️','🍂','🎃','🍁','🎄'];
+
+async function loadClassifica() {
+  try {
+    const recs = await proxyGet('tblTAA7KFUVtcPnZt', 'maxRecords=500');
+    allObiettivi = recs;
+
+    // Trova il mese corrente 2026
+    const meseCorrente = MESI_NOMI[new Date().getMonth()];
+    classMeseAtt = meseCorrente;
+
+    buildClassificaUI();
+  setTimeout(() => animateBars(), 100);
+  } catch(e) {
+    console.error('Classifica error:', e);
+  }
+}
+
+function getMesiDisponibili() {
+  const set = new Set();
+  allObiettivi.forEach(r => {
+    const nome = (r.fields['MESE'] || r.fields['fldqmnfl4UwUkLSEs'] || '').toUpperCase();
+    MESI_NOMI.forEach(m => { if (nome.includes(m) && nome.includes('26')) set.add(m); });
+  });
+  return MESI_NOMI.filter(m => set.has(m));
+}
+
+function buildClassificaUI() {
+  const container = document.getElementById('classifica-container');
+  if (!container) return;
+
+  const mesiDisp = getMesiDisponibili();
+  if (!classMeseAtt || !mesiDisp.includes(classMeseAtt)) {
+    classMeseAtt = mesiDisp[mesiDisp.length - 1] || MESI_NOMI[new Date().getMonth()];
+  }
+
+  const mesiHtml = mesiDisp.map(m => {
+    const i = MESI_NOMI.indexOf(m);
+    return `<button class="mese-btn ${m===classMeseAtt?'active':''}" onclick="selectClassMese('${m}')">${MESE_EMOJI[i]} ${MESI_SHORT[i]}</button>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="classifica-card">
+      <div class="classifica-header">
+        <div class="classifica-title">🏆 Classifica Mensile · 2026</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="tipo-toggle">
+            <button class="tipo-btn ${classTipoAtt==='Fatturato'?'active':''}" onclick="selectClassTipo('Fatturato')">💰 Fatturato</button>
+            <button class="tipo-btn ${classTipoAtt==='Calibrazione'?'active':''}" onclick="selectClassTipo('Calibrazione')">⚙️ Calibrazione</button>
+          </div>
+        </div>
+      </div>
+      <div class="mese-selector" style="margin-bottom:20px">${mesiHtml}</div>
+      <div id="classifica-body">${buildClassificaBody()}</div>
+    </div>`;
+}
+
+function buildClassificaBody() {
+  // Filtra records per mese e tipo
+  const filtered = allObiettivi.filter(r => {
+    const nome = (r.fields['MESE'] || r.fields['fldqmnfl4UwUkLSEs'] || '').toUpperCase();
+    const tipo = r.fields['fldLs0WYLtiRrhIgx'];
+    const tipoNome = tipo ? (tipo.name || '') : '';
+    const hasMese = nome.includes(classMeseAtt) && nome.includes('26');
+    const hasTipo = classTipoAtt === 'Fatturato' ? (tipoNome === 'Fatturato' || tipoNome === '') : tipoNome === classTipoAtt;
+    return hasMese && hasTipo;
+  });
+
+  if (!filtered.length) {
+    return `<div class="no-data">📭 Nessun dato per ${classMeseAtt} 2026 · ${classTipoAtt}</div>`;
+  }
+
+  // Aggrega per agente (un agente può avere più record nello stesso mese)
+  const agentiMap = {};
+  filtered.forEach(r => {
+    const comm = r.fields['fldl0CFYBIIm1GdRx'];
+    const nome = comm && comm.length > 0 ? comm[0].name : (r.fields['fldqmnfl4UwUkLSEs'] || 'N/D');
+    // Pulisci il nome del record per estrarre l'agente se non c'è linked record
+    let agente = nome;
+    if (!comm || comm.length === 0) {
+      // Prova a estrarre da nome record (es "3 MARZO MARCO 26" → no linked)
+      agente = 'N/D';
+    }
+    if (!agentiMap[agente]) agentiMap[agente] = { nome: agente, raggiunto: 0, obiettivo: 0, pct: 0 };
+    agentiMap[agente].raggiunto += r.fields['fldiwXJsXSgX9lYuK'] || 0;
+    agentiMap[agente].obiettivo += r.fields['fldpwMITgZ3Bvo85w'] || 0;
+  });
+
+  // Calcola % e ordina dal più alto al più basso
+  const agenti = Object.values(agentiMap)
+    .filter(a => a.nome !== 'N/D')
+    .map(a => {
+      a.pct = a.obiettivo > 0 ? Math.round(a.raggiunto / a.obiettivo * 100) : 0;
+      return a;
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  if (!agenti.length) return `<div class="no-data">📭 Nessun agente con obiettivi per ${classMeseAtt} 2026</div>`;
+
+  // Podio (top 3)
+  const fmt = n => '€ ' + Math.round(n).toLocaleString('it-IT');
+  const colPct = p => p >= 100 ? '#27ae60' : p >= 70 ? '#f0a500' : p >= 40 ? '#e67e22' : '#e74c3c';
+  const medal = ['🥇','🥈','🥉'];
+
+  const podioItems = agenti.slice(0, 3);
+  const podioOrder = podioItems.length === 1 ? [0] : podioItems.length === 2 ? [0,1] : [1,0,2];
+  const podioClasses = ['second','first','third'];
+  const podioSizes = ['normal','bigger','normal'];
+
+  const podioHtml = podioItems.length >= 1 ? `
+    <div class="podio" style="grid-template-columns:${podioItems.length===1?'1fr':podioItems.length===2?'1fr 1fr':'1fr 1.15fr 1fr'}">
+      ${podioOrder.slice(0, podioItems.length).map((idx, pos) => {
+        const a = podioItems[idx];
+        const cls = podioItems.length === 1 ? 'first' : podioClasses[pos];
+        const bar = Math.min(a.pct, 100);
+        const c = colPct(a.pct);
+        return `<div class="podio-item ${cls}">
+          <div class="podio-rank">${medal[idx]||'🏅'}</div>
+          <div class="podio-name">${esc(a.nome.split(' ')[0])}</div>
+          <div class="podio-val">${a.pct}%</div>
+          <div class="podio-obj">${fmt(a.raggiunto)} / ${fmt(a.obiettivo)}</div>
+          <div class="podio-bar-wrap"><div class="podio-bar-fill" style="width:0%;background:${c}" data-w="${bar}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // Lista completa
+  const listaHtml = agenti.map((a, i) => {
+    const bar = Math.min(a.pct, 100);
+    const c = colPct(a.pct);
+    const trophy = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    const rankColor = i === 0 ? '#f0a500' : i === 1 ? '#888' : i === 2 ? '#cd7f32' : 'var(--muted)';
+    return `<div class="classifica-row">
+      <div class="cl-trophy">${trophy}</div>
+      <div class="cl-rank" style="color:${rankColor}">${i+1}</div>
+      <div style="flex:1">
+        <div class="cl-name">${esc(a.nome)}</div>
+        <div class="cl-tipo">${classTipoAtt}</div>
+      </div>
+      <div class="cl-bar-wrap"><div class="cl-bar-fill" style="width:0%;background:${c}" data-w="${bar}"></div></div>
+      <div class="cl-pct" style="color:${c}">${a.pct}%</div>
+      <div class="cl-vals">${fmt(a.raggiunto)} / ${fmt(a.obiettivo)}</div>
+    </div>`;
+  }).join('');
+
+  return `${podioHtml}<div class="classifica-list">${listaHtml}</div>`;
+}
+
+function selectClassMese(mese) {
+  classMeseAtt = mese;
+  // Aggiorna bottoni
+  document.querySelectorAll('.mese-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget?.classList.add('active');
+  // Ricostruisci body
+  const body = document.getElementById('classifica-body');
+  if (body) {
+    body.innerHTML = buildClassificaBody();
+    animateBars();
+  }
+}
+
+function selectClassTipo(tipo) {
+  classTipoAtt = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget?.classList.add('active');
+  const body = document.getElementById('classifica-body');
+  if (body) {
+    body.innerHTML = buildClassificaBody();
+    animateBars();
+  }
+}
+
+function animateBars() {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
+  }));
+}
+
 // ─── AUTO INIT ────────────────────────────────────────────────────────
-if (sessionStorage.getItem('eq-admin') === '1') loadData();
+if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); }
 </script>
 </body>
 </html>
