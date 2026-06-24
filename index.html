@@ -35,7 +35,7 @@
   .avatar { width:30px; height:30px; border-radius:50%; background:#0072bc; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
   .user-name { font-size:13px; font-weight:600; color:#fff; }
 
-  .main { max-width:1200px; margin:0 auto; padding:32px 24px; }
+  .main { max-width:1400px; margin:0 auto; padding:32px 24px; }
   .welcome { margin-bottom:28px; }
   .welcome h1 { font-size:24px; font-weight:800; letter-spacing:-.5px; }
   .welcome p { color:var(--muted); font-size:14px; margin-top:4px; }
@@ -65,7 +65,7 @@
   .nav-tab:not(.active) .tab-count { background:var(--surface2); color:var(--muted); }
 
   .drawer { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; overflow:hidden; max-height:0; transition:max-height .4s cubic-bezier(.4,0,.2,1); box-shadow:0 2px 12px rgba(0,61,122,.08); }
-  .drawer.open { max-height:3000px; }
+  .drawer.open { max-height:none; }
   .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); }
   .drawer-title { font-size:14px; font-weight:700; color:var(--accent); }
   .drawer-count { font-size:12px; color:var(--muted); margin-left:8px; }
@@ -207,6 +207,34 @@
 
   .footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0 8px; border-top:1px solid var(--border); margin-top:8px; }
   .empty  { text-align:center; color:var(--muted); font-size:13px; padding:20px 0; }
+  /* NOTE COMPATTE */
+  .note-compact { font-size:11px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; max-width:160px; line-height:1.4; cursor:pointer; border-radius:6px; padding:3px 6px; transition:background .15s; }
+  .note-compact:hover { background:var(--surface2); color:var(--text); }
+  .note-add { font-size:11px; color:var(--muted); opacity:.5; cursor:pointer; font-style:italic; padding:3px 6px; }
+  .note-add:hover { opacity:1; }
+
+  /* NOTE MODAL */
+  .note-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .note-modal-box { background:#fff; border-radius:16px; padding:28px; max-width:500px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .note-modal-title { font-size:15px; font-weight:800; color:var(--accent); margin-bottom:4px; }
+  .note-modal-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+  .note-modal-text { font-size:13px; line-height:1.7; white-space:pre-wrap; color:var(--text); max-height:60vh; overflow-y:auto; background:var(--surface2); border-radius:10px; padding:16px; }
+
+  /* LAYOUT SIDEBAR + DRAWER */
+  .drawer-layout { display:flex; gap:16px; align-items:flex-start; margin-bottom:24px; }
+  .sidebar-contacts { width:210px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; position:sticky; top:80px; max-height:calc(100vh - 100px); display:flex; flex-direction:column; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .sidebar-contacts-header { padding:11px 14px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .sidebar-contacts-search { padding:8px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .sidebar-contacts-search input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 9px; font-size:11px; color:var(--text); outline:none; }
+  .sidebar-contacts-search input:focus { border-color:var(--accent); }
+  .sidebar-contacts-list { overflow-y:auto; flex:1; }
+  .sidebar-contact-item { padding:8px 12px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+  .sidebar-contact-item:hover { background:var(--surface2); }
+  .sidebar-contact-item.highlighted { background:rgba(0,61,122,.08); border-left:3px solid var(--accent); }
+  .sidebar-contact-name { font-size:11px; font-weight:600; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sidebar-contact-sub { font-size:10px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  @media(max-width:900px) { .drawer-layout { flex-direction:column; } .sidebar-contacts { width:100%; position:static; max-height:200px; } }
+
 </style>
 </head>
 <body>
@@ -522,6 +550,45 @@ document.addEventListener('click', function(e) {
   }
 });
 
+
+// ── SIDEBAR CONTATTI ───────────────────────────────────────────
+let _sidebarQ = '';
+function buildSidebar(filter) {
+  if (filter !== undefined) _sidebarQ = filter.toLowerCase();
+  const sidebar = document.getElementById('sidebar-list');
+  const count   = document.getElementById('sidebar-count');
+  if (!sidebar) return;
+  let lista = currentLista;
+  if (_sidebarQ) lista = lista.filter(r=>(r.fields['Nome e cognome']||'').toLowerCase().includes(_sidebarQ));
+  if (count) count.textContent = lista.length;
+  sidebar.innerHTML = lista.map(r => {
+    const nome = r.fields['Nome e cognome']||'—', stato = r.fields['Status']||'';
+    return `<div class="sidebar-contact-item" onclick="jumpToContact('${r.id}')">
+      <div class="sidebar-contact-name">${esc(nome)}</div>
+      <div class="sidebar-contact-sub">${esc(stato.substring(0,22))}</div>
+    </div>`;
+  }).join('') || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:11px">Nessun contatto</div>';
+}
+
+function jumpToContact(recId) {
+  const row = document.getElementById('row-'+recId);
+  if (row) {
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    row.style.background='rgba(0,61,122,.1)';
+    setTimeout(()=>row.style.background='',2000);
+    return;
+  }
+  const idx = currentLista.findIndex(r=>r.id===recId);
+  if (idx>=0) {
+    currentPage = Math.floor(idx/PAGE_SIZE);
+    renderPage();
+    setTimeout(()=>{
+      const r2=document.getElementById('row-'+recId);
+      if(r2){r2.scrollIntoView({behavior:'smooth',block:'center'});r2.style.background='rgba(0,61,122,.1)';setTimeout(()=>r2.style.background='',2000);}
+    },120);
+  }
+}
+
 // ── Drawer ─────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
 let currentPage = 0;
@@ -562,6 +629,7 @@ function openDrawer(tipo, titolo, colore) {
       <div id="drawer-table"></div>
       <div id="pagination-bar"></div>
     </div>`;
+  buildSidebar();
   renderPage();
   setTimeout(() => drawer.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
 }
@@ -638,6 +706,8 @@ function closeDrawer() {
   activeKpi = null;
   currentPage = 0;
   currentLista = [];
+  const sl=document.getElementById('sidebar-list');if(sl)sl.innerHTML='';
+  const sc=document.getElementById('sidebar-count');if(sc)sc.textContent='';
 }
 
 function refreshDrawer() {
@@ -645,6 +715,7 @@ function refreshDrawer() {
   currentLista = getListaByTipo(activeKpi);
   const cnt = $('drawer-count');
   if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  buildSidebar();
   renderPage();
 }
 
@@ -656,6 +727,7 @@ function filterDrawer(q) {
   currentPage = 0;
   const cnt = $('drawer-count');
   if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  buildSidebar();
   renderPage();
 }
 
@@ -762,7 +834,7 @@ function renderTable(lista) {
       : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
       : 'badge-blue';
 
-    return `<tr data-creaz="${dataCreazISO}">
+    return `<tr id="row-${id}" data-creaz="${dataCreazISO}">
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="c-nome" style="cursor:pointer;color:var(--accent)" onclick="openContactDetail('${id}')">${nome}</div>
@@ -793,12 +865,10 @@ function renderTable(lista) {
       </td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataCreaz}</td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataAtt}</td>
-      <td style="max-width:200px">
-        <span class="editable" style="font-size:12px;color:var(--muted);display:block;white-space:pre-wrap;word-break:break-word;line-height:1.5;text-align:justify"
-          data-edit="1" data-id="${id}" data-field="Notes" data-value="${esc(note)}"
-          title="Clicca per modificare">
-          ${note ? esc(note) : '<em style="opacity:.5">+ nota</em>'}
-        </span>
+      <td style="max-width:170px">
+        ${note
+          ? `<div class="note-compact" onclick="openNoteModal('${id}')" title="Clicca per leggere la nota completa">${esc(note)}</div>`
+          : `<span class="note-add" onclick="openNoteModal('${id}')" title="Aggiungi nota">+ nota</span>`}
       </td>
       <td style="font-size:11px;color:var(--orange);white-space:nowrap">${scad ? '📦 '+scad : ''}</td>
       <td>
@@ -832,7 +902,7 @@ function renderTable(lista) {
         <th>Telefono ✏️</th>
         <th style="cursor:pointer" onclick="sortByDate('creaz')">Data creazione ↕</th>
         <th style="cursor:pointer" onclick="sortByDate('att')">Ultima attività ↕</th>
-        <th>Note ✏️</th>
+        <th>Note 👁</th>
         <th>Scadenza</th>
         <th>Appuntamento</th>
         <th>Ult. Tel. 📞</th>
@@ -944,6 +1014,32 @@ function openContactDetail(recId) {
     </div>
   </div>`;
 
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+
+// ── NOTE MODAL ──────────────────────────────────────────────────
+function openNoteModal(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+  const note = rec.fields['Notes'] || '';
+  const nome = rec.fields['Nome e cognome'] || '';
+  document.getElementById('note-modal-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'note-modal-overlay';
+  overlay.id = 'note-modal-overlay';
+  overlay.innerHTML = `<div class="note-modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div><div class="note-modal-title">📝 Note</div><div class="note-modal-sub">${esc(nome)}</div></div>
+      <button onclick="document.getElementById('note-modal-overlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div class="note-modal-text">${esc(note)||'<em style="opacity:.5">Nessuna nota</em>'}</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="document.getElementById('note-modal-overlay').remove();openEditContact('${recId}')"
+        style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">✏️ Modifica nota</button>
+    </div>
+  </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
 }
@@ -1215,7 +1311,20 @@ async function loadData(utente) {
           🎯 HARBUR <span class="tab-count" id="tc-harbur">0</span>
         </button>
       </div>
-      <div class="drawer open" id="drawer"></div>
+      <!-- LAYOUT SIDEBAR + DRAWER -->
+      <div class="drawer-layout" id="drawer-layout">
+        <div class="sidebar-contacts">
+          <div class="sidebar-contacts-header">
+            <span>👥 Contatti</span>
+            <span id="sidebar-count" style="opacity:.7;font-size:10px"></span>
+          </div>
+          <div class="sidebar-contacts-search">
+            <input type="text" placeholder="🔍 Cerca..." oninput="buildSidebar(this.value)" id="sidebar-input">
+          </div>
+          <div class="sidebar-contacts-list" id="sidebar-list"></div>
+        </div>
+        <div class="drawer open" id="drawer" style="flex:1;min-width:0;max-height:none"></div>
+      </div>
 
       <div id="cal-container">${buildCalendar(allMiei)}</div>
 
