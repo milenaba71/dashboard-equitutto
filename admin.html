@@ -281,6 +281,7 @@
       <div class="kpi red" onclick="openTab('persi')"><div class="kpi-ico">❌</div><div class="kpi-val" id="kv-persi">—</div><div class="kpi-lbl">Non interessati</div></div>
       <div class="kpi blue" onclick="openTab('noleggi')"><div class="kpi-ico">📦</div><div class="kpi-val" id="kv-noleggi">—</div><div class="kpi-lbl">Noleggi</div></div>
       <div class="kpi orange" onclick="openTab('scadenze')"><div class="kpi-ico">⚠️</div><div class="kpi-val" id="kv-scadenze">—</div><div class="kpi-lbl">Scadono 30gg</div></div>
+      <div class="kpi green" onclick="openTab('noleggi')" style="cursor:pointer"><div class="kpi-ico">🔄</div><div class="kpi-val" id="kv-conversione" style="font-size:22px">—</div><div class="kpi-lbl">Conv. nol.→vendita</div></div>
       <div class="kpi green" onclick="openTab('proposti')"><div class="kpi-ico">🛒</div><div class="kpi-val" id="kv-proposto" style="font-size:16px">—</div><div class="kpi-lbl">Totale proposto</div></div>
     </div>
 
@@ -514,7 +515,7 @@ async function loadData() {
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO' +
-        '&fields[]=data+ultima+telefonata&maxRecords=5000'),
+        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&maxRecords=5000'),
       proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
       proxyGet(TABLE_PROPOSTE, 'maxRecords=5000'),
     ]);
@@ -658,6 +659,18 @@ function updateAll() {
     const el = $('tc-'+t);
     if (el) el.textContent = getListaByTipo(t,recs).length;
   });
+
+  // Conversione noleggio → vendita
+  const nConvertiti = recs.filter(r => {
+    const cv = r.fields['CONVERSIONE IN VENDITA'];
+    const cvn = cv ? (typeof cv === 'object' ? cv.name : cv) : '';
+    return cvn === 'VENDUTO';
+  }).length;
+  const nNoleggiati = getListaByTipo('noleggi', recs).length;
+  const pctConv = (nNoleggiati + nConvertiti) > 0
+    ? Math.round(nConvertiti / (nNoleggiati + nConvertiti) * 100) : 0;
+  const kvConv = document.getElementById('kv-conversione');
+  if (kvConv) kvConv.innerHTML = `${pctConv}%<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">${nConvertiti} conv. / ${nNoleggiati+nConvertiti} tot.</div>`;
 
   // ranking
   buildRanking();
