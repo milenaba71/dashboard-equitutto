@@ -188,6 +188,16 @@ var AC = {
   yellowBright:'#ffd600'
 };
 var qs=[], rb=[], frb=[], sel=new Set(), sc={};
+var QUIZ_TBL = 'tblwULE1CVMPsM8yj';
+var FLD_DOMANDA  = 'fldXKHiMn3CrUmV89';
+var FLD_A        = 'fldo4sBgD36mnKeVy';
+var FLD_B        = 'fldJ0g6bwtz7QBLuH';
+var FLD_C        = 'fldpkrBtfJc7X4TMG';
+var FLD_D        = 'fld9UpkrLHapriCxW';
+var FLD_CORRETTA = 'fldNwqYn5Aas8gH0h';
+var FLD_ORDINE   = 'fldB6aTaSa5ULnjoH';
+var FLD_ATTIVA   = 'fldrxeKs8TkuIKkLJ';
+var qRecordIds   = {};
 
 function login() {
   var v = document.getElementById('pwd').value.trim();
@@ -211,27 +221,30 @@ function showTab(t) {
 
 function loadAll() { loadQ(); loadStati(); }
 
-async function loadQ() {
+async function loadQ(){
   sy('sd', 'Caricamento domande...', 'in', true);
-  try {
-    var r = await fetch('https://api.airtable.com/v0/' + BID + '/' + LT + '/' + DR,
-      {mode:'cors', headers:{'Authorization':'Bearer ' + AK}});
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    var d = await r.json();
-    qs = JSON.parse(d.fields[FN] || '[]');
+  try{
+    var r = await fetch('https://api.airtable.com/v0/'+BID+'/'+QUIZ_TBL+'?sort[0][field]='+FLD_ORDINE+'&sort[0][direction]=asc',
+      {mode:'cors', headers:{'Authorization':'Bearer '+AK}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var data = await r.json();
+    var records = data.records || [];
+    qRecordIds = {};
+    qs = records.map(function(rec, i){
+      var f = rec.fields || {};
+      qRecordIds[i] = rec.id;
+      return {
+        d: f[FLD_DOMANDA]||'', a: f[FLD_A]||'', b: f[FLD_B]||'',
+        c: f[FLD_C]||'', e: f[FLD_D]||'', c_ok: f[FLD_CORRETTA]||'A'
+      };
+    });
     renderQ();
     sy('sd', qs.length + ' domande caricate', 'ok', false);
-  } catch(e) { sy('sd', 'Errore: ' + e.message, 'er', false); }
+  }catch(e){ sy('sd', 'Errore: '+e.message, 'er', false); }
 }
 
-async function saveQ() {
-  var r = await fetch('https://api.airtable.com/v0/' + BID + '/' + LT + '/' + DR, {
-    method:'PATCH', mode:'cors',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer ' + AK},
-    body: JSON.stringify({fields:{[FN]: JSON.stringify(qs)}})
-  });
-  if (!r.ok) { var e = await r.json(); throw new Error(e.error ? e.error.message : 'Errore'); }
-}
+
+// saveQ non necessaria - salvataggio diretto su Airtable
 
 function renderQ() {
   var n = qs.length;
@@ -266,30 +279,48 @@ async function addQ() {
   var d = document.getElementById('nd').value.trim();
   var a = document.getElementById('na').value.trim();
   var b = document.getElementById('nb').value.trim();
-  var c = document.getElementById('nc').value.trim();
+  var cv = document.getElementById('nc').value.trim();
   var e = document.getElementById('ne').value.trim();
   var ok = document.getElementById('nok').value;
-  if (!d||!a||!b||!c||!e||!ok) { toast('Compila tutti i campi!'); return; }
+  if (!d||!a||!b||!cv||!e||!ok) { toast('Compila tutti i campi!'); return; }
   var btn = document.getElementById('btnadd');
   btn.disabled = true; btn.textContent = 'Salvataggio...';
-  qs.push({d:d, a:a, b:b, c:c, e:e, c_ok:ok});
   try {
-    await saveQ();
-    renderQ();
+    var fields = {};
+    fields[FLD_DOMANDA] = d;
+    fields[FLD_A] = a;
+    fields[FLD_B] = b;
+    fields[FLD_C] = cv;
+    fields[FLD_D] = e;
+    fields[FLD_CORRETTA] = ok;
+    fields[FLD_ORDINE] = qs.length + 1;
+    fields[FLD_ATTIVA] = true;
+    var r = await fetch('https://api.airtable.com/v0/'+BID+'/'+QUIZ_TBL, {
+      method:'POST', mode:'cors',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+AK},
+      body: JSON.stringify({records:[{fields:fields}]})
+    });
+    if(!r.ok){ var err=await r.json(); throw new Error(err.error?err.error.message:'Errore POST'); }
     ['nd','na','nb','nc','ne'].forEach(function(id){ document.getElementById(id).value=''; });
     document.getElementById('nok').value = '';
-    toast('Domanda ' + qs.length + '/15 salvata!');
-    sy('sd', qs.length + ' domande salvate', 'ok', false);
+    toast('✅ Domanda salvata!');
+    await loadQ();
     window.scrollTo({top:0, behavior:'smooth'});
-  } catch(ex) { qs.pop(); toast('Errore: ' + ex.message); }
+  } catch(ex) { toast('Errore: ' + ex.message); }
   btn.disabled = false; btn.textContent = 'Salva Domanda';
 }
 
 async function delQ(i) {
   if (!confirm('Eliminare questa domanda?')) return;
-  var rem = qs.splice(i, 1);
-  try { await saveQ(); renderQ(); toast('Domanda eliminata'); }
-  catch(e) { qs.splice(i, 0, rem[0]); toast('Errore: ' + e.message); }
+  var recId = qRecordIds[i];
+  if(!recId){ toast('Errore: record ID non trovato'); return; }
+  try {
+    var r = await fetch('https://api.airtable.com/v0/'+BID+'/'+QUIZ_TBL+'/'+recId,
+      {method:'DELETE', mode:'cors', headers:{'Authorization':'Bearer '+AK}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    toast('🗑 Domanda eliminata');
+    await loadQ();
+  } catch(e) { toast('Errore: '+e.message); }
 }
 
 async function loadStati() {
@@ -349,7 +380,7 @@ async function loadR() {
   try {
     do {
       var url = 'https://api.airtable.com/v0/' + BID + '/' + RT +
-        '?fields[]=fld6bfoJlK5cIiAp8&fields[]=fldO0RdkbUbkWFPLB&fields[]=fld5EpJuoZLFEqeJ6&fields[]=fldddgGgkQbofsaCg&pageSize=100' +
+        '?pageSize=100' +
         (off ? '&offset=' + off : '');
       var r = await fetch(url, {mode:'cors', headers:{'Authorization':'Bearer ' + AK}});
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -376,10 +407,10 @@ function renderR() {
   var html = '';
   for (var i = 0; i < frb.length; i++) {
     var r = frb[i];
-    var n = r.fields['fld6bfoJlK5cIiAp8'] || '—';
-    var e = r.fields['fldO0RdkbUbkWFPLB'] || '';
-    var t = r.fields['fldddgGgkQbofsaCg'] || '';
-    var s = r.fields['fld5EpJuoZLFEqeJ6'] || '';
+    var n = r.fields['fld6bfoJlK5cIiAp8'] || r.fields['Nome e cognome'] || '—';
+    var e = r.fields['fldO0RdkbUbkWFPLB'] || r.fields['E-Mail'] || '';
+    var t = r.fields['fldddgGgkQbofsaCg'] || r.fields['recapito telefonico'] || '';
+    var s = r.fields['fld5EpJuoZLFEqeJ6'] || r.fields['Status'] || '';
     var col = sc[s] || '#9e9e9e';
     html += '<div class="rr">' +
       '<input type="checkbox" ' + (sel.has(r.id) ? 'checked' : '') + ' onchange="togSel(\"' + r.id + '\",this.checked)">' +
