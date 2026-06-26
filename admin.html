@@ -212,6 +212,25 @@
   .conv-bar-fill { height:100%; background:#27ae60; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
   .conv-pct { font-size:14px; font-weight:800; color:#27ae60; min-width:46px; text-align:right; }
   .conv-nums { font-size:11px; color:var(--muted); min-width:80px; text-align:right; white-space:nowrap; }
+
+  /* MODAL RICALCOLO */
+  .ricalcolo-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .ricalcolo-box { background:#fff; border-radius:16px; padding:28px; max-width:480px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .ricalcolo-title { font-size:16px; font-weight:800; color:var(--accent); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .ricalcolo-kpi { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+  .ricalcolo-k { background:var(--surface2); border-radius:10px; padding:12px; text-align:center; border:1px solid var(--border); }
+  .ricalcolo-k-val { font-size:24px; font-weight:800; color:var(--accent); }
+  .ricalcolo-k-lbl { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; }
+  .ricalcolo-k.updated { background:rgba(39,174,96,.1); border-color:#27ae60; }
+  .ricalcolo-k.updated .ricalcolo-k-val { color:#27ae60; }
+  .ricalcolo-k.error { background:rgba(231,76,60,.1); border-color:#e74c3c; }
+  .ricalcolo-k.error .ricalcolo-k-val { color:#e74c3c; }
+  .ricalcolo-list { max-height:220px; overflow-y:auto; margin-bottom:16px; }
+  .ricalcolo-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .ricalcolo-row:last-child { border-bottom:none; }
+  .ricalcolo-nome { color:var(--accent); font-weight:600; flex:1; }
+  .ricalcolo-arrow { color:var(--muted); margin:0 8px; }
+  .ricalcolo-nuovo { font-weight:800; color:#27ae60; }
 </style>
 </head>
 <body>
@@ -245,6 +264,7 @@
     <div class="topbar-right">
       <span id="last-sync" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
       <button class="btn-topbar" onclick="refreshAll()" id="btn-refresh">🔄 Aggiorna</button>
+      <button class="btn-topbar" onclick="ricalcolaObiettivi()" id="btn-ricalcola" style="background:rgba(240,165,0,.25);border-color:rgba(240,165,0,.5)" title="Ricalcola i Valore Raggiunto negli obiettivi 2026 usando le date reali di noleggio e vendita">⚙️ Ricalcola Obiettivi</button>
 
       <!-- MENU LINK AGENTI -->
       <div class="links-dropdown">
@@ -1230,6 +1250,91 @@ function animateConvBars() {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     document.querySelectorAll('[data-cw]').forEach(el => { el.style.width = el.dataset.cw + '%'; });
   }));
+}
+
+
+// ── RICALCOLA OBIETTIVI ────────────────────────────────────────
+async function ricalcolaObiettivi() {
+  const btn = document.getElementById('btn-ricalcola');
+  if (btn) { btn.textContent = '⏳ Ricalcolo...'; btn.disabled = true; }
+
+  // Mostra modal di caricamento
+  document.getElementById('ricalcolo-modal')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'ricalcolo-overlay';
+  overlay.id = 'ricalcolo-modal';
+  overlay.innerHTML = `<div class="ricalcolo-box">
+    <div class="ricalcolo-title">⚙️ Ricalcolo obiettivi in corso...</div>
+    <div style="text-align:center;padding:24px">
+      <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
+      <div style="font-size:13px;color:var(--muted)">Sto leggendo le date reali dalla Rubrica<br>e aggiornando gli obiettivi 2026...</div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  try {
+    const res = await fetch('https://equitutto-proxy.equistasi.workers.dev/update-obiettivi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+
+    const fmt = n => '€ ' + Math.round(n).toLocaleString('it-IT');
+
+    // Costruisci lista aggiornamenti
+    const listaHtml = (data.dettaglio || []).length > 0
+      ? (data.dettaglio || []).map(d => `
+          <div class="ricalcolo-row">
+            <div class="ricalcolo-nome">${esc(d.nome || '')}</div>
+            <div style="font-size:11px;color:var(--muted)">${fmt(d.vecchio || 0)}</div>
+            <div class="ricalcolo-arrow">→</div>
+            <div class="ricalcolo-nuovo">${fmt(d.nuovo || 0)}</div>
+          </div>`).join('')
+      : '<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Nessun obiettivo modificato — tutti già aggiornati ✓</div>';
+
+    // Sostituisci contenuto modal con risultato
+    overlay.innerHTML = `<div class="ricalcolo-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="ricalcolo-title">✅ Ricalcolo completato</div>
+        <button onclick="document.getElementById('ricalcolo-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="ricalcolo-kpi">
+        <div class="ricalcolo-k updated">
+          <div class="ricalcolo-k-val">${data.aggiornati || 0}</div>
+          <div class="ricalcolo-k-lbl">Aggiornati</div>
+        </div>
+        <div class="ricalcolo-k">
+          <div class="ricalcolo-k-val">${data.invariati || 0}</div>
+          <div class="ricalcolo-k-lbl">Invariati</div>
+        </div>
+        <div class="ricalcolo-k ${(data.errori || 0) > 0 ? 'error' : ''}">
+          <div class="ricalcolo-k-val">${data.errori || 0}</div>
+          <div class="ricalcolo-k-lbl">Errori</div>
+        </div>
+      </div>
+      ${(data.aggiornati || 0) > 0 ? `
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Obiettivi aggiornati</div>
+        <div class="ricalcolo-list">${listaHtml}</div>` : listaHtml}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="document.getElementById('ricalcolo-modal').remove();loadClassifica()"
+          style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">
+          🏆 Aggiorna classifica
+        </button>
+        <button onclick="document.getElementById('ricalcolo-modal').remove()"
+          style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer">
+          Chiudi
+        </button>
+      </div>
+    </div>`;
+    overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+
+    showToast('✅ Obiettivi ricalcolati!');
+  } catch(e) {
+    document.getElementById('ricalcolo-modal')?.remove();
+    showToast('❌ Errore: ' + e.message, true);
+  } finally {
+    if (btn) { btn.textContent = '⚙️ Ricalcola Obiettivi'; btn.disabled = false; }
+  }
 }
 
 // ─── AUTO INIT ────────────────────────────────────────────────────────
