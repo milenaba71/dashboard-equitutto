@@ -265,6 +265,7 @@
       <span id="last-sync" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
       <button class="btn-topbar" onclick="refreshAll()" id="btn-refresh">🔄 Aggiorna</button>
       <button class="btn-topbar" onclick="ricalcolaObiettivi()" id="btn-ricalcola" style="background:rgba(240,165,0,.25);border-color:rgba(240,165,0,.5)" title="Ricalcola i Valore Raggiunto negli obiettivi 2026 usando le date reali di noleggio e vendita">⚙️ Ricalcola Obiettivi</button>
+      <button class="btn-topbar" onclick="ricalcolaTutto()" id="btn-ricalcola-tutto" style="background:rgba(39,174,96,.25);border-color:rgba(39,174,96,.5)" title="Ricalcola obiettivi E provvigioni">?? Ricalcola Tutto</button>
 
       <!-- MENU LINK AGENTI -->
       <div class="links-dropdown">
@@ -1334,6 +1335,75 @@ async function ricalcolaObiettivi() {
     showToast('❌ Errore: ' + e.message, true);
   } finally {
     if (btn) { btn.textContent = '⚙️ Ricalcola Obiettivi'; btn.disabled = false; }
+  }
+}
+
+
+// RICALCOLA TUTTO (obiettivi + provvigioni) ─────────────────
+async function ricalcolaTutto() {
+  const btn = document.getElementById('btn-ricalcola-tutto');
+  if (btn) { btn.textContent = 'Ricalcolo...'; btn.disabled = true; }
+
+  document.getElementById('ricalcolo-modal')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'ricalcolo-overlay';
+  overlay.id = 'ricalcolo-modal';
+  overlay.innerHTML = '<div class="ricalcolo-box">'
+    + '<div class="ricalcolo-title">Ricalcolo completo in corso...</div>'
+    + '<div style="text-align:center;padding:24px">'
+    + '<div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>'
+    + '<div style="font-size:13px;color:var(--muted)">Aggiorno obiettivi e provvigioni 2026...</div>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+
+  try {
+    const res = await fetch('https://equitutto-proxy.equistasi.workers.dev/update-all', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    const r1 = data.obiettivi || {};
+    const r2 = data.provvigioni || {};
+    const fmt = n => '\u20ac\xa0' + Math.round(n).toLocaleString('it-IT');
+
+    const provHtml = (r2.dettaglio || []).length > 0
+      ? (r2.dettaglio || []).map(d =>
+          '<div class="ricalcolo-row">'
+          + '<div class="ricalcolo-nome">' + esc(d.nome||'') + '</div>'
+          + '<div style="font-size:11px;color:var(--muted)">' + fmt(d.vecchio||0) + '</div>'
+          + '<div class="ricalcolo-arrow">\u2192</div>'
+          + '<div class="ricalcolo-nuovo">' + fmt(d.nuovo||0) + '</div>'
+          + '</div>').join('')
+      : '<div style="text-align:center;color:var(--muted);padding:12px;font-size:13px">Nessuna provvigione modificata</div>';
+
+    overlay.innerHTML = '<div class="ricalcolo-box">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+      + '<div class="ricalcolo-title">Ricalcolo completato</div>'
+      + '<button onclick="document.getElementById(\'ricalcolo-modal\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">x</button>'
+      + '</div>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Obiettivi</div>'
+      + '<div class="ricalcolo-kpi" style="margin-bottom:16px">'
+      + '<div class="ricalcolo-k updated"><div class="ricalcolo-k-val">' + (r1.aggiornati||0) + '</div><div class="ricalcolo-k-lbl">Aggiornati</div></div>'
+      + '<div class="ricalcolo-k"><div class="ricalcolo-k-val">' + (r1.invariati||0) + '</div><div class="ricalcolo-k-lbl">Invariati</div></div>'
+      + '<div class="ricalcolo-k ' + ((r1.errori||0)>0?'error':'') + '"><div class="ricalcolo-k-val">' + (r1.errori||0) + '</div><div class="ricalcolo-k-lbl">Errori</div></div>'
+      + '</div>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Provvigioni</div>'
+      + '<div class="ricalcolo-kpi" style="margin-bottom:16px">'
+      + '<div class="ricalcolo-k updated"><div class="ricalcolo-k-val">' + (r2.aggiornati||0) + '</div><div class="ricalcolo-k-lbl">Aggiornate</div></div>'
+      + '<div class="ricalcolo-k"><div class="ricalcolo-k-val">' + (r2.invariati||0) + '</div><div class="ricalcolo-k-lbl">Invariate</div></div>'
+      + '<div class="ricalcolo-k ' + ((r2.errori||0)>0?'error':'') + '"><div class="ricalcolo-k-val">' + (r2.errori||0) + '</div><div class="ricalcolo-k-lbl">Errori</div></div>'
+      + '</div>'
+      + ((r2.aggiornati||0)>0 ? '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Dettaglio provvigioni</div><div class="ricalcolo-list">' + provHtml + '</div>' : '')
+      + '<div style="display:flex;gap:8px;margin-top:12px">'
+      + '<button onclick="document.getElementById(\'ricalcolo-modal\').remove();loadClassifica()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">Aggiorna classifica</button>'
+      + '<button onclick="document.getElementById(\'ricalcolo-modal\').remove()" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer">Chiudi</button>'
+      + '</div></div>';
+    overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+    showToast('Obiettivi e provvigioni aggiornati!');
+  } catch(e) {
+    document.getElementById('ricalcolo-modal')?.remove();
+    showToast('Errore: ' + e.message, true);
+  } finally {
+    if (btn) { btn.textContent = 'Ricalcola Tutto'; btn.disabled = false; }
   }
 }
 
