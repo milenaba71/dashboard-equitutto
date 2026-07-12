@@ -304,7 +304,20 @@ const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 
 // Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
-const TOKEN_MAP = {}; // Dinamico — dati caricati da Airtable Equipoint & Profili
+const TOKEN_MAP = {
+  'W_0Jmv-Q2HAzz5y2eG-ncw': { nome:'Andrea Filippi',      equipoint:['FFM DI ANDREA FILIPPI'] },
+  'HJU8VtX1SrrHef7cC3znRQ': { nome:'Giacomo Frassica',    equipoint:['GIACOMO FRASSICA'] },
+  'okN6y20sU0K93vCUmP00Mw': { nome:'Stefano Marcandalli', equipoint:['MARCANDALLI STEFANO'] },
+  'Y1kTz-Z37STfXCcBuX6umQ': { nome:'Marco Costantini',    equipoint:['Marco Costantini'] },
+  'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Bernardino Cicconi',  equipoint:['BERNARDINO CICCONI'] },
+  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Stefano Ferrari',     equipoint:['STEFANO FERRARI'] },
+  '9WZxEAPd_IHj-qMH8lRSnw': { nome:'Haleh Sadeghi',       equipoint:['sadeghi Haleh'] },
+  'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       equipoint:['Milena'] },
+  'M3jlO0U72vG_TMDqLtrrYQ': { nome:'Paola Zerla',         equipoint:['Paola'] },
+  'P1qQL-NIJcEs1a0hRCfTyw': { nome:'Iris',                equipoint:['Iris'] },
+  'LxbWQVdg_kRd-Dn1hsK5yA': { nome:'Stella',              equipoint:['stella'] },
+  'st1Cnh4yvsC_bS975EKsmFBQn5TAkg': { nome:'Medical Service', equipoint:['MEDICAL SERVICE'] },
+}; // Mantenuto come fallback — il sistema carica da Airtable automaticamente
 
 const STATUS_OPTIONS = [
   'DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO',
@@ -1066,39 +1079,45 @@ async function init() {
     $('error-screen').style.display   = 'flex';
     return;
   }
+  let utente = null;
   try {
-    // Carica profilo agente dinamicamente da Equipoint & Profili
+    // 1. Prima prova a caricare da Airtable Equipoint & Profili (dinamico)
     const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
-      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100'
+      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&maxRecords=100'
     );
     const gf = (r, fid) => { const f=r.fields||{}, cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
-    const myRec = (eqRecs||[]).find(r => {
-      const t = gf(r,'fldUGpkKP19zHTLf1') || '';
-      return t === token;
-    });
-    if (!myRec) {
-      $('loading-screen').style.display = 'none';
-      $('error-screen').style.display   = 'flex';
-      return;
+    const myRec = (eqRecs||[]).find(r => (gf(r,'fldUGpkKP19zHTLf1')||'') === token);
+    if (myRec) {
+      const nome      = gf(myRec,'fldhHAx77O7ZdedHw') || 'Agente';
+      const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
+      utente = { nome, equipoint: [equipoint], recId: myRec.id };
     }
-    const nome      = gf(myRec,'fldhHAx77O7ZdedHw') || 'Agente';
-    const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
-    const utente = { nome, equipoint: [equipoint], recId: myRec.id };
-
-    $('loading-screen').style.display = 'none';
-    $('dashboard').style.display      = 'block';
-    $('av').textContent = nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-    $('un').textContent = nome.split(' ')[0];
-    _currentUtente = utente;
-    await loadData(utente);
-    loadConsulenze(utente);
-
-    // Auto-refresh ogni 5 minuti
-    setInterval(() => refreshAll(), 5 * 60 * 1000);
   } catch(e) {
+    console.warn('Airtable lookup failed, using TOKEN_MAP:', e.message);
+  }
+
+  // 2. Fallback a TOKEN_MAP hardcoded
+  if (!utente) {
+    const tm = TOKEN_MAP[token];
+    if (tm) utente = { ...tm, recId: null };
+  }
+
+  if (!utente) {
     $('loading-screen').style.display = 'none';
     $('error-screen').style.display   = 'flex';
+    return;
   }
+
+  $('loading-screen').style.display = 'none';
+  $('dashboard').style.display      = 'block';
+  $('av').textContent = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  $('un').textContent = utente.nome.split(' ')[0];
+  _currentUtente = utente;
+  await loadData(utente);
+  loadConsulenze(utente);
+
+  // Auto-refresh ogni 5 minuti
+  setInterval(() => refreshAll(), 5 * 60 * 1000);
 }
 
 let _currentUtente = null;
@@ -1112,8 +1131,22 @@ async function loadConsulenze(utente) {
   const section = document.getElementById('consulenze-list');
   if (!section) return;
   try {
-    // Usa il recId già caricato da init() — nessuna mappa hardcoded
-    const agenteRecId = utente.recId;
+    // Usa recId se disponibile (caricato dinamicamente da Airtable)
+    // altrimenti cerca l'agente per equipoint
+    let agenteRecId = utente.recId;
+    if (!agenteRecId) {
+      // Cerca in Equipoint & Profili tramite equipoint
+      const eqList = utente.equipoint || [];
+      const eqRecs2 = await proxyGet('tblmSrijxqNZ8Wd9n',
+        'fields[]=fldUPfBDYi679z7FM&maxRecords=100'
+      );
+      const gf2 = (r,fid) => { const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+      const found = (eqRecs2||[]).find(r => {
+        const eq = gf2(r,'fldUPfBDYi679z7FM') || '';
+        return eqList.some(e => e.toLowerCase() === eq.toLowerCase());
+      });
+      if (found) agenteRecId = found.id;
+    }
     if (!agenteRecId) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Profilo agente non trovato</div>';
       return;
