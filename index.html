@@ -2454,10 +2454,9 @@ async function saveNewContact() {
   if (app)   fields['Preso appuntamento'] = app;
   if (note)  fields['Notes'] = note;
 
-  // Aggiungi automaticamente il codice Equipoint dell'utente corrente
-  const utente = TOKEN_MAP[getToken()];
-  if (utente?.equipoint?.[0]) {
-    fields['Codice Equipoint'] = utente.equipoint[0];
+  // Aggiungi automaticamente il codice Equipoint dell'utente corrente (dinamico)
+  if (_currentUtente?.equipoint?.[0]) {
+    fields['Codice Equipoint'] = _currentUtente.equipoint[0];
   }
 
   try {
