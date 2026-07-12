@@ -1157,25 +1157,23 @@ async function loadConsulenze(utente) {
       '&fields[]=fldSJ8ekSE1OjeciO&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=200'
     );
     // Normalizza: cerca in fields e cellValuesByFieldId
+    const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     const miei = (data || []).filter(r => {
-      const f = r.fields || {};
-      const cv = r.cellValuesByFieldId || {};
-      const links = f['fldxMvmS34agmCYyI'] || cv['fldxMvmS34agmCYyI'];
+      const links = gf(r, 'fldxMvmS34agmCYyI');
       if (!links) return false;
       const arr = Array.isArray(links) ? links : [links];
       if (!arr.length) return false;
-      // Controlla sia per id del record che per nome
-      return arr.some(l => {
-        const id = typeof l==='object' ? l.id : l;
-        return id === agenteRecId;
-      });
+      const match = arr.some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
+      if (!match) return false;
+      // Filtra solo 2026
+      const anno = gf(r, 'fldMsQrq1yPC1Vw9t');
+      const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
+      return annoN === '2026' || annoN === '';
     });
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
       return;
     }
-    // Helper per leggere field da records normalizzati
-    const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     miei.sort((a,b) => {
       const ma = gf(a,'fldOt8LBoW3NKSTbx'), mb = gf(b,'fldOt8LBoW3NKSTbx');
       const na = ma?(typeof ma==='object'?ma.name:ma):'', nb = mb?(typeof mb==='object'?mb.name:mb):'';
@@ -1284,7 +1282,7 @@ async function loadData(utente) {
     const percFatt  = pct(fatturato,obiettivo);
     const percFattR = pctR(fatturato,obiettivo);
 
-    const MESI=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO'];
+    const MESI=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
     const mesiMap={};
     obj26.filter(r=>(r.fields['MESE']||'').includes('26')).forEach(r=>{
       const raw=(r.fields['MESE']||'').toUpperCase();
