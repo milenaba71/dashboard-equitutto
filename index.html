@@ -304,21 +304,7 @@ const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 
 // Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
-const TOKEN_MAP = {
-  'W_0Jmv-Q2HAzz5y2eG-ncw': { nome:'Andrea Filippi',      equipoint:['FFM DI ANDREA FILIPPI'] },
-  'HJU8VtX1SrrHef7cC3znRQ': { nome:'Giacomo Frassica',    equipoint:['GIACOMO FRASSICA'] },
-  'okN6y20sU0K93vCUmP00Mw': { nome:'Stefano Marcandalli', equipoint:['MARCANDALLI STEFANO'] },
-  'Y1kTz-Z37STfXCcBuX6umQ': { nome:'Marco Costantini',    equipoint:['Marco Costantini'] },
-  'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Bernardino Cicconi',  equipoint:['BERNARDINO CICCONI'] },
-  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Stefano Ferrari',     equipoint:['STEFANO FERRARI'] },
-  '9WZxEAPd_IHj-qMH8lRSnw': { nome:'Haleh Sadeghi',       equipoint:['sadeghi Haleh'] },
-  'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       equipoint:['Milena'] },
-  'M3jlO0U72vG_TMDqLtrrYQ': { nome:'Paola Zerla',         equipoint:['Paola'] },
-  'P1qQL-NIJcEs1a0hRCfTyw': { nome:'Iris',                equipoint:['Iris'] },
-  'LxbWQVdg_kRd-Dn1hsK5yA': { nome:'Stella',              equipoint:['stella'] },
-  'st1Cnh4yvsC_bS975EKsmFBQn5TAkg': { nome:'Medical Service', equipoint:['MEDICAL SERVICE'] },
-  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Equigirls',           equipoint:['EQUIGIRLS 24-3000'] },
-};
+const TOKEN_MAP = {}; // Dinamico — dati caricati da Airtable Equipoint & Profili
 
 const STATUS_OPTIONS = [
   'DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO',
@@ -1074,58 +1060,68 @@ function openNoteModal(recId) {
 function getToken() { return new URLSearchParams(window.location.search).get('token') || ''; }
 
 async function init() {
-  const utente = TOKEN_MAP[getToken()];
-  if (!utente) {
+  const token = getToken();
+  if (!token) {
     $('loading-screen').style.display = 'none';
     $('error-screen').style.display   = 'flex';
     return;
   }
-  $('loading-screen').style.display = 'none';
-  $('dashboard').style.display      = 'block';
-  $('av').textContent = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  $('un').textContent = utente.nome.split(' ')[0];
-  _currentUtente = utente;
-  await loadData(utente);
-  loadConsulenze(utente);
+  try {
+    // Carica profilo agente dinamicamente da Equipoint & Profili
+    const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
+      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100'
+    );
+    const gf = (r, fid) => { const f=r.fields||{}, cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+    const myRec = (eqRecs||[]).find(r => {
+      const t = gf(r,'fldUGpkKP19zHTLf1') || '';
+      return t === token;
+    });
+    if (!myRec) {
+      $('loading-screen').style.display = 'none';
+      $('error-screen').style.display   = 'flex';
+      return;
+    }
+    const nome      = gf(myRec,'fldhHAx77O7ZdedHw') || 'Agente';
+    const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
+    const utente = { nome, equipoint: [equipoint], recId: myRec.id };
 
-  // Auto-refresh ogni 5 minuti
-  setInterval(() => refreshAll(), 5 * 60 * 1000);
+    $('loading-screen').style.display = 'none';
+    $('dashboard').style.display      = 'block';
+    $('av').textContent = nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    $('un').textContent = nome.split(' ')[0];
+    _currentUtente = utente;
+    await loadData(utente);
+    loadConsulenze(utente);
+
+    // Auto-refresh ogni 5 minuti
+    setInterval(() => refreshAll(), 5 * 60 * 1000);
+  } catch(e) {
+    $('loading-screen').style.display = 'none';
+    $('error-screen').style.display   = 'flex';
+  }
 }
 
 let _currentUtente = null;
 
 
 // CONSULENZE (provvigioni agente)
-const TABLE_PROVVIGIONI = 'tblUm22CELuEiGOtQ';
-const EQUIPOINT_REC_MAP = {
-  'FFM DI ANDREA FILIPPI':  'recoF4sCDl4dDKnXZ',
-  'GIACOMO FRASSICA':       'recAXguOCJw3wGTlt',
-  'MARCANDALLI STEFANO':    'rec9Eub7wJJDXHuO3',
-  'Marco Costantini':       'recfbooBAbeJ6qH1l',
-  'BERNARDINO CICCONI':     'recRia9wrIxqPJCBY',
-  'STEFANO FERRARI':        'recwJbZ6IfzIllu9d',
-  'sadeghi Haleh':          'recXGGBNcVenEKA9Y',
-  'Milena':                 'rec3zXxvQzs33Qo5g',
-  'Paola':                  'recbXMde2MMSOmQaq',
-  'Iris':                   'recXGGBNcVenEKA9Y',
-  'stella':                 'recHA8mselIZSdtq4',
-  'MEDICAL SERVICE':        'recJZOkWIBkZqlUhz',
-  'EQUIGIRLS 24-3000':      'rec7q22k2x4yCCeim',
-};
+// Tabelle Airtable — nessuna mappa hardcoded
 const MESI_ORD = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 
 async function loadConsulenze(utente) {
   const section = document.getElementById('consulenze-list');
   if (!section) return;
   try {
-    const equipointList = utente.equipoint || [];
-    const agenteRecId = equipointList.map(e => EQUIPOINT_REC_MAP[e]).find(Boolean);
+    // Usa il recId già caricato da init() — nessuna mappa hardcoded
+    const agenteRecId = utente.recId;
     if (!agenteRecId) {
-      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza trovata</div>';
+      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Profilo agente non trovato</div>';
       return;
     }
-    const data = await proxyGet(TABLE_PROVVIGIONI,
-      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=200'
+    const data = await proxyGet('tblUm22CELuEiGOtQ',
+      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx' +
+      '&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD' +
+      '&fields[]=fldSJ8ekSE1OjeciO&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=200'
     );
     // Normalizza: cerca in fields e cellValuesByFieldId
     const miei = (data || []).filter(r => {
