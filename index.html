@@ -1165,10 +1165,11 @@ async function loadConsulenze(utente) {
       if (!arr.length) return false;
       const match = arr.some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
       if (!match) return false;
-      // Filtra solo 2026
+      // Filtra per anno corrente (dinamico)
+      const annoCorrente = String(new Date().getFullYear());
       const anno = gf(r, 'fldMsQrq1yPC1Vw9t');
       const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
-      return annoN === '2026' || annoN === '';
+      return annoN === annoCorrente || annoN === '';
     });
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
@@ -1271,11 +1272,13 @@ async function loadData(utente) {
     const oggi  = new Date(); oggi.setHours(0,0,0,0);
     const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
 
+    const annoCorrenteStr = String(new Date().getFullYear());
+    const annoShortStr = annoCorrenteStr.slice(-2); // es. '27' per 2027
     const obj26 = obiettivi.filter(r => {
       const mese=(r.fields['MESE']||'').toUpperCase();
       const comm=r.fields['Name (from Commerciale)'];
       if(comm){ const arr=Array.isArray(comm)?comm:[comm]; if(arr.some(n=>n.toUpperCase().includes(firstName))) return true; }
-      return mese.includes(firstName)&&mese.includes('26');
+      return mese.includes(firstName)&&(mese.includes(annoShortStr)||mese.includes(annoCorrenteStr));
     });
     const fatturato = obj26.reduce((s,r)=>s+(r.fields['Valore Raggiunto']||0),0);
     const obiettivo = obj26.filter(r=>(r.fields['Valore Obiettivo']||0)>0).reduce((s,r)=>s+(r.fields['Valore Obiettivo']||0),0);
@@ -1284,7 +1287,8 @@ async function loadData(utente) {
 
     const MESI=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
     const mesiMap={};
-    obj26.filter(r=>(r.fields['MESE']||'').includes('26')).forEach(r=>{
+    const annoShort = String(new Date().getFullYear()).slice(-2);
+    obj26.filter(r=>(r.fields['MESE']||'').includes(annoShort)).forEach(r=>{
       const raw=(r.fields['MESE']||'').toUpperCase();
       const mese=MESI.find(m=>raw.includes(m))||raw.split(' ')[0];
       if(!mesiMap[mese]) mesiMap[mese]={f:0,o:0};
