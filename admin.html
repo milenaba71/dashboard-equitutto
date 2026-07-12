@@ -1456,6 +1456,8 @@ async function loadConsulenze() {
   const grid    = document.getElementById('cons-admin-grid');
   if (!section || !grid) return;
   grid.innerHTML = '<div class="cons-admin-empty">Caricamento...</div>';
+  const titleEl = document.getElementById('cons-admin-title-yr');
+  if (titleEl) titleEl.textContent = '💰 Consulenze Agenti ' + new Date().getFullYear();
   try {
     const gf = (r,fid) => { const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n','fields[]=fldhHAx77O7ZdedHw&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100');
@@ -1472,7 +1474,8 @@ async function loadConsulenze() {
     const byAgente = {};
     (data||[]).forEach(r => {
       const anno=gf(r,'fldMsQrq1yPC1Vw9t');
-      if(!anno||(typeof anno==='object'?anno.name:anno)!=='2026') return;
+      const _annoCorr = String(new Date().getFullYear());
+      if(!anno||(typeof anno==='object'?anno.name:anno)!==_annoCorr) return;
       const links=gf(r,'fldxMvmS34agmCYyI');
       if(!links) return;
       (Array.isArray(links)?links:[links]).forEach(l => {
