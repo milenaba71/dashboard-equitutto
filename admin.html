@@ -231,6 +231,28 @@
   .ricalcolo-nome { color:var(--accent); font-weight:600; flex:1; }
   .ricalcolo-arrow { color:var(--muted); margin:0 8px; }
   .ricalcolo-nuovo { font-weight:800; color:#27ae60; }
+
+  /* CONSULENZE ADMIN */
+  .cons-admin-section { margin:24px 0; }
+  .cons-admin-title { font-size:13px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .cons-admin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+  .cons-admin-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; }
+  .cons-admin-agent { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .cons-admin-profilo { font-size:10px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:2px 8px; }
+  .cons-admin-kpi { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .cons-admin-k { background:var(--surface2); border-radius:8px; padding:8px 10px; text-align:center; }
+  .cons-admin-k-val { font-size:16px; font-weight:800; color:var(--accent); }
+  .cons-admin-k-lbl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+  .cons-admin-rows { font-size:11px; }
+  .cons-admin-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); }
+  .cons-admin-row:last-child { border-bottom:none; }
+  .cons-admin-mese { color:var(--muted); }
+  .cons-admin-importo { font-weight:700; color:#27ae60; }
+  .cons-admin-stato { font-size:9px; padding:1px 6px; border-radius:100px; }
+  .cons-stato-pagato { background:rgba(39,174,96,.12); color:#27ae60; }
+  .cons-stato-da { background:rgba(240,165,0,.12); color:#f0a500; }
+  .cons-stato-sospeso { background:rgba(231,76,60,.12); color:#e74c3c; }
+  .cons-admin-empty { text-align:center; color:var(--muted); font-size:12px; padding:20px; grid-column:1/-1; }
 </style>
 </head>
 <body>
@@ -310,6 +332,14 @@
     <div class="stat-bar" id="ranking-bar">
       <div class="stat-bar-title">📊 Ranking Agenti per Contatti</div>
       <div id="ranking-list"></div>
+    </div>
+
+    <!-- CONSULENZE AGENTI -->
+    <div class="cons-admin-section" id="consulenze-admin-section" style="display:none">
+      <div class="cons-admin-title">💰 Consulenze Agenti 2026 <span id="cons-admin-mese-label"></span></div>
+      <div class="cons-admin-grid" id="cons-admin-grid">
+        <div class="cons-admin-empty">Caricamento...</div>
+      </div>
     </div>
 
     <!-- LAYOUT CON SIDEBAR + TABELLA -->
@@ -1408,7 +1438,129 @@ async function ricalcolaTutto() {
 }
 
 // ─── AUTO INIT ────────────────────────────────────────────────────────
-if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); loadConversione(); }
+
+// CONSULENZE ADMIN
+const TABLE_PROV = 'tblUm22CELuEiGOtQ';
+const EQUIPOINT_REC_MAP_ADM = {
+  'FFM DI ANDREA FILIPPI':  { recId:'recoF4sCDl4dDKnXZ', nome:'Andrea Filippi', profilo:'RIVENDITORE +' },
+  'GIACOMO FRASSICA':       { recId:'recAXguOCJw3wGTlt', nome:'Giacomo Frassica', profilo:'PRODUCT SPECIALIST' },
+  'MARCANDALLI STEFANO':    { recId:'rec9Eub7wJJDXHuO3', nome:'Stefano Marcandalli', profilo:'PRODUCT SPECIALIST' },
+  'Marco Costantini':       { recId:'recfbooBAbeJ6qH1l', nome:'Marco Costantini', profilo:'PRODUCT SPECIALIST' },
+  'BERNARDINO CICCONI':     { recId:'recRia9wrIxqPJCBY', nome:'Bernardino Cicconi', profilo:'RIVENDITORE' },
+  'STEFANO FERRARI':        { recId:'recwJbZ6IfzIllu9d', nome:'Stefano Ferrari', profilo:'PRODUCT SPECIALIST' },
+  'sadeghi Haleh':          { recId:'recXGGBNcVenEKA9Y', nome:'Haleh Sadeghi', profilo:'PRODUCT SPECIALIST' },
+  'Milena':                 { recId:'rec3zXxvQzs33Qo5g', nome:'Milena Baroni', profilo:'PRODUCT SPECIALIST' },
+  'Paola':                  { recId:'recbXMde2MMSOmQaq', nome:'Paola Zerla', profilo:'PRODUCT SPECIALIST' },
+  'stella':                 { recId:'recHA8mselIZSdtq4', nome:'Stella', profilo:'DIST. SVIZZERA' },
+  'MEDICAL SERVICE':        { recId:'recJZOkWIBkZqlUhz', nome:'Medical Service', profilo:'DISTRIBUTORE' },
+};
+const MESI_ORD_ADM = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+
+async function loadConsulenze() {
+  const section = document.getElementById('consulenze-admin-section');
+  const grid    = document.getElementById('cons-admin-grid');
+  const label   = document.getElementById('cons-admin-mese-label');
+  if (!section || !grid) return;
+
+  try {
+    const data = await proxyGet(TABLE_PROV,
+      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx' +
+      '&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD' +
+      '&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=200'
+    );
+
+    // Raggruppa per agente (record ID)
+    const byAgente = {};
+    (data || []).forEach(r => {
+      const links = r.fields['fldxMvmS34agmCYyI'];
+      if (!links || !links.length) return;
+      const agenteId = typeof links[0]==='object' ? links[0].id : links[0];
+      if (!byAgente[agenteId]) byAgente[agenteId] = [];
+      byAgente[agenteId].push(r);
+    });
+
+    // Crea reverse map recId → info agente
+    const recIdMap = {};
+    Object.values(EQUIPOINT_REC_MAP_ADM).forEach(info => { recIdMap[info.recId] = info; });
+
+    const agentIds = Object.keys(byAgente).filter(id => recIdMap[id]);
+    if (!agentIds.length) {
+      grid.innerHTML = '<div class="cons-admin-empty">Nessuna consulenza trovata</div>';
+      section.style.display = '';
+      return;
+    }
+
+    // Mese corrente
+    const meseCorr = MESI_ORD_ADM[new Date().getMonth()];
+    if (label) label.textContent = '· ' + meseCorr;
+
+    const badge = s => {
+      const n = s?(typeof s==='object'?s.name:s):'Da pagare';
+      const cls = n==='Pagato'?'cons-stato-pagato':n==='Sospeso'?'cons-stato-sospeso':'cons-stato-da';
+      return '<span class="cons-admin-stato '+cls+'">'+esc(n)+'</span>';
+    };
+
+    // Filtra solo per agente corrente se selezionato
+    const agenteFiltro = selectedAgent && selectedAgent !== 'ALL' ? selectedAgent : null;
+
+    let html = '';
+    agentIds
+      .filter(id => {
+        if (!agenteFiltro) return true;
+        const info = recIdMap[id];
+        return info && info.nome === agenteFiltro;
+      })
+      .sort((a,b) => (recIdMap[a].nome||'').localeCompare(recIdMap[b].nome||''))
+      .forEach(agenteId => {
+        const info = recIdMap[agenteId];
+        const rows = byAgente[agenteId].filter(r => {
+          const anno = r.fields['fldMsQrq1yPC1Vw9t'];
+          return anno && (typeof anno==='object'?anno.name:anno) === '2026';
+        });
+        rows.sort((a,b) => {
+          const ma=a.fields['fldOt8LBoW3NKSTbx'], mb=b.fields['fldOt8LBoW3NKSTbx'];
+          const na=ma?(typeof ma==='object'?ma.name:ma):'', nb=mb?(typeof mb==='object'?mb.name:mb):'';
+          return MESI_ORD_ADM.indexOf(na)-MESI_ORD_ADM.indexOf(nb);
+        });
+        const totAuto = rows.reduce((s,r)=>s+parseFloat(r.fields['fldYAPIRg9pMQb8bD']||0),0);
+        const totVal  = rows.reduce((s,r)=>s+parseFloat(r.fields['fldExV7WZDakWl1Gy']||0),0);
+
+        html += '<div class="cons-admin-card">' +
+          '<div class="cons-admin-agent">' +
+            '<span>'+esc(info.nome)+'</span>' +
+            '<span class="cons-admin-profilo">'+esc(info.profilo)+'</span>' +
+          '</div>' +
+          '<div class="cons-admin-kpi">' +
+            '<div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totAuto)+'</div><div class="cons-admin-k-lbl">Consulenza tot.</div></div>' +
+            '<div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totVal)+'</div><div class="cons-admin-k-lbl">Fatturato base</div></div>' +
+          '</div>' +
+          '<div class="cons-admin-rows">' +
+          rows.map(r => {
+            const mese=r.fields['fldOt8LBoW3NKSTbx'], meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
+            const auto=parseFloat(r.fields['fldYAPIRg9pMQb8bD']||0);
+            const stato=r.fields['fldg1R7K3WjDgGZ8S'];
+            return '<div class="cons-admin-row">' +
+              '<span class="cons-admin-mese">'+esc(meseN)+'</span>' +
+              '<span class="cons-admin-importo">'+(auto>0?fmtE(auto):'—')+'</span>' +
+              badge(stato) +
+            '</div>';
+          }).join('') +
+          '</div></div>';
+      });
+
+    grid.innerHTML = html || '<div class="cons-admin-empty">Nessuna consulenza per gli agenti selezionati</div>';
+    section.style.display = '';
+  } catch(e) {
+    if (grid) grid.innerHTML = '<div class="cons-admin-empty">Errore: '+e.message+'</div>';
+    section.style.display = '';
+  }
+}
+
+function fmtE(n) {
+  return '€ ' + Math.round(n).toLocaleString('it-IT');
+}
+
+if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); loadConversione(); loadConsulenze(); }
 </script>
 </body>
 </html>
