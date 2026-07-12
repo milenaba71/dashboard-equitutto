@@ -1125,25 +1125,36 @@ async function loadConsulenze(utente) {
       return;
     }
     const data = await proxyGet(TABLE_PROVVIGIONI,
-      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=50'
+      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=200'
     );
+    // Normalizza: cerca in fields e cellValuesByFieldId
     const miei = (data || []).filter(r => {
-      const links = r.fields['fldxMvmS34agmCYyI'];
-      if (!links || !links.length) return false;
-      return links.some(l => (typeof l==='object'?l.id:l) === agenteRecId);
+      const f = r.fields || {};
+      const cv = r.cellValuesByFieldId || {};
+      const links = f['fldxMvmS34agmCYyI'] || cv['fldxMvmS34agmCYyI'];
+      if (!links) return false;
+      const arr = Array.isArray(links) ? links : [links];
+      if (!arr.length) return false;
+      // Controlla sia per id del record che per nome
+      return arr.some(l => {
+        const id = typeof l==='object' ? l.id : l;
+        return id === agenteRecId;
+      });
     });
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
       return;
     }
+    // Helper per leggere field da records normalizzati
+    const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     miei.sort((a,b) => {
-      const ma = a.fields['fldOt8LBoW3NKSTbx'], mb = b.fields['fldOt8LBoW3NKSTbx'];
+      const ma = gf(a,'fldOt8LBoW3NKSTbx'), mb = gf(b,'fldOt8LBoW3NKSTbx');
       const na = ma?(typeof ma==='object'?ma.name:ma):'', nb = mb?(typeof mb==='object'?mb.name:mb):'';
       return MESI_ORD.indexOf(na) - MESI_ORD.indexOf(nb);
     });
-    const totValore = miei.reduce((s,r) => s+parseFloat(r.fields['fldExV7WZDakWl1Gy']||0),0);
-    const totAuto   = miei.reduce((s,r) => s+parseFloat(r.fields['fldYAPIRg9pMQb8bD']||0),0);
-    const nPagate   = miei.filter(r => { const s=r.fields['fldg1R7K3WjDgGZ8S']; return s&&(typeof s==='object'?s.name:s)==='Pagato'; }).length;
+    const totValore = miei.reduce((s,r) => s+parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0),0);
+    const totAuto   = miei.reduce((s,r) => s+parseFloat(gf(r,'fldYAPIRg9pMQb8bD')||0),0);
+    const nPagate   = miei.filter(r => { const s=gf(r,'fldg1R7K3WjDgGZ8S'); return s&&(typeof s==='object'?s.name:s)==='Pagato'; }).length;
     const badge = s => { const n=s?(typeof s==='object'?s.name:s):'Da pagare'; const cls=n==='Pagato'?'pagato':n==='Sospeso'?'sospeso':'da-pagare'; return '<span class="cons-badge '+cls+'">'+esc(n)+'</span>'; };
     section.innerHTML =
       '<div class="cons-grid">' +
@@ -1154,10 +1165,10 @@ async function loadConsulenze(utente) {
       '</div>' +
       '<table class="cons-table"><thead><tr><th>Mese</th><th>Fatturato</th><th>Consulenza</th><th>Stato</th></tr></thead><tbody>' +
       miei.map(r => {
-        const mese=r.fields['fldOt8LBoW3NKSTbx'], meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
-        const valore=parseFloat(r.fields['fldExV7WZDakWl1Gy']||0);
-        const auto=parseFloat(r.fields['fldYAPIRg9pMQb8bD']||0);
-        const stato=r.fields['fldg1R7K3WjDgGZ8S'];
+        const mese=gf(r,'fldOt8LBoW3NKSTbx'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
+        const valore=parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+        const auto=parseFloat(gf(r,'fldYAPIRg9pMQb8bD')||0);
+        const stato=gf(r,'fldg1R7K3WjDgGZ8S');
         return '<tr>' +
           '<td style="font-weight:600;color:var(--accent)">'+esc(meseN)+'</td>' +
           '<td>'+(auto>0?fmt(valore):'<span style="color:var(--muted)">—</span>')+'</td>' +
@@ -2535,4 +2546,3 @@ init();
 </script>
 </body>
 </html>
-
