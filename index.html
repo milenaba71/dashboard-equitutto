@@ -1158,7 +1158,7 @@ async function loadConsulenze(utente) {
       '&fields[]=fldtTLgh1yvF6GIzO&fields[]=fldiL8WLmHkxdEgk1' +
       '&fields[]=fldUYrIMzAtjUf6a2&fields[]=fldsTr5zexCUcAazH' +
       '&fields[]=fldwgv4IHMq6dN5IT&fields[]=fld9hqy9nJ00vouYB' +
-      '&fields[]=fldYAPIRg9pMQb8bD&maxRecords=200'
+      '&fields[]=flddZ21kARkQ1erU2&maxRecords=200'
     );
     // Normalizza: cerca in fields e cellValuesByFieldId
     const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
@@ -1188,15 +1188,16 @@ async function loadConsulenze(utente) {
     // Calcola provvigione: usa fldYAPIRg9pMQb8bD (formula Airtable) se disponibile
     // altrimenti calcola da Valore * % (campi fldtTLgh1yvF6GIzO = % Silicon AUTO, ecc.)
     const calcProvvigione = r => {
+      // 1. Usa Provvigione AUTO formula Airtable
       const formula = parseFloat(gf(r,'fldYAPIRg9pMQb8bD')||0);
       if (formula > 0) return formula;
-      // Fallback: somma di tutte le % AUTO × Valore Raggiunto
-      const val = parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+      // 2. Calcola da Valore Raggiunto AUTO (rollup) × % profilo
+      const valRollup = parseFloat(gf(r,'flddZ21kARkQ1erU2')||0);
+      const valManuale = parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+      const val = valRollup > 0 ? valRollup : valManuale;
       if (val <= 0) return 0;
-      // Prova con % Noleggio AUTO
       const pctNolo = parseFloat(gf(r,'fldUYrIMzAtjUf6a2')||0);
       if (pctNolo > 0) return Math.round(val * pctNolo * 100) / 100;
-      // Prova con % Noleggio manuale
       const pctNolo2 = parseFloat(gf(r,'fldSJ8ekSE1OjeciO')||0);
       if (pctNolo2 > 0) return Math.round(val * pctNolo2 * 100) / 100;
       return 0;
@@ -1214,7 +1215,9 @@ async function loadConsulenze(utente) {
       '<table class="cons-table"><thead><tr><th>Mese</th><th>Fatturato</th><th>Consulenza</th><th>Stato</th></tr></thead><tbody>' +
       miei.map(r => {
         const mese=gf(r,'fldOt8LBoW3NKSTbx'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
-        const valore=parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+        const valRollup=parseFloat(gf(r,'flddZ21kARkQ1erU2')||0);
+        const valManuale=parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+        const valore=valRollup>0?valRollup:valManuale;
         const auto=calcProvvigione(r);
         const stato=gf(r,'fldg1R7K3WjDgGZ8S');
         return '<tr>' +
