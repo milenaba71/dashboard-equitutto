@@ -1090,7 +1090,10 @@ async function init() {
     if (myRec) {
       const nome      = gf(myRec,'fldhHAx77O7ZdedHw') || 'Agente';
       const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
-      utente = { nome, equipoint: [equipoint], recId: myRec.id };
+      // recId può essere in myRec.id o in myRec.fields.id o cellValuesByFieldId
+      const recId = myRec.id || myRec.fields?.id || null;
+      console.log('DEBUG myRec.id:', myRec.id, 'myRec keys:', Object.keys(myRec));
+      utente = { nome, equipoint: [equipoint], recId };
     }
   } catch(e) {
     console.warn('Airtable lookup failed, using TOKEN_MAP:', e.message);
