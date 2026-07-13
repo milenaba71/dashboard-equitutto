@@ -1134,6 +1134,8 @@ async function loadConsulenze(utente) {
     // Usa recId se disponibile (caricato dinamicamente da Airtable)
     // altrimenti cerca l'agente per equipoint
     let agenteRecId = utente.recId;
+    console.log('DEBUG loadConsulenze - utente:', JSON.stringify(utente));
+    console.log('DEBUG agenteRecId:', agenteRecId);
     if (!agenteRecId) {
       // Cerca in Equipoint & Profili tramite equipoint
       const eqList = utente.equipoint || [];
@@ -1177,6 +1179,8 @@ async function loadConsulenze(utente) {
       const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
       return annoN === annoCorrente || annoN === '';
     });
+    console.log('DEBUG miei length:', miei.length, 'di', (data||[]).length);
+    if (miei.length > 0) console.log('DEBUG primo record:', JSON.stringify(miei[0]));
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
       return;
