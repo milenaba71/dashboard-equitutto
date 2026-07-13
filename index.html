@@ -1160,17 +1160,19 @@ async function loadConsulenze(utente) {
       '&fields[]=fldwgv4IHMq6dN5IT&fields[]=fld9hqy9nJ00vouYB' +
       '&fields[]=flddZ21kARkQ1erU2&maxRecords=200'
     );
-    // Normalizza: cerca in fields e cellValuesByFieldId
+    // Filtra per agente (link o nome) e anno corrente
     const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+    const annoCorrente = String(new Date().getFullYear());
     const miei = (data || []).filter(r => {
+      // 1. Controlla link agente
       const links = gf(r, 'fldxMvmS34agmCYyI');
-      if (!links) return false;
-      const arr = Array.isArray(links) ? links : [links];
-      if (!arr.length) return false;
-      const match = arr.some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
-      if (!match) return false;
-      // Filtra per anno corrente (dinamico)
-      const annoCorrente = String(new Date().getFullYear());
+      const linkMatch = links && (Array.isArray(links) ? links : [links]).some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
+      // 2. Fallback: controlla nome record (es. "Marco Costantini - GENNAIO 26")
+      const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU') || '').toLowerCase();
+      const nomeParti = utente.nome.toLowerCase().split(' ');
+      const nomeMatch = nomeParti.every(p => nomeRec.includes(p));
+      if (!linkMatch && !nomeMatch) return false;
+      // Filtra per anno corrente
       const anno = gf(r, 'fldMsQrq1yPC1Vw9t');
       const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
       return annoN === annoCorrente || annoN === '';
