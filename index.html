@@ -1150,6 +1150,8 @@ async function loadConsulenze(utente) {
     const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     const annoCorrente = String(new Date().getFullYear());
     const nomeParti = nomeAgente.split(' ').filter(p => p.length > 2);
+    console.log('DEBUG prov - tot records:', (data||[]).length, 'nomeParti:', nomeParti, 'anno:', annoCorrente);
+    if ((data||[]).length > 0) console.log('DEBUG primo record fields:', JSON.stringify((data||[])[0]));
     const miei = (data || []).filter(r => {
       const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU') || '').toLowerCase();
       const nomeMatch = nomeParti.every(p => nomeRec.includes(p));
@@ -1158,6 +1160,7 @@ async function loadConsulenze(utente) {
       const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
       return annoN === annoCorrente || annoN === '';
     });
+    console.log('DEBUG miei trovati:', miei.length);
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
       return;
