@@ -1156,13 +1156,13 @@ async function loadConsulenze(utente) {
     };
     const annoCorrente = String(new Date().getFullYear());
     const nomeParti = nomeAgente.split(' ').filter(p => p.length > 2);
+    if ((data||[]).length > 0) console.log('CAMPI RECORD:', Object.keys((data||[])[0].fields||{}));
     const miei = (data || []).filter(r => {
-      // Cerca nome record in field ID o nome campo "Nome"
-      const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU','Nome','name') || '').toLowerCase();
+      const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU','Nome','Name','name') || '').toLowerCase();
       const nomeMatch = nomeParti.every(p => nomeRec.includes(p));
       if (!nomeMatch) return false;
       // Cerca anno in field ID o nome campo "Anno"
-      const anno = gf(r,'fldMsQrq1yPC1Vw9t','Anno','anno');
+      const anno = gf(r,'fldMsQrq1yPC1Vw9t','Anno','anno','Year');
       const annoN = anno ? (typeof anno==='object' ? anno.name : String(anno)) : '';
       return annoN === annoCorrente || annoN === '';
     });
@@ -1171,7 +1171,7 @@ async function loadConsulenze(utente) {
       return;
     }
     miei.sort((a,b) => {
-      const ma = gf(a,'fldOt8LBoW3NKSTbx','Mese','mese'), mb = gf(b,'fldOt8LBoW3NKSTbx','Mese','mese');
+      const ma = gf(a,'fldOt8LBoW3NKSTbx','Mese','mese','Month'), mb = gf(b,'fldOt8LBoW3NKSTbx','Mese','mese','Month');
       const na = ma?(typeof ma==='object'?ma.name:ma):'', nb = mb?(typeof mb==='object'?mb.name:mb):'';
       return MESI_ORD.indexOf(na) - MESI_ORD.indexOf(nb);
     });
@@ -1205,7 +1205,7 @@ async function loadConsulenze(utente) {
       '</div>' +
       '<table class="cons-table"><thead><tr><th>Mese</th><th>Fatturato</th><th>Consulenza</th><th>Stato</th></tr></thead><tbody>' +
       miei.map(r => {
-        const mese=gf(r,'fldOt8LBoW3NKSTbx','Mese','mese'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
+        const mese=gf(r,'fldOt8LBoW3NKSTbx','Mese','mese','Month'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
         const valRollup=parseFloat(gf(r,'flddZ21kARkQ1erU2','Valore Raggiunto AUTO')||0);
         const valManuale=parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €')||0);
         const valore=valRollup>0?valRollup:valManuale;
