@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EQUITUTTO · Dashboard</title>
+<style>
+  :root {
+    --bg:#f0f4f8; --surface:#ffffff; --surface2:#e8eef5; --border:#d0dae8;
+    --accent:#003d7a; --accent2:#0072bc; --gold:#f0a500; --green:#27ae60;
+    --orange:#e67e22; --red:#e74c3c; --text:#1a2a3a; --muted:#6b7f96;
+    --r:12px; --r-sm:8px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; min-height:100vh; }
+
+  #error-screen { display:none; align-items:center; justify-content:center; min-height:100vh; text-align:center; padding:24px; }
+  .error-box { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:48px 40px; max-width:400px; }
+  .error-icon { font-size:48px; margin-bottom:16px; }
+  .error-title { font-size:20px; font-weight:700; margin-bottom:8px; }
+  .error-msg { color:var(--muted); font-size:14px; line-height:1.6; }
+
+  #loading-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; flex-direction:column; gap:16px; }
+  .spinner { width:44px; height:44px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  body { background:var(--bg); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { color:var(--muted); font-size:14px; }
+
+  #dashboard { display:none; }
+  .topbar { background:var(--accent); border-bottom:1px solid #002a5c; padding:0 28px; height:64px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,61,122,.2); }
+  .brand { font-size:18px; font-weight:800; color:#fff; display:flex; align-items:center; gap:12px; }
+  .brand img { height:36px; filter:brightness(0) invert(1); }
+  .brand-text { font-size:13px; color:rgba(255,255,255,.7); font-weight:400; margin-left:4px; }
+  .user-chip { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); border-radius:100px; padding:6px 14px 6px 8px; }
+  .avatar { width:30px; height:30px; border-radius:50%; background:#0072bc; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+  .user-name { font-size:13px; font-weight:600; color:#fff; }
+
+  .main { max-width:1400px; margin:0 auto; padding:32px 24px; }
+  .welcome { margin-bottom:28px; }
+  .welcome h1 { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+  .welcome p { color:var(--muted); font-size:14px; margin-top:4px; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 18px; position:relative; overflow:hidden; cursor:pointer; transition:transform .15s,box-shadow .15s; }
+  .kpi:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,61,122,.12); }
+  .kpi.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(0,61,122,.2); }
+  .kpi::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; border-radius:var(--r) var(--r) 0 0; }
+  .kpi.blue::before   { background:var(--accent); }
+  .kpi.green::before  { background:var(--green); }
+  .kpi.orange::before { background:var(--orange); }
+  .kpi.purple::before { background:#0072bc; }
+  .kpi.gold::before   { background:var(--gold); }
+  .kpi.red::before    { background:var(--red); }
+  .kpi-ico { font-size:20px; margin-bottom:10px; }
+  .kpi-val { font-size:30px; font-weight:800; letter-spacing:-1px; line-height:1; color:var(--accent); }
+  .kpi-lbl { font-size:12px; color:var(--muted); margin-top:5px; }
+  .kpi-hint { font-size:10px; color:var(--accent2); margin-top:6px; opacity:.7; }
+
+  /* Tab navigazione tabelle */
+  .nav-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; background:var(--surface); border-radius:var(--r); padding:8px; border:1px solid var(--border); }
+  .nav-tab { padding:8px 16px; border:none; border-radius:var(--r-sm); font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--muted); transition:all .2s; }
+  .nav-tab:hover { background:var(--surface2); color:var(--text); }
+  .nav-tab.active { background:var(--accent); color:#fff; }
+  .nav-tab .tab-count { display:inline-block; background:rgba(255,255,255,.25); border-radius:99px; padding:1px 7px; font-size:11px; margin-left:5px; }
+  .nav-tab:not(.active) .tab-count { background:var(--surface2); color:var(--muted); }
+
+  .drawer { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); margin-bottom:24px; overflow:hidden; max-height:0; transition:max-height .4s cubic-bezier(.4,0,.2,1); box-shadow:0 2px 12px rgba(0,61,122,.08); }
+  .drawer.open { max-height:none; }
+  .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); background:var(--surface2); }
+  .drawer-title { font-size:14px; font-weight:700; color:var(--accent); }
+  .drawer-count { font-size:12px; color:var(--muted); margin-left:8px; }
+  .drawer-close { background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:4px; }
+  .drawer-close:hover { color:var(--red); }
+  .drawer-body { padding:16px 22px; }
+  .search-bar { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:9px 14px; color:var(--text); font-size:13px; outline:none; margin-bottom:14px; }
+  .search-bar:focus { border-color:var(--accent); }
+  .search-bar::placeholder { color:var(--muted); }
+
+  .contact-table { width:100%; border-collapse:collapse; }
+  .contact-table th { text-align:left; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding-bottom:10px; border-bottom:2px solid var(--accent); }
+  .contact-table td { padding:10px 6px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); }
+  .contact-table tr:hover td { background:var(--surface2); }
+  .contact-table tr:last-child td { border-bottom:none; }
+  .c-nome { font-weight:600; color:var(--accent); }
+  .c-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; }
+  .badge-red    { background:rgba(239,68,68,.15);  color:var(--red); }
+  .badge-orange { background:rgba(245,158,11,.15); color:var(--orange); }
+  .badge-green  { background:rgba(52,199,123,.15); color:var(--green); }
+  .badge-blue   { background:rgba(79,142,247,.15); color:var(--accent); }
+
+  .editable { cursor:pointer; border-radius:6px; padding:4px 8px; transition:background .15s; display:inline-block; }
+  .editable:hover { background:var(--surface2); outline:1px dashed var(--border); }
+
+  .edit-input  { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:13px; outline:none; width:100%; margin-bottom:6px; }
+  .edit-select { background:var(--surface2); border:1px solid var(--accent); border-radius:6px; padding:5px 8px; color:var(--text); font-size:13px; outline:none; width:100%; margin-bottom:6px; }
+  .btn-save   { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:4px; }
+  .btn-cancel { background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; }
+
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.error { background:var(--red); }
+
+  .tel-link { color:var(--accent); text-decoration:none; }
+  .tel-link:hover { text-decoration:underline; }
+  .btn-wa { background:#25D366; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px; white-space:nowrap; }
+  .btn-wa:hover { background:#1ebe5d; }
+
+  /* Modal Safari warning */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .modal-box { background:#fff; border-radius:16px; padding:32px; max-width:380px; width:100%; text-align:center; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .modal-icon { font-size:48px; margin-bottom:12px; }
+  .modal-title { font-size:18px; font-weight:800; color:var(--accent); margin-bottom:8px; }
+  .modal-msg { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:20px; }
+  .modal-btn { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; }
+  .modal-btn:hover { opacity:.9; }
+
+  /* Calendario */
+  .cal-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .cal-title { font-size:15px; font-weight:700; color:var(--accent); }
+  .cal-nav { display:flex; gap:6px; }
+  .cal-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--accent); font-weight:600; }
+  .cal-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .cal-day-name { text-align:center; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; padding:6px 0; }
+  .cal-day { min-height:72px; background:var(--surface2); border-radius:6px; padding:6px; position:relative; border:1px solid transparent; }
+  .cal-day.today { border-color:var(--accent); background:rgba(0,61,122,.06); }
+  .cal-day.other-month { opacity:.35; }
+  .cal-day-num { font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+  .cal-day.today .cal-day-num { color:var(--accent); }
+  .cal-event { font-size:10px; font-weight:600; padding:2px 5px; border-radius:4px; margin-bottom:2px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cal-event:hover { opacity:.8; }
+  .cal-event.app  { background:rgba(0,114,188,.15); color:#0072bc; }
+  .cal-event.att  { background:rgba(39,174,96,.15);  color:#27ae60; }
+  .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
+
+  /* Popup evento calendario */
+  .cal-popup { position:absolute; z-index:200; background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px 16px; min-width:220px; box-shadow:0 8px 24px rgba(0,0,0,.15); font-size:13px; top:100%; left:0; }
+  .cal-popup-nome { font-weight:700; color:var(--accent); margin-bottom:6px; }
+  .cal-popup-row { color:var(--muted); margin-bottom:3px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group label { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:9px 12px; color:var(--text); font-size:13px; outline:none; font-family:inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent); }
+  .form-group textarea { resize:vertical; min-height:70px; }
+  .form-full { grid-column:1/-1; }
+  .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:4px; }
+  .btn-primary:hover { opacity:.9; }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* Pannello prodotti */
+  .prod-panel { background:var(--surface); border:1px solid var(--accent); border-radius:var(--r); padding:20px; margin-top:8px; box-shadow:0 4px 20px rgba(0,61,122,.15); }
+  .prod-panel-title { font-size:13px; font-weight:700; color:var(--accent); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  .prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; margin-bottom:14px; max-height:300px; overflow-y:auto; padding-right:4px; }
+  .prod-item { background:var(--surface2); border:2px solid var(--border); border-radius:8px; padding:10px 12px; cursor:pointer; transition:all .15s; position:relative; }
+  .prod-item:hover { border-color:var(--accent2); }
+  .prod-item.selected { border-color:var(--accent); background:rgba(0,114,188,.08); }
+  .prod-item.selected::after { content:'✓'; position:absolute; top:6px; right:8px; color:var(--accent); font-weight:700; font-size:14px; }
+  .prod-nome { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .prod-cat  { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .prod-prezzo { font-size:14px; font-weight:800; color:var(--accent); margin-top:5px; }
+  .prod-total-bar { background:rgba(0,61,122,.06); border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border:1px solid var(--border); }
+  .prod-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .prod-filter-btn { background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:4px 12px; font-size:11px; font-weight:600; cursor:pointer; color:var(--muted); transition:all .15s; }
+  .prod-filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .progress-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+  .progress-head h3 { font-size:15px; font-weight:700; color:var(--accent); }
+  .progress-head p { font-size:13px; color:var(--muted); margin-top:3px; }
+  .progress-pct { font-size:32px; font-weight:800; }
+  .track { background:var(--surface2); border-radius:100px; height:12px; overflow:hidden; }
+  .fill  { height:100%; border-radius:100px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+  @media(max-width:680px){ .two-col { grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .panel-title { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:18px; border-bottom:2px solid var(--accent); padding-bottom:8px; }
+
+  .donut-wrap { display:flex; align-items:center; gap:20px; }
+  .legend { display:flex; flex-direction:column; gap:9px; flex:1; }
+  .leg-row { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .leg-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .leg-lbl { color:var(--muted); flex:1; }
+  .leg-val { font-weight:700; color:var(--accent); }
+
+  .row-list { display:flex; flex-direction:column; gap:9px; }
+  .row-item { background:var(--surface2); border-radius:var(--r-sm); padding:11px 14px; display:flex; justify-content:space-between; align-items:center; font-size:13px; border:1px solid var(--border); }
+  .row-nome { font-weight:600; color:var(--accent); }
+  .row-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .mesi-table { width:100%; border-collapse:collapse; }
+  .mesi-table th { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.7px; padding-bottom:10px; border-bottom:2px solid var(--accent); text-align:left; }
+  .mesi-table th:not(:first-child) { text-align:right; }
+  .mesi-table td { padding:10px 0; font-size:13px; border-bottom:1px solid var(--border); color:var(--text); }
+  .mesi-table tr:last-child td { border-bottom:none; }
+  .mesi-table .r { text-align:right; font-weight:600; }
+  .mini-bar  { width:70px; height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-left:auto; }
+  .mini-fill { height:100%; border-radius:100px; }
+
+  .footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 0 8px; border-top:1px solid var(--border); margin-top:8px; }
+  .empty  { text-align:center; color:var(--muted); font-size:13px; padding:20px 0; }
+  /* NOTE COMPATTE */
+  .note-compact { font-size:11px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; max-width:160px; line-height:1.4; cursor:pointer; border-radius:6px; padding:3px 6px; transition:background .15s; }
+  .note-compact:hover { background:var(--surface2); color:var(--text); }
+  .note-add { font-size:11px; color:var(--muted); opacity:.5; cursor:pointer; font-style:italic; padding:3px 6px; }
+  .note-add:hover { opacity:1; }
+
+  /* NOTE MODAL */
+  .note-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .note-modal-box { background:#fff; border-radius:16px; padding:28px; max-width:500px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,.3); }
+  .note-modal-title { font-size:15px; font-weight:800; color:var(--accent); margin-bottom:4px; }
+  .note-modal-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+  .note-modal-text { font-size:13px; line-height:1.7; white-space:pre-wrap; color:var(--text); max-height:60vh; overflow-y:auto; background:var(--surface2); border-radius:10px; padding:16px; }
+
+  /* LAYOUT SIDEBAR + DRAWER */
+  .drawer-layout { display:flex; gap:16px; align-items:flex-start; margin-bottom:24px; }
+  .sidebar-contacts { width:210px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; position:sticky; top:80px; max-height:calc(100vh - 100px); display:flex; flex-direction:column; box-shadow:0 2px 8px rgba(0,61,122,.06); }
+  .sidebar-contacts-header { padding:11px 14px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .sidebar-contacts-search { padding:8px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .sidebar-contacts-search input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 9px; font-size:11px; color:var(--text); outline:none; }
+  .sidebar-contacts-search input:focus { border-color:var(--accent); }
+  .sidebar-contacts-list { overflow-y:auto; flex:1; }
+  .sidebar-contact-item { padding:8px 12px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+  .sidebar-contact-item:hover { background:var(--surface2); }
+  .sidebar-contact-item.highlighted { background:rgba(0,61,122,.08); border-left:3px solid var(--accent); }
+  .sidebar-contact-name { font-size:11px; font-weight:600; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sidebar-contact-sub { font-size:10px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  @media(max-width:900px) { .drawer-layout { flex-direction:column; } .sidebar-contacts { width:100%; position:static; max-height:200px; } }
+
+
+  /* CONSULENZE */
+  .cons-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:16px; }
+  .cons-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-align:center; }
+  .cons-kpi-val { font-size:22px; font-weight:800; color:var(--accent); }
+  .cons-kpi-lbl { font-size:10px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:.5px; }
+  .cons-table { width:100%; border-collapse:collapse; font-size:12px; background:var(--surface); border-radius:12px; overflow:hidden; border:1px solid var(--border); }
+  .cons-table th { padding:8px 12px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); text-align:left; background:var(--surface2); }
+  .cons-table td { padding:9px 12px; border-bottom:1px solid var(--border); }
+  .cons-table tr:last-child td { border-bottom:none; }
+  .cons-badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:600; }
+  .cons-badge.pagato { background:rgba(39,174,96,.12); color:#27ae60; }
+  .cons-badge.da-pagare { background:rgba(240,165,0,.12); color:#f0a500; }
+  .cons-badge.sospeso { background:rgba(231,76,60,.12); color:#e74c3c; }
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text">Caricamento…</div>
+</div>
+
+<div id="error-screen">
+  <div class="error-box">
+    <div class="error-icon">🔒</div>
+    <div class="error-title">Link non valido</div>
+    <div class="error-msg">Questo link non è riconosciuto o è scaduto.<br>Contatta l'amministratore per ricevere il tuo link personale.</div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="topbar">
+    <div class="brand">
+      <img src="https://equistasi.com/assets/Equistasi-logo.png" alt="Equistasi" onerror="this.style.display='none'">
+      <div>
+        <div>Equistasi<sup style="font-size:10px">®</sup></div>
+        <div class="brand-text">Dashboard Commerciale</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="last-sync" style="font-size:11px;color:rgba(255,255,255,.5)"></span>
+      <button onclick="refreshAll()" id="btn-refresh"
+        style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">
+        🔄 Aggiorna
+      </button>
+      <div class="user-chip">
+        <div class="avatar" id="av"></div>
+        <div class="user-name" id="un"></div>
+      </div>
+    </div>
+  </div>
+  <div class="main" id="main">
+    <div class="spinner" style="margin:60px auto"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
+const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
+const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
+const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
+const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
+const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
+const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
+
+// Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
+const TOKEN_MAP = {
+  'W_0Jmv-Q2HAzz5y2eG-ncw': { nome:'Andrea Filippi',      equipoint:['FFM DI ANDREA FILIPPI'] },
+  'HJU8VtX1SrrHef7cC3znRQ': { nome:'Giacomo Frassica',    equipoint:['GIACOMO FRASSICA'] },
+  'okN6y20sU0K93vCUmP00Mw': { nome:'Stefano Marcandalli', equipoint:['MARCANDALLI STEFANO'] },
+  'Y1kTz-Z37STfXCcBuX6umQ': { nome:'Marco Costantini',    equipoint:['Marco Costantini'] },
+  'MJ7EcrQhIlsQdXHp23Y1VQ': { nome:'Bernardino Cicconi',  equipoint:['BERNARDINO CICCONI'] },
+  'oMcHTvGoYN99xpjeeKFl3g': { nome:'Stefano Ferrari',     equipoint:['STEFANO FERRARI'] },
+  '9WZxEAPd_IHj-qMH8lRSnw': { nome:'Haleh Sadeghi',       equipoint:['sadeghi Haleh'] },
+  'US0Jm8nK3EWK5GsgZ9hu2Q': { nome:'Milena Baroni',       equipoint:['Milena'] },
+  'M3jlO0U72vG_TMDqLtrrYQ': { nome:'Paola Zerla',         equipoint:['Paola'] },
+  'P1qQL-NIJcEs1a0hRCfTyw': { nome:'Iris',                equipoint:['Iris'] },
+  'LxbWQVdg_kRd-Dn1hsK5yA': { nome:'Stella',              equipoint:['stella'] },
+  'st1Cnh4yvsC_bS975EKsmFBQn5TAkg': { nome:'Medical Service', equipoint:['MEDICAL SERVICE'] },
+}; // Mantenuto come fallback — il sistema carica da Airtable automaticamente
+
+const STATUS_OPTIONS = [
+  'DA RICONTATTARE','NON HA ANCORA RISPOSTO','TRATTATIVA IN CORSO',
+  'INVIATO LINK PER APPUNTAMENTO','CAPARRA','VENDUTO','NOLEGGIATO',
+  'NON VUOLE ESSERE RICONTATTATO','NON INTER.PREZZO ALTO',
+  'NON ADATTO AL DISPOSITIVO','NUMERO ERRATO','NO RECAPITO TELEFONICO',
+  'RECUPERATO','RINNOVO NOLEGGIO','CALIBRAZIONE','web','passato a terzi','deceduto'
+];
+
+const APPUNTAMENTO_OPTIONS = ['SI','NO','DA FISSARE','FISSATO','RIMANDATO','FATTO'];
+
+const CONVERSIONE_OPTIONS = ['VENDUTO','NOLEGGIATO','-'];
+
+
+const $ = id => document.getElementById(id);
+const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
+const pct  = (a,b) => b>0 ? Math.min(Math.round(a/b*100),100) : 0;
+const pctR = (a,b) => b>0 ? Math.round(a/b*100) : 0;
+const col  = p => p>=100 ? '#34c77b' : p>=50 ? '#f59e0b' : '#ef4444';
+const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let allMiei   = [];
+let activeKpi = null;
+let allProdotti  = []; // cache prodotti negozio
+let allProposte  = []; // nuova tabella Proposte Prodotti
+
+// Helper per leggere campi proposte — usa field ID o nome campo
+function getPropField(p, fieldId, ...names) {
+  if (p.fields?.[fieldId] !== undefined) return p.fields[fieldId];
+  for (const n of names) if (p.fields?.[n] !== undefined) return p.fields[n];
+  return p.cellValuesByFieldId?.[fieldId];
+}
+
+// Helper per calcolare proposte di un contatto
+function getProposteContatto(recId) {
+  return allProposte.filter(function(p) {
+    var f = p.fields || {};
+    // Cerca in tutti i possibili campi contatto
+    var cl = f['fldgWb7KAXQ1i5sRC'] || f['CONTATTO'] || f['Contatto'] || f['contatto'];
+    if (Array.isArray(cl)) {
+      return cl.some(function(c) {
+        // Può essere stringa "recXXX" o oggetto {id:"recXXX", name:"..."}
+        if (typeof c === 'string') return c === recId;
+        if (typeof c === 'object' && c !== null) return c.id === recId;
+        return false;
+      });
+    }
+    // Fallback: cerca per nome tramite lookup
+    var nomi = f['fldBq5MM457raLunf'] || f['Nome e cognome'] || [];
+    if (Array.isArray(nomi)) {
+      var rec = allMiei.find(function(r){ return r.id === recId; });
+      if (rec) {
+        var nomeRec = rec.fields['Nome e cognome'] || '';
+        return nomi.some(function(n){ return n === nomeRec; });
+      }
+    }
+    return false;
+  });
+}
+
+function getProdottoDaProposta(p) {
+  var f = p.fields || {};
+  return f['fldpVAKpMGRRjnDnt'] || f['negozio'] || f['PRODOTTO'] || null;
+}
+
+function getValoreProposte(props) {
+  return props.reduce(function(s, p) {
+    var f = p.fields || {};
+    // 1. Usa Totale riga (formula Airtable) se disponibile
+    var totaleRiga = parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0);
+    if (totaleRiga > 0) return s + totaleRiga;
+    // 2. Calcola da prezzo unitario x quantità
+    var qta = parseFloat(f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1);
+    var prezzoUnitario = parseFloat(f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0);
+    if (prezzoUnitario > 0) return s + (prezzoUnitario * qta);
+    // 3. Fallback: cerca nel prodotto collegato
+    var pl = getProdottoDaProposta(p);
+    var prodId = Array.isArray(pl) ? (pl[0] && pl[0].id ? pl[0].id : pl[0]) : null;
+    var prod = prodId ? (allProdotti||[]).find(function(x){ return x.id === prodId; }) : null;
+    var prezzo = prod ? prodPrezzo(prod) : 0;
+    return s + (prezzo * qta);
+  }, 0);
+}
+
+function showToast(msg, isError=false) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError?' error':'') + ' show';
+  setTimeout(() => t.className='toast', 3000);
+}
+
+async function proxyGet(table, qs='') {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qs)}`;
+  const res = await fetch(url);
+  const d   = await res.json();
+  return d.records || [];
+}
+
+async function proxyPatch(table, recordId, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
+}
+
+async function proxyPost(table, fields) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  return res.json();
+}
+
+async function proxyDelete(table, recordId) {
+  const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, { method: 'DELETE' });
+  return res.json();
+}
+
+// ── Editing tramite data attributes (niente apostrofi nel JS inline) ──
+document.addEventListener('click', function(e) {
+  // Click su cella editabile testo
+  const editEl = e.target.closest('[data-edit]');
+  if (editEl) {
+    const td      = editEl.closest('td');
+    const recId   = editEl.dataset.id;
+    const field   = editEl.dataset.field;
+    const current = editEl.dataset.value || '';
+    const isNote  = field === 'Notes';
+
+    if (isNote) {
+      td.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:280px">
+          <textarea class="edit-textarea" id="ei-${recId}" rows="5"
+            style="background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;color:var(--text);font-size:13px;outline:none;resize:vertical;width:100%;line-height:1.6;font-family:inherit"
+            placeholder="Scrivi una nota…">${esc(current)}</textarea>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn-save" data-save="${recId}" data-field="${field}" data-textarea="1">💾 Salva</button>
+            <button class="btn-cancel" data-cancel="1">Annulla</button>
+            <button id="mic-${recId}" onclick="startDictation('${recId}')"
+              style="margin-left:auto;background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px">
+              🎤 Detta
+            </button>
+          </div>
+          <div id="mic-status-${recId}" style="font-size:11px;color:var(--muted);min-height:16px"></div>
+        </div>`;
+      td.querySelector('textarea').focus();
+    } else {
+      td.innerHTML = `
+        <input class="edit-input" id="ei-${recId}" value="${esc(current)}">
+        <div style="margin-top:6px;display:flex;gap:4px">
+          <button class="btn-save" data-save="${recId}" data-field="${field}">Salva</button>
+          <button class="btn-cancel" data-cancel="1">Annulla</button>
+        </div>`;
+      td.querySelector('.edit-input').focus();
+    }
+    return;
+  }
+
+  // Click su badge stato editabile
+  const statEl = e.target.closest('[data-stato]');
+  if (statEl) {
+    const td      = statEl.closest('td');
+    const recId   = statEl.dataset.id;
+    const field   = statEl.dataset.field;
+    const current = statEl.dataset.value || '';
+    const optsArr = field === 'Preso appuntamento' ? APPUNTAMENTO_OPTIONS : STATUS_OPTIONS;
+    const opts    = optsArr.map(o => `<option ${o===current?'selected':''}>${esc(o)}</option>`).join('');
+    td.innerHTML = `
+      <select class="edit-select" id="es-${recId}">${opts}</select>
+      <div style="margin-top:6px;display:flex;gap:4px">
+        <button class="btn-save" data-save="${recId}" data-field="${field}" data-select="1">Salva</button>
+        <button class="btn-cancel" data-cancel="1">Annulla</button>
+      </div>`;
+    return;
+  }
+
+  // Click su Salva
+  const saveBtn = e.target.closest('[data-save]');
+  if (saveBtn) {
+    const recId    = saveBtn.dataset.save;
+    const field    = saveBtn.dataset.field;
+    const isSelect = saveBtn.dataset.select === '1';
+    const isTextarea = saveBtn.dataset.textarea === '1';
+    let el, value;
+    if (isSelect) {
+      el = $(`es-${recId}`);
+      value = el ? el.value.trim() : '';
+    } else if (isTextarea) {
+      el = $(`ei-${recId}`);
+      value = el ? el.value : '';
+    } else if (saveBtn.dataset.date === '1') {
+      el = $(`ed-${recId}`);
+      value = el ? el.value : '';
+    } else {
+      el = $(`ei-${recId}`);
+      value = el ? el.value.trim() : '';
+    }
+    const td = saveBtn.closest('td');
+    td.style.opacity = '.5';
+    proxyPatch(TABLE_RUBRICA, recId, { [field]: value })
+      .then(() => {
+        const rec = allMiei.find(r => r.id === recId);
+        if (rec) rec.fields[field] = value;
+        showToast('✅ Salvato su Airtable!');
+        refreshDrawer();
+      })
+      .catch(() => { showToast('❌ Errore nel salvataggio', true); refreshDrawer(); });
+    return;
+  }
+
+  // Click su data editabile
+  const dateEl = e.target.closest('[data-date-edit]');
+  if (dateEl) {
+    const td    = dateEl.closest('td');
+    const recId = dateEl.dataset.id;
+    const field = dateEl.dataset.field;
+    const curr  = dateEl.dataset.value || '';
+    td.innerHTML = `
+      <input type="date" class="edit-input" id="ed-${recId}" value="${curr}"
+        style="font-size:12px;padding:4px 8px">
+      <div style="margin-top:6px;display:flex;gap:4px">
+        <button class="btn-save" data-save="${recId}" data-field="${field}" data-date="1">Salva</button>
+        <button class="btn-cancel" data-cancel="1">Annulla</button>
+      </div>`;
+    td.querySelector('input[type=date]').focus();
+    return;
+  }
+
+  // Click su +/- quantità carrello e rimozione
+  var qtaMinus = e.target.closest('[data-qta-minus]');
+  if (qtaMinus) { changeQtaCart(qtaMinus.dataset.qtaMinus, -1); return; }
+  var qtaPlus = e.target.closest('[data-qta-plus]');
+  if (qtaPlus) { changeQtaCart(qtaPlus.dataset.qtaPlus, 1); return; }
+  var removeCart = e.target.closest('[data-remove-cart]');
+  if (removeCart) { removeFromCart(removeCart.dataset.removeCart); return; }
+
+  // Click su Annulla
+  if (e.target.closest('[data-cancel]')) {
+    refreshDrawer();
+  }
+});
+
+
+// ── SIDEBAR CONTATTI ───────────────────────────────────────────
+let _sidebarQ = '';
+function buildSidebar(filter) {
+  if (filter !== undefined) _sidebarQ = filter.toLowerCase();
+  const sidebar = document.getElementById('sidebar-list');
+  const count   = document.getElementById('sidebar-count');
+  if (!sidebar) return;
+  let lista = currentLista;
+  if (_sidebarQ) lista = lista.filter(r=>(r.fields['Nome e cognome']||'').toLowerCase().includes(_sidebarQ));
+  if (count) count.textContent = lista.length;
+  sidebar.innerHTML = lista.map(r => {
+    const nome = r.fields['Nome e cognome']||'—', stato = r.fields['Status']||'';
+    return `<div class="sidebar-contact-item" onclick="jumpToContact('${r.id}')">
+      <div class="sidebar-contact-name">${esc(nome)}</div>
+      <div class="sidebar-contact-sub">${esc(stato.substring(0,22))}</div>
+    </div>`;
+  }).join('') || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:11px">Nessun contatto</div>';
+}
+
+function jumpToContact(recId) {
+  const row = document.getElementById('row-'+recId);
+  if (row) {
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    row.style.background='rgba(0,61,122,.1)';
+    setTimeout(()=>row.style.background='',2000);
+    return;
+  }
+  const idx = currentLista.findIndex(r=>r.id===recId);
+  if (idx>=0) {
+    currentPage = Math.floor(idx/PAGE_SIZE);
+    renderPage();
+    setTimeout(()=>{
+      const r2=document.getElementById('row-'+recId);
+      if(r2){r2.scrollIntoView({behavior:'smooth',block:'center'});r2.style.background='rgba(0,61,122,.1)';setTimeout(()=>r2.style.background='',2000);}
+    },120);
+  }
+}
+
+// ── Drawer ─────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
+let currentPage = 0;
+let currentLista = [];
+
+function openDrawer(tipo, titolo, colore) {
+  // Aggiorna tab attivo
+  document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+  var activeTab = document.getElementById('navtab-' + tipo);
+  if (activeTab) activeTab.classList.add('active');
+  if (activeKpi === tipo) { closeDrawer(); return; }
+  activeKpi = tipo;
+  currentPage = 0;
+  document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
+  const kpiEl = $('kpi-' + tipo);
+  if (kpiEl) kpiEl.classList.add('active');
+  currentLista = getListaByTipo(tipo);
+  const drawer = $('drawer');
+  drawer.classList.add('open');
+  drawer.innerHTML = `
+    <div class="drawer-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${colore}"></div>
+        <span class="drawer-title">${titolo}</span>
+        <span class="drawer-count" id="drawer-count">${currentLista.length} contatti</span>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+      <input class="search-bar" placeholder="🔍 Cerca nome, stato, telefono…" oninput="filterDrawer(this.value)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:700;color:var(--accent)">📅 Data creazione:</span>
+        <input type="date" id="filter-da" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()">
+        <span style="font-size:12px;color:var(--muted)">→</span>
+        <input type="date" id="filter-a" style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text);outline:none" onchange="applyDateFilter()">
+        <button onclick="clearDateFilter()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--muted);cursor:pointer">✕</button>
+      </div>
+      <div id="drawer-table"></div>
+      <div id="pagination-bar"></div>
+    </div>`;
+  buildSidebar();
+  renderPage();
+  setTimeout(() => drawer.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+}
+
+function renderPage() {
+  const start = currentPage * PAGE_SIZE;
+  const slice = currentLista.slice(start, start + PAGE_SIZE);
+  console.log(`📄 renderPage: lista=${currentLista.length}, pagina=${currentPage}, slice=${slice.length}, pages=${Math.ceil(currentLista.length/PAGE_SIZE)}`);
+  const tbl = $('drawer-table');
+  if (tbl) tbl.innerHTML = renderTable(slice);
+  renderPaginationBar();
+}
+
+function renderPaginationBar() {
+  const bar  = $('pagination-bar');
+  if (!bar) return;
+  const total = currentLista.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { bar.innerHTML = ''; return; }
+
+  const start = currentPage * PAGE_SIZE + 1;
+  const end   = Math.min((currentPage + 1) * PAGE_SIZE, total);
+
+  // Genera i numeri pagina — mostra max 5 intorno alla pagina corrente
+  let pageNums = [];
+  const delta = 2;
+  for (let i = 0; i < pages; i++) {
+    if (i === 0 || i === pages-1 || (i >= currentPage-delta && i <= currentPage+delta)) {
+      pageNums.push(i);
+    }
+  }
+  // Aggiunge "..." dove ci sono salti
+  let pageButtons = '';
+  let prev = -1;
+  for (const i of pageNums) {
+    if (prev !== -1 && i - prev > 1) {
+      pageButtons += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+    }
+    pageButtons += `<button onclick="goToPage(${i})"
+      style="min-width:32px;height:32px;border-radius:6px;border:1px solid ${i===currentPage?'var(--accent)':'var(--border)'};background:${i===currentPage?'var(--accent)':'var(--surface2)'};color:${i===currentPage?'#fff':'var(--text)'};font-size:13px;font-weight:${i===currentPage?'800':'500'};cursor:pointer">
+      ${i+1}
+    </button>`;
+    prev = i;
+  }
+
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0;margin-top:8px;border-top:1px solid var(--border);flex-wrap:wrap">
+      <button onclick="goToPage(${currentPage - 1})"
+        ${currentPage === 0 ? 'disabled' : ''}
+        style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${currentPage===0?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${currentPage===0?'not-allowed':'pointer'}">
+        ←
+      </button>
+      ${pageButtons}
+      <button onclick="goToPage(${currentPage + 1})"
+        ${currentPage >= pages-1 ? 'disabled' : ''}
+        style="height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:${currentPage>=pages-1?'var(--muted)':'var(--accent)'};font-size:13px;font-weight:700;cursor:${currentPage>=pages-1?'not-allowed':'pointer'}">
+        →
+      </button>
+      <span style="font-size:12px;color:var(--muted);margin-left:8px">${start}–${end} di ${total}</span>
+    </div>`;
+}
+
+function goToPage(page) {
+  const pages = Math.ceil(currentLista.length / PAGE_SIZE);
+  if (page < 0 || page >= pages) return;
+  currentPage = page;
+  renderPage();
+  $('drawer-table')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function closeDrawer() {
+  $('drawer').classList.remove('open');
+  document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
+  activeKpi = null;
+  currentPage = 0;
+  currentLista = [];
+  const sl=document.getElementById('sidebar-list');if(sl)sl.innerHTML='';
+  const sc=document.getElementById('sidebar-count');if(sc)sc.textContent='';
+}
+
+function refreshDrawer() {
+  if (!activeKpi) return;
+  currentLista = getListaByTipo(activeKpi);
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  buildSidebar();
+  renderPage();
+}
+
+function filterDrawer(q) {
+  const ql = q.toLowerCase();
+  currentLista = getListaByTipo(activeKpi).filter(r =>
+    JSON.stringify(r.fields).toLowerCase().includes(ql)
+  );
+  currentPage = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  buildSidebar();
+  renderPage();
+}
+
+function getListaByTipo(tipo) {
+  const oggi  = new Date(); oggi.setHours(0,0,0,0);
+  const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
+  switch(tipo) {
+    case 'contatti':     return allMiei;
+    case 'ricontattare': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA RISPOSTO'); });
+    case 'trattativa':   return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
+    case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
+    case 'vendite':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
+    case 'venduto':      return allMiei.filter(r=>{ return (r.fields['Status']||'').toUpperCase()==='VENDUTO'; });
+    case 'noleggi':      return allMiei.filter(r=>{ 
+      const s = r.fields['STATO NOLEGGIO']; 
+      const stato = (r.fields['Status']||'').toUpperCase();
+      if (stato.includes('NOLEGGIATO') || stato.includes('NOLEGGIO')) return true;
+      if (!s) return false; 
+      const t=(Array.isArray(s)?s.join(' '):s).toLowerCase(); 
+      return t.includes('attiv')||t.includes('corso')||t.includes('noleggi'); 
+    });
+    case 'scadenze':     return allMiei.filter(r=>{ const d=r.fields['data scadenza noleggio']; if(!d) return false; const sc=new Date(d); return sc>=oggi&&sc<=tra30; });
+    case 'proposti':     return allMiei.filter(function(r){
+      var hasProp = allProposte.some(function(p) {
+        var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+        if (!Array.isArray(cl)) return false;
+        return cl.some(function(c) { return (typeof c==='object'&&c!==null?c.id:c)===r.id; });
+      });
+      if (hasProp) return true;
+      const vecchi = r.fields['fldMKXo8Ss8Fljvvj'] || [];
+      return Array.isArray(vecchi) && vecchi.length > 0;
+    });
+    case 'persi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON VUOLE')||s.includes('NON INTER')||s.includes('NON ADATTO')||s.includes('NUMERO ERRATO'); });
+    case 'harbur':       return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('HARBUR')||s.includes('ATP'); });
+    default: return [];
+  }
+}
+
+function editDataTel(recId, currVal) {
+  document.querySelectorAll('.date-tel-popup').forEach(function(el){ el.remove(); });
+  var popup = document.createElement('div');
+  popup.className = 'date-tel-popup';
+  popup.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:240px;top:50%;left:50%;transform:translate(-50%,-50%)';
+  popup.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;">📞 Data ultima telefonata</div>' +
+    '<input type="date" id="dtel-input" value="' + currVal + '" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none;margin-bottom:12px;">' +
+    '<div style="display:flex;gap:8px;">' +
+    '<button onclick="saveDataTel(\"' + recId + '\")" style="flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">💾 Salva</button>' +
+    '<button onclick="document.querySelectorAll(\'.date-tel-popup\').forEach(function(el){el.remove();})" style="padding:10px 14px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;">✕</button>' +
+    '</div>';
+  document.body.appendChild(popup);
+  var inp = document.getElementById('dtel-input');
+  if (inp) inp.focus();
+  setTimeout(function() {
+    document.addEventListener('click', function handler(e) {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 100);
+}
+
+async function saveDataTel(recId) {
+  var inp = document.getElementById('dtel-input');
+  var val = inp ? inp.value : '';
+  document.querySelectorAll('.date-tel-popup').forEach(function(el){ el.remove(); });
+  try {
+    var fields = {};
+    fields['data ultima telefonata'] = val || null;
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    var rec = allMiei.find(function(r){ return r.id === recId; });
+    if (rec) rec.fields['data ultima telefonata'] = val;
+    showToast('✅ Data telefonata salvata!');
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore nel salvataggio', true);
+  }
+}
+
+function renderTable(lista) {
+  if (!lista.length) return '<div class="empty">Nessun contatto trovato</div>';
+
+  const rows = lista.map(r => {
+    const id       = r.id;
+    const nome     = esc(r.fields['Nome e cognome'] || '—');
+    const stato    = r.fields['Status'] || '—';
+    const tel      = r.fields['recapito telefonico'] || '';
+    const note     = r.fields['Notes'] || '';
+    const dataAtt  = r.fields['DATA ATTIVITA'] ? new Date(r.fields['DATA ATTIVITA']).toLocaleDateString('it-IT') : '—';
+    const dataUltTel = r.fields['data ultima telefonata'] ? new Date(r.fields['data ultima telefonata']).toLocaleDateString('it-IT') : '—';
+    const dataCreaz= r.fields['DATA DI CREAZIONE DATO'] ? new Date(r.fields['DATA DI CREAZIONE DATO']).toLocaleDateString('it-IT') : (r.createdTime ? new Date(r.createdTime).toLocaleDateString('it-IT') : '—');
+    const dataCreazISO = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
+    const scad     = r.fields['data scadenza noleggio'] ? new Date(r.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+    const venduto  = !!(r.fields['Data Vendita'] || (r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
+    const appunto  = r.fields['Preso appuntamento'] || '';
+    const appCls   = appunto && appunto !== 'NO' ? 'badge-green' : appunto === 'NO' ? 'badge-red' : '';
+    const mieProposteRow = getProposteContatto(r.id);
+    const nProd   = mieProposteRow.length;
+    const valProd = getValoreProposte(mieProposteRow);
+    const statoUp  = (r.fields['Status']||'').toUpperCase();
+    const bCls     = venduto ? 'badge-green'
+      : statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA') ? 'badge-orange'
+      : statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA') ? 'badge-blue'
+      : statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO') ? 'badge-red'
+      : 'badge-blue';
+
+    return `<tr id="row-${id}" data-creaz="${dataCreazISO}">
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="c-nome" style="cursor:pointer;color:var(--accent)" onclick="openContactDetail('${id}')">${nome}</div>
+          <button onclick="openEditContact('${id}')"
+            title="Modifica contatto"
+            style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--muted);padding:2px;opacity:.6;flex-shrink:0"
+            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.6'">✏️</button>
+        </div>
+        <div class="c-sub">${esc(r.fields['Tipologia cliente']||'')}</div>
+      </td>
+      <td>
+        <span class="badge ${bCls} editable"
+          data-stato="1" data-id="${id}" data-field="Status" data-value="${esc(stato)}"
+          title="Clicca per modificare">${esc(stato)}</span>
+      </td>
+      <td>
+        ${tel
+          ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+               <a class="tel-link" href="tel:${esc(tel)}">📞 ${esc(tel)}</a>
+               <a class="btn-wa" href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank" title="Apri WhatsApp">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.553 4.103 1.518 5.83L0 24l6.335-1.518A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.847 0-3.575-.5-5.065-1.373l-.363-.215-3.761.901.916-3.648-.236-.374A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                 WA
+               </a>
+             </div>`
+          : `<span class="editable" style="color:var(--muted);font-size:12px"
+               data-edit="1" data-id="${id}" data-field="recapito telefonico" data-value=""
+               title="Clicca per aggiungere">+ aggiungi</span>`}
+      </td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataCreaz}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${dataAtt}</td>
+      <td style="max-width:170px">
+        ${note
+          ? `<div class="note-compact" onclick="openNoteModal('${id}')" title="Clicca per leggere la nota completa">${esc(note)}</div>`
+          : `<span class="note-add" onclick="openNoteModal('${id}')" title="Aggiungi nota">+ nota</span>`}
+      </td>
+      <td style="font-size:11px;color:var(--orange);white-space:nowrap">${scad ? '📦 '+scad : ''}</td>
+      <td>
+        <span class="badge ${appCls} editable"
+          data-stato="1" data-id="${id}" data-field="Preso appuntamento" data-value="${esc(appunto)}"
+          title="Clicca per modificare">
+          ${appunto ? esc(appunto) : '<em style="opacity:.5;font-size:11px">+ set</em>'}
+        </span>
+      </td>
+      <td>${(() => {
+        const cv = r.fields['CONVERSIONE IN VENDITA'];
+        const cvn = cv ? (typeof cv === 'object' ? cv.name : cv) : '';
+        const cvCls = cvn === 'VENDUTO' ? 'badge-green' : cvn === 'NOLEGGIATO' ? 'badge-blue' : '';
+        return cvn && cvn !== '-'
+          ? `<span class="badge ${cvCls} editable" data-stato="1" data-id="${id}" data-field="CONVERSIONE IN VENDITA" data-value="${esc(cvn)}" title="Modifica conversione">${esc(cvn)}</span>`
+          : `<span class="editable" style="font-size:11px;color:var(--muted);opacity:.7" data-stato="1" data-id="${id}" data-field="CONVERSIONE IN VENDITA" data-value="" title="Imposta conversione">+ conv.</span>`;
+      })()}</td>
+      <td>
+        <button onclick="openProdottiPanel('${id}')"
+          style="background:${nProd>0?'rgba(0,114,188,.12)':'var(--surface2)'};border:1px solid ${nProd>0?'#0072bc':'var(--border)'};color:${nProd>0?'#0072bc':'var(--muted)'};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+          🛒 ${nProd>0 ? `${nProd} prod · ${fmt(valProd)}` : '+ Proponi'}
+        </button>
+      </td>
+      <td style="white-space:nowrap;font-size:13px">
+        <span onclick="editDataTel('${id}', '${r.fields['data ultima telefonata']||''}')"
+          title="Clicca per modificare la data"
+          style="color:${dataUltTel!=='—'?'var(--text)':'var(--muted)'};cursor:pointer;text-decoration:underline dotted">
+          ${dataUltTel}
+        </span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto">
+    <table class="contact-table" id="contact-tbl">
+      <tr>
+        <th>Nome</th>
+        <th>Stato ✏️</th>
+        <th>Telefono ✏️</th>
+        <th style="cursor:pointer" onclick="sortByDate('creaz')">Data creazione ↕</th>
+        <th style="cursor:pointer" onclick="sortByDate('att')">Ultima attività ↕</th>
+        <th>Note 👁</th>
+        <th>Scadenza</th>
+        <th>Appuntamento</th>
+        <th style="white-space:nowrap">Conversione 🔄</th>
+        <th>Ult. Tel. 📞</th>
+        <th>Prodotti 🛒</th>
+      </tr>
+      <tbody id="tbl-body">${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── DETTAGLIO CONTATTO ─────────────────────────────────────────
+function openContactDetail(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+
+  // Rimuovi dettaglio precedente
+  document.getElementById('contact-detail-'+recId)?.remove();
+  document.querySelectorAll('[id^="contact-detail-"]').forEach(el=>el.remove());
+
+  const nome   = rec.fields['Nome e cognome']||'—';
+  const stato  = rec.fields['Status']||'—';
+  const tel    = rec.fields['recapito telefonico']||'';
+  const note   = rec.fields['Notes']||'';
+  const scad   = rec.fields['data scadenza noleggio'] ? new Date(rec.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
+
+  // Prodotti proposti dalla nuova tabella Proposte Prodotti
+  const mieProposte = getProposteContatto(recId);
+
+  const prodHTML = mieProposte.length > 0
+    ? mieProposte.map(p => {
+        const prodLinks = getProdottoDaProposta(p);
+        const prodId    = prodLinks?.[0]?.id;
+        const prod      = (allProdotti||[]).find(x=>x.id===prodId);
+        const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
+        const prezzo    = prod ? prodPrezzo(prod) : 0;
+        const f         = p.fields || {};
+        const qta       = f[FLD_IDX_QTA] || f['Quantità'] || 1;
+        const totale    = prezzo * qta;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(nomeProd)}</div>
+            <div style="font-size:11px;color:var(--muted)">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})} × ${qta}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        </div>`;
+      }).join('') +
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:2px solid var(--accent)">
+        <span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>
+        <span style="font-size:18px;font-weight:800;color:var(--accent)">€ ${getValoreProposte(mieProposte).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+      </div>`
+    : `<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Nessun prodotto proposto</div>`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'contact-detail-' + recId;
+  overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent)">${esc(nome)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${esc(rec.fields['Tipologia cliente']||'')}</div>
+      </div>
+      <button onclick="document.getElementById('contact-detail-${recId}').remove()"
+        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+
+    <!-- Info base -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="background:var(--surface2);border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Stato</div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent)">${esc(stato)}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Telefono</div>
+        <div style="font-size:13px;font-weight:700">${tel ? `<a href="tel:${esc(tel)}" style="color:var(--accent)">${esc(tel)}</a>` : '—'}</div>
+      </div>
+      ${scad ? `<div style="background:rgba(230,126,34,.1);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-bottom:4px">📦 Scadenza noleggio</div>
+        <div style="font-size:13px;font-weight:700;color:var(--orange)">${scad}</div>
+      </div>` : ''}
+      ${note ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Note</div>
+        <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${esc(note)}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Prodotti proposti -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:800;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        🛒 Prodotti proposti
+        <span style="font-size:11px;font-weight:400;color:var(--muted)">${mieProposte.length} prodotti</span>
+      </div>
+      ${prodHTML}
+    </div>
+
+    <!-- Azioni -->
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="document.getElementById('contact-detail-${recId}').remove();openProdottiPanel('${recId}')"
+        style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
+        🛒 Prodotti
+      </button>
+      <button onclick="document.getElementById('contact-detail-${recId}').remove();openEditContact('${recId}')"
+        style="flex:1;background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
+        ✏️ Modifica
+      </button>
+      ${tel ? `<a href="https://wa.me/${tel.replace(/\D/g,'')}" target="_blank"
+        style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center">
+        📲 WA
+      </a>` : ''}
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+
+// ── NOTE MODAL ──────────────────────────────────────────────────
+function openNoteModal(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+  const note = rec.fields['Notes'] || '';
+  const nome = rec.fields['Nome e cognome'] || '';
+  document.getElementById('note-modal-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'note-modal-overlay';
+  overlay.id = 'note-modal-overlay';
+  overlay.innerHTML = `<div class="note-modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div><div class="note-modal-title">📝 Note</div><div class="note-modal-sub">${esc(nome)}</div></div>
+      <button onclick="document.getElementById('note-modal-overlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div class="note-modal-text">${esc(note)||'<em style="opacity:.5">Nessuna nota</em>'}</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="document.getElementById('note-modal-overlay').remove();openEditContact('${recId}')"
+        style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">✏️ Modifica nota</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+function getToken() { return new URLSearchParams(window.location.search).get('token') || ''; }
+
+async function init() {
+  const token = getToken();
+  if (!token) {
+    $('loading-screen').style.display = 'none';
+    $('error-screen').style.display   = 'flex';
+    return;
+  }
+  let utente = null;
+  try {
+    // 1. Prima prova a caricare da Airtable Equipoint & Profili (dinamico)
+    const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
+      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&maxRecords=100'
+    );
+    const gf = (r, fid) => { const f=r.fields||{}, cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+    const myRec = (eqRecs||[]).find(r => (gf(r,'fldUGpkKP19zHTLf1')||'') === token);
+    if (myRec) {
+      const nome      = gf(myRec,'fldhHAx77O7ZdedHw') || 'Agente';
+      const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
+      utente = { nome, equipoint: [equipoint], recId: myRec.id };
+    }
+  } catch(e) {
+    console.warn('Airtable lookup failed, using TOKEN_MAP:', e.message);
+  }
+
+  // 2. Fallback a TOKEN_MAP hardcoded
+  if (!utente) {
+    const tm = TOKEN_MAP[token];
+    if (tm) utente = { ...tm, recId: null };
+  }
+
+  if (!utente) {
+    $('loading-screen').style.display = 'none';
+    $('error-screen').style.display   = 'flex';
+    return;
+  }
+
+  $('loading-screen').style.display = 'none';
+  $('dashboard').style.display      = 'block';
+  $('av').textContent = utente.nome.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  $('un').textContent = utente.nome.split(' ')[0];
+  _currentUtente = utente;
+  await loadData(utente);
+  loadConsulenze(utente);
+
+  // Auto-refresh ogni 5 minuti
+  setInterval(() => refreshAll(), 5 * 60 * 1000);
+}
+
+let _currentUtente = null;
+
+
+// CONSULENZE (provvigioni agente)
+// Tabelle Airtable — nessuna mappa hardcoded
+const MESI_ORD = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+
+async function loadConsulenze(utente) {
+  const section = document.getElementById('consulenze-list');
+  if (!section) return;
+  try {
+    // Usa recId se disponibile (caricato dinamicamente da Airtable)
+    // altrimenti cerca l'agente per equipoint
+    let agenteRecId = utente.recId;
+    if (!agenteRecId) {
+      // Cerca in Equipoint & Profili tramite equipoint
+      const eqList = utente.equipoint || [];
+      const eqRecs2 = await proxyGet('tblmSrijxqNZ8Wd9n',
+        'fields[]=fldUPfBDYi679z7FM&maxRecords=100'
+      );
+      const gf2 = (r,fid) => { const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+      const found = (eqRecs2||[]).find(r => {
+        const eq = gf2(r,'fldUPfBDYi679z7FM') || '';
+        return eqList.some(e => e.toLowerCase() === eq.toLowerCase());
+      });
+      if (found) agenteRecId = found.id;
+    }
+    if (!agenteRecId) {
+      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Profilo agente non trovato</div>';
+      return;
+    }
+    const data = await proxyGet('tblUm22CELuEiGOtQ',
+      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx' +
+      '&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD' +
+      '&fields[]=fldSJ8ekSE1OjeciO&fields[]=fldg1R7K3WjDgGZ8S' +
+      '&fields[]=fldtTLgh1yvF6GIzO&fields[]=fldiL8WLmHkxdEgk1' +
+      '&fields[]=fldUYrIMzAtjUf6a2&fields[]=fldsTr5zexCUcAazH' +
+      '&fields[]=fldwgv4IHMq6dN5IT&fields[]=fld9hqy9nJ00vouYB' +
+      '&fields[]=fldYAPIRg9pMQb8bD&maxRecords=200'
+    );
+    // Normalizza: cerca in fields e cellValuesByFieldId
+    const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
+    const miei = (data || []).filter(r => {
+      const links = gf(r, 'fldxMvmS34agmCYyI');
+      if (!links) return false;
+      const arr = Array.isArray(links) ? links : [links];
+      if (!arr.length) return false;
+      const match = arr.some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
+      if (!match) return false;
+      // Filtra per anno corrente (dinamico)
+      const annoCorrente = String(new Date().getFullYear());
+      const anno = gf(r, 'fldMsQrq1yPC1Vw9t');
+      const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
+      return annoN === annoCorrente || annoN === '';
+    });
+    if (!miei.length) {
+      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
+      return;
+    }
+    miei.sort((a,b) => {
+      const ma = gf(a,'fldOt8LBoW3NKSTbx'), mb = gf(b,'fldOt8LBoW3NKSTbx');
+      const na = ma?(typeof ma==='object'?ma.name:ma):'', nb = mb?(typeof mb==='object'?mb.name:mb):'';
+      return MESI_ORD.indexOf(na) - MESI_ORD.indexOf(nb);
+    });
+    const totValore = miei.reduce((s,r) => s+parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0),0);
+    // Calcola provvigione: usa fldYAPIRg9pMQb8bD (formula Airtable) se disponibile
+    // altrimenti calcola da Valore * % (campi fldtTLgh1yvF6GIzO = % Silicon AUTO, ecc.)
+    const calcProvvigione = r => {
+      const formula = parseFloat(gf(r,'fldYAPIRg9pMQb8bD')||0);
+      if (formula > 0) return formula;
+      // Fallback: somma di tutte le % AUTO × Valore Raggiunto
+      const val = parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+      if (val <= 0) return 0;
+      // Prova con % Noleggio AUTO
+      const pctNolo = parseFloat(gf(r,'fldUYrIMzAtjUf6a2')||0);
+      if (pctNolo > 0) return Math.round(val * pctNolo * 100) / 100;
+      // Prova con % Noleggio manuale
+      const pctNolo2 = parseFloat(gf(r,'fldSJ8ekSE1OjeciO')||0);
+      if (pctNolo2 > 0) return Math.round(val * pctNolo2 * 100) / 100;
+      return 0;
+    };
+    const totAuto = miei.reduce((s,r) => s+calcProvvigione(r),0);
+    const nPagate   = miei.filter(r => { const s=gf(r,'fldg1R7K3WjDgGZ8S'); return s&&(typeof s==='object'?s.name:s)==='Pagato'; }).length;
+    const badge = s => { const n=s?(typeof s==='object'?s.name:s):'Da pagare'; const cls=n==='Pagato'?'pagato':n==='Sospeso'?'sospeso':'da-pagare'; return '<span class="cons-badge '+cls+'">'+esc(n)+'</span>'; };
+    section.innerHTML =
+      '<div class="cons-grid">' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">'+fmt(totAuto)+'</div><div class="cons-kpi-lbl">Totale maturato</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">'+fmt(totValore)+'</div><div class="cons-kpi-lbl">Fatturato base</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">'+nPagate+'</div><div class="cons-kpi-lbl">Pagate</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">'+miei.length+'</div><div class="cons-kpi-lbl">Mesi</div></div>' +
+      '</div>' +
+      '<table class="cons-table"><thead><tr><th>Mese</th><th>Fatturato</th><th>Consulenza</th><th>Stato</th></tr></thead><tbody>' +
+      miei.map(r => {
+        const mese=gf(r,'fldOt8LBoW3NKSTbx'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
+        const valore=parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0);
+        const auto=calcProvvigione(r);
+        const stato=gf(r,'fldg1R7K3WjDgGZ8S');
+        return '<tr>' +
+          '<td style="font-weight:600;color:var(--accent)">'+esc(meseN)+'</td>' +
+          '<td>'+(auto>0?fmt(valore):'<span style="color:var(--muted)">—</span>')+'</td>' +
+          '<td style="font-weight:700;color:'+(auto>0?'#27ae60':'var(--muted)')+'">'+(auto>0?fmt(auto):'—')+'</td>' +
+          '<td>'+badge(stato)+'</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  } catch(e) {
+    section.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px">Errore: '+e.message+'</div>';
+  }
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.textContent = '⏳ Carico...'; btn.disabled = true; }
+  try {
+    await loadData(_currentUtente);
+    loadConsulenze(_currentUtente);
+    const sync = document.getElementById('last-sync');
+    if (sync) sync.textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+    showToast('✅ Dati aggiornati!');
+  } catch(e) {
+    showToast('❌ Errore aggiornamento', true);
+  } finally {
+    if (btn) { btn.textContent = '🔄 Aggiorna'; btn.disabled = false; }
+  }
+}
+
+async function loadData(utente) {
+  const main = $('main');
+  try {
+    const firstName = utente.nome.split(' ')[0].toUpperCase();
+
+    const [rubrica, obiettivi, prodotti, proposteRaw] = await Promise.all([
+      proxyGet(TABLE_RUBRICA,
+        'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
+        '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
+        '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
+        '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
+        '&fields[]=recapito+telefonico&fields[]=Notes' +
+        '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
+        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio&maxRecords=3000'),
+      proxyGet('tblTAA7KFUVtcPnZt',
+        'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
+        '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
+      proxyGet('tblAvm14RuhE0dWZg', 'maxRecords=100'),
+      proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000'),
+    ]);
+
+    allProdotti = prodotti;
+    // Normalizza proposte — unisce fields e cellValuesByFieldId
+    allProposte = proposteRaw.map(p => {
+      const cv = p.cellValuesByFieldId || {};
+      const f  = p.fields || {};
+      // Unisce fields e cellValuesByFieldId, con cellValuesByFieldId prioritario per i field ID
+      const merged = { ...f, ...cv };
+      return { ...p, fields: merged };
+    });
+
+    // Aggiorna orario ultimo sync
+    const sync = document.getElementById('last-sync');
+    if (sync) sync.textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+
+    // Filtra per Codice Equipoint
+    allMiei = rubrica.filter(r => {
+      const codice = r.fields['Codice Equipoint'];
+      if (!codice) return false;
+      const val = typeof codice === 'object' ? codice.name : codice;
+      return utente.equipoint.some(eq => eq.toLowerCase() === val.toLowerCase());
+    });
+
+    const oggi  = new Date(); oggi.setHours(0,0,0,0);
+    const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
+
+    const annoCorrenteStr = String(new Date().getFullYear());
+    const annoShortStr = annoCorrenteStr.slice(-2); // es. '27' per 2027
+    const obj26 = obiettivi.filter(r => {
+      const mese=(r.fields['MESE']||'').toUpperCase();
+      const comm=r.fields['Name (from Commerciale)'];
+      if(comm){ const arr=Array.isArray(comm)?comm:[comm]; if(arr.some(n=>n.toUpperCase().includes(firstName))) return true; }
+      return mese.includes(firstName)&&(mese.includes(annoShortStr)||mese.includes(annoCorrenteStr));
+    });
+    const fatturato = obj26.reduce((s,r)=>s+(r.fields['Valore Raggiunto']||0),0);
+    const obiettivo = obj26.filter(r=>(r.fields['Valore Obiettivo']||0)>0).reduce((s,r)=>s+(r.fields['Valore Obiettivo']||0),0);
+    const percFatt  = pct(fatturato,obiettivo);
+    const percFattR = pctR(fatturato,obiettivo);
+
+    const MESI=['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+    const mesiMap={};
+    const annoShort = String(new Date().getFullYear()).slice(-2);
+    obj26.filter(r=>(r.fields['MESE']||'').includes(annoShort)).forEach(r=>{
+      const raw=(r.fields['MESE']||'').toUpperCase();
+      const mese=MESI.find(m=>raw.includes(m))||raw.split(' ')[0];
+      if(!mesiMap[mese]) mesiMap[mese]={f:0,o:0};
+      mesiMap[mese].f+=r.fields['Valore Raggiunto']||0;
+      mesiMap[mese].o+=r.fields['Valore Obiettivo'] ||0;
+    });
+
+    const statMap={};
+    allMiei.forEach(r=>{ const s=r.fields['Status']||'N/D'; statMap[s]=(statMap[s]||0)+1; });
+    const COLORS=['#4f8ef7','#34c77b','#f59e0b','#ef4444','#7c5cbf','#14b8a6'];
+    const statTop=Object.entries(statMap).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([l,v],i)=>({l,v,c:COLORS[i]}));
+
+    const recenti=[...allMiei].filter(r=>r.fields['DATA ATTIVITA'])
+      .sort((a,b)=>new Date(b.fields['DATA ATTIVITA'])-new Date(a.fields['DATA ATTIVITA'])).slice(0,7);
+
+    const noleggiScad = getListaByTipo('scadenze');
+
+    // Conversione noleggio → vendita
+    const nNoleggiati = getListaByTipo('noleggi').length;
+    const nConvertiti = allMiei.filter(r => {
+      const cv = r.fields['CONVERSIONE IN VENDITA'];
+      const cvn = cv ? (typeof cv === 'object' ? cv.name : cv) : '';
+      return cvn === 'VENDUTO';
+    }).length;
+    const pctConversione = (nNoleggiati + nConvertiti) > 0
+      ? Math.round(nConvertiti / (nNoleggiati + nConvertiti) * 100)
+      : 0;
+
+    // Calcola totale proposto — filtra solo proposte dei contatti di questo commerciale
+    const mieProposteAll = allProposte.filter(function(p) {
+      var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || p.fields['Contatto'] || [];
+      if (!Array.isArray(cl)) return false;
+      return allMiei.some(function(r) {
+        return cl.some(function(c) {
+          var cid = (typeof c === 'object' && c !== null) ? c.id : c;
+          return cid === r.id;
+        });
+      });
+    });
+    const totProposto = getValoreProposte(mieProposteAll);
+    const nConProposte = allMiei.filter(function(r) {
+      return allProposte.some(function(p) {
+        var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+        if (!Array.isArray(cl)) return false;
+        return cl.some(function(c) {
+          var cid = (typeof c === 'object' && c !== null) ? c.id : c;
+          return cid === r.id;
+        });
+      });
+    }).length;
+
+    // Aggiorna contatori tab navigazione
+    setTimeout(() => {
+      const tabCounts = {
+        'contatti': allMiei.length,
+        'ricontattare': getListaByTipo('ricontattare').length,
+        'trattativa': getListaByTipo('trattativa').length,
+        'appuntamenti': getListaByTipo('appuntamenti').length,
+        'vendite': getListaByTipo('vendite').length,
+        'noleggi': getListaByTipo('noleggi').length,
+        'proposti': getListaByTipo('proposti').length,
+        'persi': getListaByTipo('persi').length,
+        'scadenze': noleggiScad.length,
+        'harbur': getListaByTipo('harbur').length
+      };
+      Object.entries(tabCounts).forEach(([k,v]) => {
+        const el = document.getElementById('tc-'+k);
+        if (el) el.textContent = v;
+      });
+    }, 100);
+
+    const noleggiHTML = noleggiScad.length
+      ? noleggiScad.slice(0,6).map(r=>{
+          const sc=new Date(r.fields['data scadenza noleggio']);
+          const diff=Math.round((sc-oggi)/86400000);
+          const cls=diff<=7?'badge-red':diff<=15?'badge-orange':'badge-green';
+          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${diff<=0?'Scaduto':diff+'gg'}</span></div>`;
+        }).join('')
+      : '<div class="empty">Nessun noleggio in scadenza ✓</div>';
+
+    const recentiHTML = recenti.length
+      ? recenti.map(r=>{
+          const d=new Date(r.fields['DATA ATTIVITA']);
+          const venduto=!!r.fields['Data Vendita'];
+          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${esc(r.fields['Status']||'—')} · ${d.toLocaleDateString('it-IT')}</div></div><span class="badge ${venduto?'badge-green':'badge-blue'}">${venduto?'Vendita':'Aperto'}</span></div>`;
+        }).join('')
+      : '<div class="empty">Nessun contatto recente</div>';
+
+    const mesiHTML = MESI.filter(m=>mesiMap[m]).length
+      ? `<table class="mesi-table"><tr><th>Mese</th><th>Fatturato</th><th>Obiettivo</th><th>%</th><th></th></tr>
+          ${MESI.filter(m=>mesiMap[m]).map(m=>{
+            const {f,o}=mesiMap[m]; const p=pctR(f,o),c=col(p);
+            return `<tr><td>${m.charAt(0)+m.slice(1).toLowerCase()}</td><td class="r">${fmt(f)}</td><td class="r" style="color:var(--muted)">${fmt(o)}</td><td class="r" style="color:${c}">${p}%</td><td><div class="mini-bar"><div class="mini-fill" style="width:${pct(f,o)}%;background:${c}"></div></div></td></tr>`;
+          }).join('')}</table>`
+      : '<div class="empty">Nessun obiettivo 2026</div>';
+
+    const donut = buildDonut(statTop, allMiei.length);
+
+    main.innerHTML = `
+      <div class="welcome" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1>Ciao, ${esc(utente.nome.split(' ')[0])} 👋</h1>
+          <p>Riepilogo al ${new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})} · Clicca sui KPI per vedere e modificare i contatti</p>
+        </div>
+        <button onclick="openNewContactModal()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,61,122,.2)">
+          ➕ Nuovo contatto
+        </button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi blue"   id="kpi-contatti"     onclick="openDrawer('contatti','Tutti i contatti','#003d7a')">
+          <div class="kpi-ico">👥</div><div class="kpi-val">${allMiei.length}</div><div class="kpi-lbl">Contatti totali</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi orange" id="kpi-ricontattare" onclick="openDrawer('ricontattare','Da ricontattare','#e67e22')">
+          <div class="kpi-ico">📞</div><div class="kpi-val">${getListaByTipo('ricontattare').length}</div><div class="kpi-lbl">Da ricontattare</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi gold"   id="kpi-trattativa"   onclick="openDrawer('trattativa','Trattativa in corso','#f0a500')">
+          <div class="kpi-ico">🤝</div><div class="kpi-val">${getListaByTipo('trattativa').length}</div><div class="kpi-lbl">Trattativa in corso</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi purple" id="kpi-appuntamenti" onclick="openDrawer('appuntamenti','Appuntamenti','#0072bc')">
+          <div class="kpi-ico">📅</div><div class="kpi-val">${getListaByTipo('appuntamenti').length}</div><div class="kpi-lbl">Appuntamenti</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green"  id="kpi-vendite"      onclick="openDrawer('vendite','Vendite chiuse','#27ae60')">
+          <div class="kpi-ico">💰</div><div class="kpi-val">${getListaByTipo('vendite').length}</div><div class="kpi-lbl">Vendite chiuse</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-venduto" onclick="openDrawer('venduto','Stato VENDUTO','#1a7a4a')" style="--kpi-before:#1a7a4a">
+          <div class="kpi-ico">🏆</div><div class="kpi-val">${allMiei.filter(r=>(r.fields['Status']||'').toUpperCase()==='VENDUTO').length}</div><div class="kpi-lbl">Status VENDUTO</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi red"    id="kpi-persi"        onclick="openDrawer('persi','Contatti persi','#e74c3c')">
+          <div class="kpi-ico">❌</div><div class="kpi-val">${getListaByTipo('persi').length}</div><div class="kpi-lbl">Non interessati</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi blue"   id="kpi-noleggi"      onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#0072bc">
+          <div class="kpi-ico">📦</div><div class="kpi-val">${getListaByTipo('noleggi').length}</div><div class="kpi-lbl">Noleggi attivati</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-conversione" onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" style="--kpi-before:#27ae60">
+          <div class="kpi-ico">🔄</div>
+          <div class="kpi-val" style="font-size:26px">${pctConversione}%</div>
+          <div class="kpi-lbl">Conversione nol.→vendita</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">${nConvertiti} conv. / ${nNoleggiati+nConvertiti} tot.</div>
+        </div>
+        <div class="kpi orange" id="kpi-scadenze"     onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')">
+          <div class="kpi-ico">⚠️</div><div class="kpi-val">${noleggiScad.length}</div><div class="kpi-lbl">Scadono entro 30gg</div><div class="kpi-hint">Clicca per vedere →</div></div>
+        <div class="kpi green" id="kpi-proposti" onclick="openDrawer('proposti','Prodotti proposti','#27ae60')" style="--kpi-before:#34c77b">
+          <div class="kpi-ico">🛒</div>
+          <div class="kpi-val" style="font-size:16px">${fmt(totProposto)}</div>
+          <div class="kpi-lbl">Proposto totale</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
+        <div class="kpi purple" id="kpi-n-proposte" onclick="openDrawer('proposti','Contatti con proposte','#0072bc')" style="--kpi-before:#0072bc">
+          <div class="kpi-ico">📋</div>
+          <div class="kpi-val">${nConProposte}</div>
+          <div class="kpi-lbl">Con proposte</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
+        <div class="kpi gold" id="kpi-media-proposta" onclick="openDrawer('proposti','Valore medio proposta','#f0a500')" style="--kpi-before:#f0a500">
+          <div class="kpi-ico">📊</div>
+          <div class="kpi-val" style="font-size:16px">${fmt(nConProposte > 0 ? Math.round(totProposto / nConProposte) : 0)}</div>
+          <div class="kpi-lbl">Media proposta</div>
+          <div class="kpi-hint">Clicca per vedere →</div>
+        </div>
+      </div>
+
+      <div class="nav-tabs" id="nav-tabs">
+        <button class="nav-tab active" onclick="openDrawer('contatti','Tutti i contatti','#003d7a')" id="navtab-contatti">
+          👥 Tutti <span class="tab-count" id="tc-contatti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('ricontattare','Da ricontattare','#e67e22')" id="navtab-ricontattare">
+          📞 Da ricontattare <span class="tab-count" id="tc-ricontattare">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('trattativa','Trattativa in corso','#f0a500')" id="navtab-trattativa">
+          🤝 Trattativa <span class="tab-count" id="tc-trattativa">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('appuntamenti','Appuntamenti','#0072bc')" id="navtab-appuntamenti">
+          📅 Appuntamenti <span class="tab-count" id="tc-appuntamenti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('vendite','Vendite chiuse','#27ae60')" id="navtab-vendite">
+          💰 Vendite <span class="tab-count" id="tc-vendite">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('noleggi','Noleggi attivati','#003d7a')" id="navtab-noleggi">
+          📦 Noleggi <span class="tab-count" id="tc-noleggi">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('proposti','Con proposte','#27ae60')" id="navtab-proposti">
+          🛒 Proposte <span class="tab-count" id="tc-proposti">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('persi','Non interessati','#e74c3c')" id="navtab-persi">
+          ❌ Persi <span class="tab-count" id="tc-persi">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('scadenze','Scadono entro 30gg','#e74c3c')" id="navtab-scadenze">
+          ⚠️ Scadenze <span class="tab-count" id="tc-scadenze">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('harbur','HARBUR','#9b59b6')" id="navtab-harbur">
+          🎯 HARBUR <span class="tab-count" id="tc-harbur">0</span>
+        </button>
+      </div>
+      <!-- LAYOUT SIDEBAR + DRAWER -->
+      <div class="drawer-layout" id="drawer-layout">
+        <div class="sidebar-contacts">
+          <div class="sidebar-contacts-header">
+            <span>👥 Contatti</span>
+            <span id="sidebar-count" style="opacity:.7;font-size:10px"></span>
+          </div>
+          <div class="sidebar-contacts-search">
+            <input type="text" placeholder="🔍 Cerca..." oninput="buildSidebar(this.value)" id="sidebar-input">
+          </div>
+          <div class="sidebar-contacts-list" id="sidebar-list"></div>
+        </div>
+        <div class="drawer open" id="drawer" style="flex:1;min-width:0;max-height:none"></div>
+      </div>
+
+      <div id="cal-container">${buildCalendar(allMiei)}</div>
+
+      ${obiettivo>0?`
+      <div class="progress-card">
+        <div class="progress-head">
+          <div><h3>Obiettivo Fatturato 2026</h3><p>${fmt(fatturato)} su ${fmt(obiettivo)}</p></div>
+          <div class="progress-pct" style="color:${col(percFattR)}">${percFattR}%</div>
+        </div>
+        <div class="track"><div class="fill" style="width:0%;background:${col(percFattR)}" data-w="${percFatt}"></div></div>
+      </div>`:''}
+
+      <div class="two-col">
+        <div class="panel"><div class="panel-title">Stato contatti</div>
+          <div class="donut-wrap">${donut}
+            <div class="legend">${statTop.map(s=>`<div class="leg-row"><div class="leg-dot" style="background:${s.c}"></div><span class="leg-lbl">${esc(s.l)}</span><span class="leg-val">${s.v}</span></div>`).join('')}</div>
+          </div>
+        </div>
+        <div class="panel"><div class="panel-title">Noleggi in scadenza (30gg)</div><div class="row-list">${noleggiHTML}</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel"><div class="panel-title">Obiettivi per mese · 2026</div>${mesiHTML}</div>
+        <div class="panel"><div class="panel-title">Ultimi contatti</div><div class="row-list">${recentiHTML}</div></div>
+      </div>
+
+      <!-- SEZIONE CONSULENZE -->
+      <div id="consulenze-section" style="margin-top:24px">
+        <div style="font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">💰 Le mie consulenze</div>
+        <div id="consulenze-list"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Caricamento...</div></div>
+      </div>
+
+      <div class="footer">Equistasi® Dashboard Commerciale · Clicca su Stato, Telefono o Note per modificarli · si salvano su Airtable</div>
+    `;
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      document.querySelectorAll('.fill[data-w]').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
+    }));
+
+  } catch(e) {
+    main.innerHTML = `<div class="empty" style="padding:60px">⚠️ Errore: ${e.message}</div>`;
+    console.error(e);
+  }
+}
+
+// ── LINK STRIPE ────────────────────────────────────────────────
+const STRIPE_LINKS = {
+  'KITNOLO 10GG':              { url:'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h', label:'Noleggio 10gg' },
+  'KITNOLO 30GG':              { url:'https://buy.stripe.com/dRmcN5fXw09aaqM02fafS0e', label:'Noleggio 30gg' },
+  'KITNOLO 41GG':              { url:'https://buy.stripe.com/28E4gzcLk6xy6aw5mzafS0f', label:'Noleggio 41gg' },
+  'KITNOLO 60GG':              { url:'https://buy.stripe.com/eVqeVddPo5tudCY9CPafS0i', label:'Noleggio 60gg' },
+  'KITNOLO 90GG':              { url:'https://buy.stripe.com/9B6cN5bHgg888iEdT5afS0j', label:'Noleggio 90gg' },
+  'KIT SILICON 3 DISPOSITIVI': { url:'https://buy.stripe.com/bJefZhaDc3lm6awbKXafS0k', label:'Kit Silicon' },
+  'KIT GEL 3 DISPOSITIVI':     { url:'https://buy.stripe.com/dRm6oH12C2hieH23erafS0l', label:'Kit Gel' },
+  'SILICON SINGOLO':           { url:'https://buy.stripe.com/fZuaEX7r03lm56s7uHafS0m', label:'Jolly Silicon' },
+  'GEL SINGOLO':               { url:'https://buy.stripe.com/aFaaEX9z87BC7eAbKXafS0n', label:'Jolly Gel' },
+  'CALIBRAZIONE':              { url:'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o', label:'Calibrazione' },
+  'DISPOSITIVO NOLO SMARRITO': { url:'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p', label:'Smarrimento' },
+};
+
+// ── PANNELLO PRODOTTI ───────────────────────────────────────────
+// ── Helper campi prodotto ────────────────────────────────────
+const prodNome   = p => p.fields['Nome prodotto']   || p.fields['fldJWkKD8emiesXgV'] || '—';
+const prodPrezzo = p => Number(p.fields['Prezzo (€)'] || p.fields['fldFVAOHfQMaMmudW'] || 0);
+const prodCat    = p => {
+  const c = p.fields['Categoria'] || p.fields['flddZwalfEpfYsRIZ'];
+  if (!c) return 'altro';
+  if (typeof c === 'object' && c.name) return c.name.toLowerCase().trim();
+  if (typeof c === 'string') return c.toLowerCase().trim();
+  return 'altro';
+};
+
+// ── CARRELLO CON TAB ───────────────────────────────────────────
+const STRIPE_LINKS_IDX = {
+  'KITNOLO 10GG':              'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h',
+  'KITNOLO 30GG':              'https://buy.stripe.com/dRmcN5fXw09aaqM02fafS0e',
+  'KITNOLO 41GG':              'https://buy.stripe.com/28E4gzcLk6xy6aw5mzafS0f',
+  'KITNOLO 60GG':              'https://buy.stripe.com/eVqeVddPo5tudCY9CPafS0i',
+  'KITNOLO 90GG':              'https://buy.stripe.com/9B6cN5bHgg888iEdT5afS0j',
+  'KIT SILICON 3 DISPOSITIVI': 'https://buy.stripe.com/bJefZhaDc3lm6awbKXafS0k',
+  'KIT GEL 3 DISPOSITIVI':     'https://buy.stripe.com/dRm6oH12C2hieH23erafS0l',
+  'SILICON SINGOLO':           'https://buy.stripe.com/fZuaEX7r03lm56s7uHafS0m',
+  'GEL SINGOLO':               'https://buy.stripe.com/aFaaEX9z87BC7eAbKXafS0n',
+  'CALIBRAZIONE':              'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o',
+  'DISPOSITIVO NOLO SMARRITO': 'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p',
+};
+const NOLO_ORDER_IDX = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
+
+let idxCartRecId  = null;
+let idxCartSelIds = new Map(); // prodId → { propId, qta, prezzo }
+let idxCartTab    = 'noleggio';
+
+function openProdottiPanel(recId) {
+  idxCartRecId = recId;
+  const rec    = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+
+  idxCartSelIds = new Map();
+  getProposteContatto(recId).forEach(function(p) {
+    var prodLinks = getProdottoDaProposta(p);
+    if (prodLinks && prodLinks.length > 0) {
+      // prodLinks può essere array di stringhe ["recXXX"] o di oggetti [{id:"recXXX"}]
+      var prodLink = prodLinks[0];
+      var prodId = (typeof prodLink === 'object' && prodLink !== null) ? prodLink.id : prodLink;
+      var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
+      var f = p.fields || {};
+      var prezzo = prod ? prodPrezzo(prod) : parseFloat(f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0);
+      idxCartSelIds.set(prodId, {
+        propId: p.id,
+        qta:    f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1,
+        prezzo: prezzo,
+        nomeProd: prod ? prodNome(prod) : (prodLink && prodLink.name ? prodLink.name : ('ID:'+prodId)),
+        totRiga: parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0),
+      });
+    } else {
+      // Proposta senza prodotto collegato - usa nome proposta e prezzo diretto
+      var f2 = p.fields || {};
+      var nomeProp = f2['Nome proposta'] || f2['fldWe4dM6FbXxN07z'] || 'Proposta';
+      var prezzo2 = parseFloat(f2['fldN4u3S8ngsBAWuL'] || f2['Prezzo unitario'] || 0);
+      var tot2 = parseFloat(f2['fldSVSzsslNzmI8HY'] || f2['Totale riga'] || 0);
+      if (prezzo2 > 0 || tot2 > 0) {
+        idxCartSelIds.set('prop_' + p.id, {
+          propId: p.id,
+          qta: f2['fldw2aCMC8pVKbJ2N'] || f2['Quantità'] || 1,
+          prezzo: prezzo2,
+          nomeProd: nomeProp,
+          totRiga: tot2,
+        });
+      }
+    }
+  });
+  idxCartTab = 'noleggio';
+
+  // chiudi modal esistente
+  document.getElementById('idx-cart-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'idx-cart-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--accent)">🛒 Prodotti da proporre</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(rec.fields['Nome e cognome']||'')}</div>
+      </div>
+      <button onclick="document.getElementById('idx-cart-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div id="idx-cart-body">${buildIdxCart()}</div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+function buildIdxCart() {
+  const TABS = [
+    { id:'noleggio',      label:'📦 Noleggi' },
+    { id:'singolo',       label:'🔬 Singolo' },
+    { id:'kit',           label:'📦 Kit x3' },
+    { id:'accessori',     label:'🔧 Accessori' },
+    { id:'calibrazione',  label:'⚙️ Calibraz.' },
+    { id:'assicurazione', label:'🛡️ Assicur.' },
+    { id:'altro',         label:'📌 Altro' },
+  ];
+
+  // Sezione prodotti già selezionati
+  var selectedHtml = '';
+  if (idxCartSelIds.size > 0) {
+    var rows = [];
+    idxCartSelIds.forEach(function(entry, prodId) {
+      var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
+      var nome = prod ? prodNome(prod) : (entry.nomeProd || prodId);
+      var prezzo = prod ? prodPrezzo(prod) : (entry.prezzo || 0);
+      var tot = prezzo * entry.qta;
+      var safeId = prodId.replace(/'/g, '');
+      rows.push(
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+        '<div style="font-size:13px;font-weight:600;">' + esc(nome) + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">€ ' + prezzo.toLocaleString('it-IT',{minimumFractionDigits:2}) + ' × ' + entry.qta + ' = <strong>€ ' + tot.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</strong></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;">' +
+        '<button data-qta-minus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">−</button>' +
+        '<span style="font-size:13px;font-weight:700;min-width:22px;text-align:center">' + entry.qta + '</span>' +
+        '<button data-qta-plus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">+</button>' +
+        '<button data-remove-cart="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:none;background:#fdecea;color:#c0392b;cursor:pointer;font-size:14px;font-weight:700;">✕</button>' +
+        '</div></div>'
+      );
+    });
+    var totCarr = 0;
+    idxCartSelIds.forEach(function(e){ totCarr += (e.prezzo || 0) * e.qta; });
+    selectedHtml = '<div style="background:#e8f0fe;border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🛒 Prodotti selezionati (' + idxCartSelIds.size + ')</div>' +
+      rows.join('') +
+      '<div style="margin-top:10px;padding-top:10px;border-top:2px solid var(--accent);display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>' +
+      '<span style="font-size:16px;font-weight:800;color:var(--accent)">€ ' + totCarr.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</span>' +
+      '</div></div>';
+  }
+
+    const tabsHtml = `<div style="display:flex;gap:3px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:16px;flex-wrap:wrap">
+    ${TABS.map(t=>`<button style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:${t.id===idxCartTab?'#fff':'none'};color:${t.id===idxCartTab?'var(--accent)':'var(--muted)'};box-shadow:${t.id===idxCartTab?'0 1px 4px rgba(0,0,0,.1)':'none'};transition:all .15s"
+      onclick="switchIdxTab('${t.id}')">${t.label}</button>`).join('')}
+  </div>`;
+
+  let prods = [];
+  if (idxCartTab === 'noleggio') {
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))==='noleggio')
+      .sort((a,b)=>(NOLO_ORDER_IDX[a.fields['Nome prodotto']?.trim()]||99)-(NOLO_ORDER_IDX[b.fields['Nome prodotto']?.trim()]||99));
+  } else if (idxCartTab === 'singolo') {
+    prods = (allProdotti||[]).filter(p=>{
+      const nome = (prodNome(p)).toUpperCase();
+      return (prodCat(p))==='vendita dispositivi' && nome.includes('SINGOLO');
+    });
+  } else if (idxCartTab === 'kit') {
+    prods = (allProdotti||[]).filter(p=>{
+      const nome = (prodNome(p)).toUpperCase();
+      return (prodCat(p))==='vendita dispositivi' && !nome.includes('SINGOLO');
+    });
+  } else if (idxCartTab === 'accessori') {
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))==='accessori')
+      .sort((a,b)=>{
+        const na = (a.fields['Nome prodotto']||'').toUpperCase();
+        const nb = (b.fields['Nome prodotto']||'').toUpperCase();
+        const ordA = na.includes('CEROTTI')?0:na.includes('ROCCH')?1:na.includes('TASCH')?2:3;
+        const ordB = nb.includes('CEROTTI')?0:nb.includes('ROCCH')?1:nb.includes('TASCH')?2:3;
+        return ordA - ordB;
+      });
+  } else {
+    prods = (allProdotti||[]).filter(p=>(prodCat(p))===idxCartTab);
+  }
+
+  const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px;padding:2px">
+    ${prods.map(p=>{
+      const entry  = idxCartSelIds.get(p.id);
+      const sel    = !!entry;
+      const qta    = entry?.qta||1;
+      const nome   = prodNome(p);
+      const prezzo = prodPrezzo(p);
+      const stripe = STRIPE_LINKS_IDX[nome.trim().toUpperCase()]||null;
+      return `<div onclick="toggleIdxItem('${p.id}',${prezzo})"
+        style="background:${sel?'rgba(0,114,188,.08)':'var(--surface2)'};border:2px solid ${sel?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative">
+        ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;padding-right:${sel?'18px':'0'}">${esc(nome)}</div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent);margin-top:6px">€ ${prezzo.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        ${sel?`<div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;margin-top:7px">
+          <button onclick="event.stopPropagation();chgIdxQta('${p.id}',-1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800">−</button>
+          <span style="font-weight:800;font-size:14px;color:var(--accent);min-width:20px;text-align:center">${qta}</span>
+          <button onclick="event.stopPropagation();chgIdxQta('${p.id}',1)" style="background:var(--border);border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-weight:800">+</button>
+          <span style="font-size:10px;color:var(--muted)">= €${(prezzo*qta).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>
+        </div>`:''}
+        ${stripe?`<a href="${stripe}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#635bff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;background:rgba(99,91,255,.1);padding:2px 7px;border-radius:4px">💳 Stripe</a>`:''}
+      </div>`;
+    }).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1">Nessun prodotto</div>'}
+  </div>`;
+
+  const selProds = allProdotti.filter(p=>idxCartSelIds.has(p.id));
+  const totale   = selProds.reduce((s,p)=>{ const e=idxCartSelIds.get(p.id); return s+prodPrezzo(p)*(e?.qta||1); }, 0);
+
+  const linksHtml = selProds
+    .filter(p=>STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()])
+    .map(p=>{
+      const url = STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()];
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.05);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px;margin-top:8px;gap:10px">
+        <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(prodNome(p))}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✅ Copiato!'))"
+            style="background:#635bff;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copia</button>
+          <a href="https://wa.me/?text=${encodeURIComponent('Ecco il link: '+url)}" target="_blank"
+            style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none">📲 WA</a>
+        </div>
+      </div>`;
+    }).join('');
+
+  return `${selectedHtml}${tabsHtml}${grid}
+    <div style="background:rgba(0,61,122,.06);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:11px;color:var(--muted)">Totale proposta</div>
+        <div style="font-size:22px;font-weight:800;color:var(--accent)">€ ${totale.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:var(--muted)">${idxCartSelIds.size} prodotti</div>
+        <button onclick="saveIdxCart()"
+          style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer">
+          💾 Salva su Airtable
+        </button>
+      </div>
+    </div>
+    ${linksHtml?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">💳 Link pagamento</div>${linksHtml}</div>`:''}`;
+}
+
+function changeQtaCart(prodId, delta) {
+  const entry = idxCartSelIds.get(prodId);
+  if (!entry) return;
+  const newQta = Math.max(1, (entry.qta || 1) + delta);
+  idxCartSelIds.set(prodId, Object.assign({}, entry, { qta: newQta }));
+  document.getElementById('idx-cart-body').innerHTML = buildIdxCart();
+}
+
+function removeFromCart(prodId) {
+  idxCartSelIds.delete(prodId);
+  document.getElementById('idx-cart-body').innerHTML = buildIdxCart();
+}
+
+
+function switchIdxTab(tab) {
+  idxCartTab = tab;
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
+}
+
+function toggleIdxItem(prodId, prezzo) {
+  if (idxCartSelIds.has(prodId)) idxCartSelIds.delete(prodId);
+  else idxCartSelIds.set(prodId, { propId:null, qta:1, prezzo:prezzo||0 });
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
+}
+
+function chgIdxQta(prodId, delta) {
+  const e = idxCartSelIds.get(prodId);
+  if (!e) return;
+  idxCartSelIds.set(prodId, { ...e, qta: Math.max(1,(e.qta||1)+delta) });
+  const b = document.getElementById('idx-cart-body');
+  if (b) b.innerHTML = buildIdxCart();
+}
+
+async function saveIdxCart() {
+  if (!idxCartRecId) return;
+  const btn = document.querySelector('#idx-cart-modal button[onclick="saveIdxCart()"]');
+  if (btn) { btn.textContent = '⏳ Salvo...'; btn.disabled = true; }
+  try {
+    const ops = [];
+
+    // Salva/aggiorna prodotti selezionati
+    for (const [prodId, entry] of idxCartSelIds.entries()) {
+      // Salta le proposte senza prodotto (prefisso 'prop_')
+      if (prodId.startsWith('prop_')) {
+        if (entry.propId) {
+          // Aggiorna quantità proposta esistente senza prodotto
+          ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, {
+            'Quantità': entry.qta || 1,
+          }));
+        }
+        continue;
+      }
+      const prod = (allProdotti||[]).find(function(p){ return p.id === prodId; });
+      const fields = {
+        [FLD_IDX_CONTATTO]: [idxCartRecId],
+        [FLD_IDX_PRODOTTO]: [prodId],
+        'Quantità':         entry.qta || 1,
+        'Prezzo unitario':  prod ? prodPrezzo(prod) : (entry.prezzo || 0),
+      };
+      if (entry.propId) {
+        ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
+      } else {
+        ops.push(
+          proxyPost(TABLE_PROPOSTE_IDX, fields).then(function(res) {
+            if (res.id) {
+              const merged = { ...res, fields: { ...(res.cellValuesByFieldId||{}), ...(res.fields||{}), ...fields } };
+              allProposte.push(merged);
+              idxCartSelIds.set(prodId, { ...entry, propId: res.id });
+            } else {
+              throw new Error((res.error && res.error.message) || 'Errore POST proposta');
+            }
+          })
+        );
+      }
+    }
+
+    // Elimina proposte rimosse — fix: gestisce sia stringhe che oggetti nel campo CONTATTO
+    const daEliminare = allProposte.filter(function(p) {
+      var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+      if (!Array.isArray(cl)) return false;
+      // Verifica che questa proposta appartenga al contatto corrente
+      var isThisContact = cl.some(function(x) {
+        var cid = (typeof x === 'object' && x !== null) ? x.id : x;
+        return cid === idxCartRecId;
+      });
+      if (!isThisContact) return false;
+      // Verifica che il prodotto non sia più nel carrello
+      var pl = p.fields[FLD_IDX_PRODOTTO] || p.fields['negozio'] || [];
+      if (!Array.isArray(pl) || pl.length === 0) {
+        // Proposta senza prodotto: controlla se è nel carrello come 'prop_XXX'
+        return !idxCartSelIds.has('prop_' + p.id);
+      }
+      var prodId = (typeof pl[0] === 'object' && pl[0] !== null) ? pl[0].id : pl[0];
+      return !idxCartSelIds.has(prodId);
+    });
+
+    daEliminare.forEach(function(p) {
+      ops.push(proxyDelete(TABLE_PROPOSTE_IDX, p.id));
+      allProposte = allProposte.filter(function(x){ return x.id !== p.id; });
+    });
+
+    await Promise.all(ops);
+
+    // Ricarica proposte aggiornate da Airtable
+    const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
+    allProposte = nuoveProposte.map(function(p) {
+      const cv = p.cellValuesByFieldId || {};
+      const f  = p.fields || {};
+      return { ...p, fields: { ...f, ...cv } };
+    });
+
+    // Aggiorna Valore raggiunto nella rubrica
+    try {
+      const propContatto = getProposteContatto(idxCartRecId);
+      const totVal = getValoreProposte(propContatto);
+      await proxyPatch(TABLE_RUBRICA, idxCartRecId, { 'Valore raggiunto': totVal });
+      const recUp = allMiei.find(function(r){ return r.id === idxCartRecId; });
+      if (recUp) recUp.fields['Valore raggiunto'] = totVal;
+    } catch(e2) { console.warn('Aggiornamento valore raggiunto:', e2); }
+
+    document.getElementById('idx-cart-modal')?.remove();
+    showToast('✅ Prodotti salvati!');
+    refreshDrawer();
+  } catch(e) {
+    console.error('❌ saveIdxCart errore:', e);
+    showToast('❌ Errore: ' + e.message, true);
+    if (btn) { btn.textContent = '💾 Salva su Airtable'; btn.disabled = false; }
+  }
+}
+
+// ── CALENDARIO ─────────────────────────────────────────────────
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function buildCalendar(eventsData) {
+  const MESI_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                   'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const GIORNI  = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+  const oggi    = new Date(); oggi.setHours(0,0,0,0);
+  const primo   = new Date(calYear, calMonth, 1);
+  const ultimo  = new Date(calYear, calMonth+1, 0);
+
+  // giorno settimana del primo (0=Dom → convertiamo a Lun=0)
+  let startDow = primo.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  // mappa eventi per data YYYY-MM-DD
+  const evMap = {};
+  eventsData.forEach(r => {
+    const d1 = r.fields['Datavisita'];
+    const d2 = r.fields['DATA ATTIVITA'];
+    const d3 = r.fields['data scadenza noleggio'];
+    const nome = r.fields['Nome e cognome'] || '—';
+    const stato = r.fields['Status'] || '';
+    const add = (iso, tipo) => {
+      if (!iso) return;
+      const key = iso.substring(0,10);
+      if (!evMap[key]) evMap[key] = [];
+      evMap[key].push({ nome, stato, tipo, iso });
+    };
+    add(d1, 'app');
+    add(d2, 'att');
+    add(d3, 'scad');
+  });
+
+  // celle
+  const cells = [];
+  // giorni mese precedente
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for (let i = startDow-1; i >= 0; i--) {
+    cells.push({ day: prevLast-i, cur: false });
+  }
+  // giorni mese corrente
+  for (let d = 1; d <= ultimo.getDate(); d++) {
+    cells.push({ day: d, cur: true });
+  }
+  // giorni mese successivo
+  let next = 1;
+  while (cells.length % 7 !== 0) { cells.push({ day: next++, cur: false }); }
+
+  const headerRow = GIORNI.map(g => `<div class="cal-day-name">${g}</div>`).join('');
+
+  const dayRows = cells.map(c => {
+    const isToday = c.cur && new Date(calYear, calMonth, c.day).getTime() === oggi.getTime();
+    const key = c.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}` : '';
+    const evs = evMap[key] || [];
+    const evHtml = evs.slice(0,3).map(ev => {
+      const label = ev.tipo==='app' ? '📅' : ev.tipo==='scad' ? '⚠️' : '✅';
+      return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)}"
+        onclick="showCalPopup(event,'${esc(ev.nome)}','${esc(ev.stato)}','${ev.tipo}','${ev.iso}')">
+        ${label} ${esc(ev.nome.split(' ')[0])}
+      </div>`;
+    }).join('');
+    const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
+    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}"
+      onclick="openAddActivity('${c.iso}')" style="cursor:pointer"
+      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
+      <div class="cal-day-num">${c.day}</div>
+      ${evHtml}${more}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="cal-card">
+      <div class="cal-header">
+        <div class="cal-title">📅 ${MESI_IT[calMonth]} ${calYear}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
+            <span><span style="color:#0072bc">📅</span> Visita</span>
+            <span><span style="color:#27ae60">✅</span> Attività</span>
+            <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
+          </div>
+          <div class="cal-nav">
+            <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
+            <button class="cal-btn" onclick="changeMonth(0)">Oggi</button>
+            <button class="cal-btn" onclick="changeMonth(1)">›</button>
+          </div>
+        </div>
+      </div>
+      <div class="cal-grid">
+        ${headerRow}
+        ${dayRows}
+      </div>
+    </div>`;
+}
+
+function changeMonth(dir) {
+  if (dir === 0) {
+    calYear  = new Date().getFullYear();
+    calMonth = new Date().getMonth();
+  } else {
+    calMonth += dir;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+  }
+  const calEl = document.getElementById('cal-container');
+  if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+}
+
+function showCalPopup(e, nome, stato, tipo, iso) {
+  e.stopPropagation();
+  document.querySelectorAll('.cal-popup').forEach(p => p.remove());
+  const tipoLabel = tipo==='app' ? 'Data visita' : tipo==='scad' ? 'Scadenza noleggio' : 'Ultima attività';
+  const data = iso ? new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const popup = document.createElement('div');
+  popup.className = 'cal-popup';
+  popup.innerHTML = `
+    <div class="cal-popup-nome">👤 ${nome}</div>
+    <div class="cal-popup-row">📌 ${stato}</div>
+    <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>`;
+  e.target.closest('.cal-event').style.position = 'relative';
+  e.target.closest('.cal-event').appendChild(popup);
+  setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
+}
+
+function buildDonut(slices, total) {
+  const R=50,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
+  let off=0,paths='';
+  slices.forEach(s=>{
+    const frac=s.v/total,dash=frac*circ,gap=circ-dash;
+    paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.c}" stroke-width="${sw}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-off*circ}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=frac;
+  });
+  return `<svg width="120" height="120" style="flex-shrink:0"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e8eef5" stroke-width="${sw}"/>${paths}<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#003d7a" font-size="20" font-weight="800">${total}</text></svg>`;
+}
+
+// ── Filtro data ────────────────────────────────────────────────
+function applyDateFilter() {
+  const da  = document.getElementById('filter-da')?.value;
+  const a   = document.getElementById('filter-a')?.value;
+  if (!da && !a) { currentLista = getListaByTipo(activeKpi); }
+  else {
+    currentLista = getListaByTipo(activeKpi).filter(r => {
+      const iso = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
+      const d   = iso ? new Date(iso) : null;
+      if (da && d && d < new Date(da)) return false;
+      if (a  && d && d > new Date(a+'T23:59:59')) return false;
+      return true;
+    });
+  }
+  currentPage = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
+}
+
+function clearDateFilter() {
+  const da = document.getElementById('filter-da');
+  const a  = document.getElementById('filter-a');
+  if (da) da.value='';
+  if (a)  a.value='';
+  currentLista = getListaByTipo(activeKpi);
+  currentPage  = 0;
+  const cnt = $('drawer-count');
+  if (cnt) cnt.textContent = currentLista.length + ' contatti';
+  renderPage();
+}
+
+let sortDir = 1;
+function sortByDate(tipo) {
+  currentLista = [...currentLista].sort((a,b) => {
+    const da = tipo==='creaz'
+      ? new Date(a.fields['DATA DI CREAZIONE DATO']||a.createdTime||0)
+      : new Date(a.fields['DATA ATTIVITA']||0);
+    const db = tipo==='creaz'
+      ? new Date(b.fields['DATA DI CREAZIONE DATO']||b.createdTime||0)
+      : new Date(b.fields['DATA ATTIVITA']||0);
+    return sortDir * (da-db);
+  });
+  sortDir *= -1;
+  currentPage = 0;
+  renderPage();
+}
+
+// ── Aggiungi attività dal calendario ───────────────────────────
+function openAddActivity(isoDate) {
+  const dataFmt = isoDate ? new Date(isoDate).toLocaleDateString('it-IT') : '';
+  document.getElementById('add-activity-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'add-activity-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">📅 Aggiungi attività</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${dataFmt}</div>
+        </div>
+        <button onclick="document.getElementById('add-activity-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Contatto *</label>
+          <input id="aa-cerca" type="text" placeholder="Cerca per nome…" oninput="cercaContattoAA(this.value)">
+          <div id="aa-results" style="background:#fff;border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;margin-top:4px;display:none"></div>
+          <input type="hidden" id="aa-recId">
+          <div id="aa-selected" style="margin-top:6px;font-size:13px;color:var(--accent);font-weight:700"></div>
+        </div>
+        <div class="form-group form-full">
+          <label>Tipo attività</label>
+          <select id="aa-tipo">
+            <option value="DATA ATTIVITA">📞 Chiamata / Attività</option>
+            <option value="Datavisita">🏠 Visita</option>
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Data</label>
+          <input id="aa-data" type="date" value="${isoDate||''}">
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="aa-note" rows="3" placeholder="Descrivi l'attività…"></textarea>
+        </div>
+      </div>
+      <div id="aa-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="aa-btn" style="margin-top:14px" onclick="saveActivity()">💾 Salva attività</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('aa-cerca').focus();
+}
+
+function cercaContattoAA(q) {
+  const res = document.getElementById('aa-results');
+  if (!q || q.length < 2) { res.style.display='none'; return; }
+  const hits = allMiei.filter(r => (r.fields['Nome e cognome']||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if (!hits.length) { res.style.display='none'; return; }
+  res.style.display = 'block';
+  res.innerHTML = hits.map(r => `
+    <div onclick="selezionaContattoAA('${r.id}','${esc(r.fields['Nome e cognome']||'')}')"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${esc(r.fields['Nome e cognome']||'—')}
+      <span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(r.fields['Status']||'')}</span>
+    </div>`).join('');
+}
+
+function selezionaContattoAA(recId, nome) {
+  document.getElementById('aa-recId').value = recId;
+  document.getElementById('aa-cerca').value = nome;
+  document.getElementById('aa-selected').textContent = '✓ ' + nome;
+  document.getElementById('aa-results').style.display = 'none';
+}
+
+async function saveActivity() {
+  const recId = document.getElementById('aa-recId').value;
+  const tipo  = document.getElementById('aa-tipo').value;
+  const data  = document.getElementById('aa-data').value;
+  const note  = document.getElementById('aa-note').value.trim();
+  const errEl = document.getElementById('aa-error');
+  const btn   = document.getElementById('aa-btn');
+
+  if (!recId) { errEl.textContent='⚠️ Seleziona un contatto'; errEl.style.display='block'; return; }
+  if (!data)  { errEl.textContent='⚠️ Inserisci una data'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = '⏳ Salvo…';
+  errEl.style.display = 'none';
+
+  const fields = { [tipo]: data };
+  if (note) fields['Notes'] = note;
+
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    const rec = allMiei.find(r=>r.id===recId);
+    if (rec) { rec.fields[tipo] = data; if(note) rec.fields['Notes'] = note; }
+    document.getElementById('add-activity-modal').remove();
+    showToast('✅ Attività salvata!');
+    // Ricarica calendario
+    const calEl = document.getElementById('cal-section');
+    if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+  } catch(e) {
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '💾 Salva attività';
+  }
+}
+
+// ── Modifica contatto ───────────────────────────────────────────
+function openEditContact(recId) {
+  const rec = allMiei.find(r=>r.id===recId);
+  if (!rec) return;
+  const f = rec.fields;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'edit-contact-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">✏️ Modifica contatto</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(f['Nome e cognome']||'')}</div>
+        </div>
+        <button onclick="document.getElementById('edit-contact-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nome e Cognome *</label>
+          <input id="ec-nome" type="text" value="${esc(f['Nome e cognome']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input id="ec-tel" type="tel" value="${esc(f['recapito telefonico']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="ec-stato">
+            ${STATUS_OPTIONS.map(o=>`<option ${f['Status']===o?'selected':''}>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipologia cliente</label>
+          <input id="ec-tipo" type="text" value="${esc(f['Tipologia cliente']||'')}">
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="ec-note" rows="4">${esc(f['Notes']||'')}</textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-primary" style="margin:0;flex:1" id="ec-btn" onclick="saveEditContact('${recId}')">
+          💾 Salva modifiche
+        </button>
+        <button onclick="confirmDeleteContact('${recId}')"
+          style="background:rgba(231,76,60,.1);color:var(--red);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer">
+          🗑️ Elimina
+        </button>
+      </div>
+      <div id="ec-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('ec-nome').focus();
+}
+
+async function saveEditContact(recId) {
+  const nome  = document.getElementById('ec-nome')?.value.trim();
+  const tel   = document.getElementById('ec-tel')?.value.trim();
+  const stato = document.getElementById('ec-stato')?.value;
+  const tipo  = document.getElementById('ec-tipo')?.value.trim();
+  const note  = document.getElementById('ec-note')?.value.trim();
+  const btn   = document.getElementById('ec-btn');
+  const errEl = document.getElementById('ec-error');
+
+  if (!nome) {
+    errEl.textContent = '⚠️ Il nome è obbligatorio';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvo…';
+  errEl.style.display = 'none';
+
+  const fields = {
+    'Nome e cognome':      nome,
+    'recapito telefonico': tel,
+    'Status':              stato,
+    'Tipologia cliente':   tipo,
+    'Notes':               note,
+  };
+
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, fields);
+    // Aggiorna anche Valore raggiunto con il totale proposte
+    try {
+      const propContatto = allProposte.filter(p => Array.isArray(p.fields[FLD_IDX_CONTATTO]) && p.fields[FLD_IDX_CONTATTO].some(x=>x.id===recId));
+      const totVal = getValoreProposte(propContatto);
+      if (totVal > 0) {
+        await proxyPatch(TABLE_RUBRICA, recId, { 'Valore raggiunto': totVal });
+        const recUp = allMiei.find(r=>r.id===recId);
+        if (recUp) recUp.fields['Valore raggiunto'] = totVal;
+      }
+    } catch(e) { console.warn('Aggiornamento valore raggiunto:', e); }
+    // Aggiorna cache locale
+    const rec = allMiei.find(r=>r.id===recId);
+    if (rec) rec.fields = { ...rec.fields, ...fields };
+    document.getElementById('edit-contact-modal').remove();
+    showToast('✅ Contatto aggiornato!');
+    refreshDrawer();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '💾 Salva modifiche';
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function confirmDeleteContact(recId) {
+  const rec  = allMiei.find(r=>r.id===recId);
+  const nome = rec?.fields['Nome e cognome'] || '?';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'delete-confirm-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:400px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:8px">Elimina contatto</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">
+        Sei sicuro di voler eliminare <strong>${esc(nome)}</strong>?<br>
+        <span style="color:var(--red);font-size:12px">Questa azione non può essere annullata.</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('delete-confirm-modal').remove()"
+          style="flex:1;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">
+          Annulla
+        </button>
+        <button id="del-btn" onclick="deleteContact('${recId}')"
+          style="flex:1;background:var(--red);color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">
+          🗑️ Elimina
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+async function deleteContact(recId) {
+  const btn = document.getElementById('del-btn');
+  if (btn) { btn.textContent = '⏳ Elimino…'; btn.disabled = true; }
+  try {
+    await proxyDelete(TABLE_RUBRICA, recId);
+    // Rimuovi dalla cache locale
+    allMiei = allMiei.filter(r=>r.id!==recId);
+    // Chiudi tutti i modal
+    document.getElementById('delete-confirm-modal')?.remove();
+    document.getElementById('edit-contact-modal')?.remove();
+    document.getElementById('contact-detail-'+recId)?.remove();
+    showToast('✅ Contatto eliminato!');
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore eliminazione: ' + e.message, true);
+    if (btn) { btn.textContent = '🗑️ Elimina'; btn.disabled = false; }
+  }
+}
+
+// ── Nuovo contatto ─────────────────────────────────────────────
+function openNewContactModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'new-contact-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div class="modal-icon" style="font-size:28px;margin:0">➕</div>
+          <div class="modal-title" style="margin:4px 0 0">Nuovo contatto</div>
+        </div>
+        <button onclick="document.getElementById('new-contact-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nome e Cognome *</label>
+          <input id="nc-nome" type="text" placeholder="Es. Mario Rossi" required>
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input id="nc-tel" type="tel" placeholder="+39 333 1234567">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input id="nc-email" type="email" placeholder="email@esempio.it">
+        </div>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="nc-stato">
+            ${STATUS_OPTIONS.map(o=>`<option>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipologia cliente</label>
+          <input id="nc-tipo" type="text" placeholder="Es. Paziente, Medico…">
+        </div>
+        <div class="form-group">
+          <label>Regione</label>
+          <input id="nc-regione" type="text" placeholder="Es. Lombardia">
+        </div>
+        <div class="form-group">
+          <label>Preso appuntamento</label>
+          <select id="nc-app">
+            <option value="">—</option>
+            ${APPUNTAMENTO_OPTIONS.map(o=>`<option>${o}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Note</label>
+          <textarea id="nc-note" placeholder="Aggiungi una nota…"></textarea>
+        </div>
+      </div>
+      <div id="nc-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="nc-btn" onclick="saveNewContact()">💾 Salva contatto su Airtable</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.getElementById('nc-nome').focus();
+}
+
+async function saveNewContact() {
+  const nome   = document.getElementById('nc-nome')?.value.trim();
+  const tel    = document.getElementById('nc-tel')?.value.trim();
+  const email  = document.getElementById('nc-email')?.value.trim();
+  const stato  = document.getElementById('nc-stato')?.value;
+  const tipo   = document.getElementById('nc-tipo')?.value.trim();
+  const reg    = document.getElementById('nc-regione')?.value.trim();
+  const app    = document.getElementById('nc-app')?.value;
+  const note   = document.getElementById('nc-note')?.value.trim();
+  const errEl  = document.getElementById('nc-error');
+  const btn    = document.getElementById('nc-btn');
+
+  if (!nome) {
+    errEl.textContent = '⚠️ Il nome è obbligatorio';
+    errEl.style.display = 'block';
+    document.getElementById('nc-nome').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvataggio…';
+  errEl.style.display = 'none';
+
+  const fields = { 'Nome e cognome': nome };
+  if (tel)   fields['recapito telefonico'] = tel;
+  if (email) fields['E-Mail'] = email;
+  if (stato) fields['Status'] = stato;
+  if (tipo)  fields['Tipologia cliente'] = tipo;
+  if (reg)   fields['Regione'] = reg;
+  if (app)   fields['Preso appuntamento'] = app;
+  if (note)  fields['Notes'] = note;
+
+  // Aggiungi automaticamente il codice Equipoint dell'utente corrente (dinamico)
+  if (_currentUtente?.equipoint?.[0]) {
+    fields['Codice Equipoint'] = _currentUtente.equipoint[0];
+  }
+
+  try {
+    const url = `${PROXY}?table=${encodeURIComponent(TABLE_RUBRICA)}&action=create`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    });
+    const data = await res.json();
+
+    if (data.id) {
+      // Aggiunge alla cache locale
+      allMiei.push({ id: data.id, createdTime: new Date().toISOString(), fields: { ...fields, ...data.fields } });
+      document.getElementById('new-contact-modal').remove();
+      showToast('✅ Contatto aggiunto su Airtable!');
+      refreshDrawer();
+    } else {
+      throw new Error(data.error?.message || 'Errore sconosciuto');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '💾 Salva contatto su Airtable';
+    errEl.textContent = '❌ Errore: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ── Modal Safari warning ────────────────────────────────────────
+function showSafariWarning() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'safari-modal';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-icon">🦁</div>
+      <div class="modal-title">Safari non supporta la dettatura</div>
+      <div class="modal-msg">
+        Il riconoscimento vocale non funziona su <strong>Safari</strong>.<br><br>
+        Per usare la dettatura apri questa pagina con:<br>
+        <strong>Chrome</strong> 🌐 oppure <strong>Edge</strong> 🔷
+      </div>
+      <button class="modal-btn" onclick="document.getElementById('safari-modal').remove()">Ho capito</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
+// ── Dettatura vocale ───────────────────────────────────────────
+let recognition = null;
+
+function startDictation(recId) {
+  // Controlla Safari prima di tutto
+  if (isSafari()) {
+    showSafariWarning();
+    return;
+  }
+
+  const btn    = document.getElementById(`mic-${recId}`);
+  const status = document.getElementById(`mic-status-${recId}`);
+  const ta     = document.getElementById(`ei-${recId}`);
+  if (!ta) return;
+
+  if (recognition) { recognition.stop(); return; }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showSafariWarning();
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = 'it-IT';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  const baseText = ta.value;
+
+  recognition.onstart = () => {
+    if (btn) { btn.style.background='#ef4444'; btn.innerHTML='⏹ Ferma'; }
+    if (status) { status.textContent='🎙 In ascolto… parla ora'; status.style.color='#ef4444'; }
+  };
+
+  recognition.onresult = (e) => {
+    let interim='', final='';
+    for (let i=e.resultIndex; i<e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) ta.value = (baseText + (baseText?' ':'')+final);
+    if (status) status.textContent = interim ? `💬 "${interim}"` : '🎙 In ascolto…';
+  };
+
+  recognition.onend = () => {
+    recognition = null;
+    if (btn) { btn.style.background='var(--accent2)'; btn.innerHTML='🎤 Detta'; }
+    if (status) { status.textContent='✅ Completato'; status.style.color='var(--green)'; }
+    setTimeout(()=>{ if(status) status.textContent=''; }, 3000);
+  };
+
+  recognition.onerror = (e) => {
+    recognition = null;
+    if (btn) { btn.style.background='var(--accent2)'; btn.innerHTML='🎤 Detta'; }
+    if (status) status.textContent = e.error==='not-allowed' ? '❌ Microfono negato — controlla i permessi' : `❌ ${e.error}`;
+  };
+
+  recognition.start();
+}
+
+init();
+</script>
+</body>
+</html>
