@@ -1092,7 +1092,6 @@ async function init() {
       const equipoint = gf(myRec,'fldUPfBDYi679z7FM') || '';
       // recId può essere in myRec.id o in myRec.fields.id o cellValuesByFieldId
       const recId = myRec.id || myRec.fields?.id || null;
-      console.log('DEBUG myRec.id:', myRec.id, 'myRec keys:', Object.keys(myRec));
       utente = { nome, equipoint: [equipoint], recId };
     }
   } catch(e) {
@@ -1136,26 +1135,8 @@ async function loadConsulenze(utente) {
   try {
     // Usa recId se disponibile (caricato dinamicamente da Airtable)
     // altrimenti cerca l'agente per equipoint
-    let agenteRecId = utente.recId;
-    console.log('DEBUG loadConsulenze - utente:', JSON.stringify(utente));
-    console.log('DEBUG agenteRecId:', agenteRecId);
-    if (!agenteRecId) {
-      // Cerca in Equipoint & Profili tramite equipoint
-      const eqList = utente.equipoint || [];
-      const eqRecs2 = await proxyGet('tblmSrijxqNZ8Wd9n',
-        'fields[]=fldUPfBDYi679z7FM&maxRecords=100'
-      );
-      const gf2 = (r,fid) => { const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
-      const found = (eqRecs2||[]).find(r => {
-        const eq = gf2(r,'fldUPfBDYi679z7FM') || '';
-        return eqList.some(e => e.toLowerCase() === eq.toLowerCase());
-      });
-      if (found) agenteRecId = found.id;
-    }
-    if (!agenteRecId) {
-      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Profilo agente non trovato</div>';
-      return;
-    }
+    // Usa nome agente per filtrare le provvigioni (recId non disponibile via proxy)
+    const nomeAgente = utente.nome.toLowerCase();
     const data = await proxyGet('tblUm22CELuEiGOtQ',
       'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx' +
       '&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD' +
@@ -1165,25 +1146,18 @@ async function loadConsulenze(utente) {
       '&fields[]=fldwgv4IHMq6dN5IT&fields[]=fld9hqy9nJ00vouYB' +
       '&fields[]=flddZ21kARkQ1erU2&maxRecords=200'
     );
-    // Filtra per agente (link o nome) e anno corrente
+    // Filtra per nome agente nel campo Nome del record Provvigioni
     const gf = (r, fid) => { const f=r.fields||{}; const cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
     const annoCorrente = String(new Date().getFullYear());
+    const nomeParti = nomeAgente.split(' ').filter(p => p.length > 2);
     const miei = (data || []).filter(r => {
-      // 1. Controlla link agente
-      const links = gf(r, 'fldxMvmS34agmCYyI');
-      const linkMatch = links && (Array.isArray(links) ? links : [links]).some(l => (typeof l==='object' ? l.id : l) === agenteRecId);
-      // 2. Fallback: controlla nome record (es. "Marco Costantini - GENNAIO 26")
       const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU') || '').toLowerCase();
-      const nomeParti = utente.nome.toLowerCase().split(' ');
       const nomeMatch = nomeParti.every(p => nomeRec.includes(p));
-      if (!linkMatch && !nomeMatch) return false;
-      // Filtra per anno corrente
+      if (!nomeMatch) return false;
       const anno = gf(r, 'fldMsQrq1yPC1Vw9t');
       const annoN = anno ? (typeof anno==='object' ? anno.name : anno) : '';
       return annoN === annoCorrente || annoN === '';
     });
-    console.log('DEBUG miei length:', miei.length, 'di', (data||[]).length);
-    if (miei.length > 0) console.log('DEBUG primo record:', JSON.stringify(miei[0]));
     if (!miei.length) {
       section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
       return;
