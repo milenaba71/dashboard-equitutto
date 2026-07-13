@@ -1473,7 +1473,7 @@ async function loadConsulenze() {
       '&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=500');
     const byAgente = {};
     (data||[]).forEach(r => {
-      const anno=gf(r,'fldMsQrq1yPC1Vw9t');
+      const anno=gf(r,'fldMsQrq1yPC1Vw9t','Anno','anno','Year');
       const _annoCorr = String(new Date().getFullYear());
       if(!anno||(typeof anno==='object'?anno.name:anno)!==_annoCorr) return;
       const links=gf(r,'fldxMvmS34agmCYyI');
@@ -1486,17 +1486,17 @@ async function loadConsulenze() {
       });
     });
     if(!Object.keys(byAgente).length){grid.innerHTML='<div class="cons-admin-empty">Nessuna consulenza trovata</div>';section.style.display='';return;}
-    const calcAuto=r=>{const a=parseFloat(gf(r,'fldYAPIRg9pMQb8bD')||0);if(a>0)return a;return Math.round(parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0)*parseFloat(gf(r,'fldSJ8ekSE1OjeciO')||0)*100)/100;};
+    const calcAuto=r=>{const a=parseFloat(gf(r,'fldYAPIRg9pMQb8bD','Provvigione AUTO €','Provvigione Calcolata €','Provvigione Calcolata')||0);if(a>0)return a;return Math.round(parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0)*parseFloat(gf(r,'fldSJ8ekSE1OjeciO')||0)*100)/100;};
     const badge=s=>{const n=s?(typeof s==='object'?s.name:s):'Da pagare';const cls=n==='Pagato'?'cons-stato-pagato':n==='Sospeso'?'cons-stato-sospeso':'cons-stato-da';return '<span class="cons-admin-stato '+cls+'">'+esc(n)+'</span>';};
     let htmlOut='';
     Object.keys(byAgente).sort((a,b)=>(agentiMap[a].nome||'').localeCompare(agentiMap[b].nome||'')).forEach(id=>{
       const info=agentiMap[id];
       const rows=byAgente[id].sort((a,b)=>{const ma=gf(a,'fldOt8LBoW3NKSTbx'),mb=gf(b,'fldOt8LBoW3NKSTbx');const na=ma?(typeof ma==='object'?ma.name:ma):'',nb=mb?(typeof mb==='object'?mb.name:mb):'';return MESI_ORD_ADM.indexOf(na)-MESI_ORD_ADM.indexOf(nb);});
-      const totAuto=rows.reduce((s,r)=>s+calcAuto(r),0),totVal=rows.reduce((s,r)=>s+parseFloat(gf(r,'fldExV7WZDakWl1Gy')||0),0);
+      const totAuto=rows.reduce((s,r)=>s+calcAuto(r),0),totVal=rows.reduce((s,r)=>s+parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0),0);
       htmlOut+='<div class="cons-admin-card"><div class="cons-admin-agent"><span>'+esc(info.nome)+'</span>'+(info.profilo?'<span class="cons-admin-profilo">'+esc(info.profilo)+'</span>':'')+
         '</div><div class="cons-admin-kpi"><div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totAuto)+'</div><div class="cons-admin-k-lbl">Consulenza tot.</div></div>'+
         '<div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totVal)+'</div><div class="cons-admin-k-lbl">Fatturato base</div></div></div><div class="cons-admin-rows">'+
-        rows.map(r=>{const mese=gf(r,'fldOt8LBoW3NKSTbx'),meseN=mese?(typeof mese==='object'?mese.name:mese):'-';const auto=calcAuto(r),stato=gf(r,'fldg1R7K3WjDgGZ8S');
+        rows.map(r=>{const mese=gf(r,'fldOt8LBoW3NKSTbx','Mese','mese','Month'),meseN=mese?(typeof mese==='object'?mese.name:mese):'-';const auto=calcAuto(r),stato=gf(r,'fldg1R7K3WjDgGZ8S','Stato Pagamento');
           return '<div class="cons-admin-row"><span class="cons-admin-mese">'+esc(meseN)+'</span><span class="cons-admin-importo">'+(auto>0?fmtE(auto):'—')+'</span>'+badge(stato)+'</div>';}).join('')+
         '</div></div>';
     });
@@ -1510,4 +1510,3 @@ if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); 
 </script>
 </body>
 </html>
-
