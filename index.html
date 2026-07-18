@@ -1125,99 +1125,234 @@ async function init() {
 let _currentUtente = null;
 
 
-// CONSULENZE (provvigioni agente)
-// Tabelle Airtable — nessuna mappa hardcoded
-const MESI_ORD = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+// ═══════════════════════════════════════════════════════════════
+//  CONSULENZE / PROVVIGIONI — versione aggiornata
+//  Sostituisce integralmente la vecchia funzione loadConsulenze()
+//
+//  COSA CAMBIA rispetto alla versione precedente:
+//  1. Filtra per CODICE EQUIPOINT (fldpBIU4cPynWMLoB) invece che per nome
+//  2. Usa i campi NUOVI:
+//       Valore da Proposte €      → fldl1KD6ta8txfTjv
+//       Provvigione da Proposte € → fldZyDdF5zQSMobPc
+//     (non più "Provvigione AUTO €" fldYAPIRg9pMQb8bD, obsoleto/errato)
+//  3. Ogni mese è cliccabile e mostra il DETTAGLIO delle proposte:
+//     cliente, tipo prodotto, totale riga, % applicata, provvigione riga
+// ═══════════════════════════════════════════════════════════════
+
+const MESI_ORD = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO',
+                  'LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+
+// Field ID tabella Provvigioni
+const FP = {
+  NOME:   'fldnyDCtYjNgCjnAU',
+  MESE:   'fldOt8LBoW3NKSTbx',
+  ANNO:   'fldMsQrq1yPC1Vw9t',
+  CODICE: 'fldpBIU4cPynWMLoB',   // Codice Equipoint (from Agente)
+  CHIAVE: 'fld3AtDfCOTtpWAFE',   // Chiave Provvigione
+  VALORE: 'fldl1KD6ta8txfTjv',   // Valore da Proposte €
+  PROVV:  'fldZyDdF5zQSMobPc',   // Provvigione da Proposte €
+  STATO:  'fldg1R7K3WjDgGZ8S',   // Stato Pagamento
+};
+
+// Field ID tabella Proposte Prodotti
+const FPR = {
+  CHIAVE:   'fldi8EsWOTFHqF9Zd', // Chiave Provvigione
+  CLIENTE:  'fldBq5MM457raLunf', // Nome e cognome (from CONTATTO)
+  TIPO:     'fldc2ZBNszpFQQN3g', // Tipo Provvigione (from negozio)
+  QTA:      'fldw2aCMC8pVKbJ2N', // Quantità
+  TOTALE:   'fldSVSzsslNzmI8HY', // Totale riga
+  PERC:     'fldWULZXlCB2VlxBT', // % applicata
+  PROVVRIG: 'fldJ8XfwoCDj0McIi', // Provvigione riga €
+};
+
+let _consRecords = [];   // record provvigioni dell'agente
+let _consAperto  = null; // chiave del mese espanso
+
+// Legge un campo sia per field ID sia per nome leggibile
+function cgf(r, fid) {
+  const f = r.fields || {}, cv = r.cellValuesByFieldId || {};
+  if (f[fid] !== undefined) return f[fid];
+  if (cv[fid] !== undefined) return cv[fid];
+  for (let i = 2; i < arguments.length; i++) {
+    if (f[arguments[i]] !== undefined) return f[arguments[i]];
+  }
+  return undefined;
+}
+
+// Normalizza qualsiasi valore Airtable in stringa leggibile
+function ctxt(v) {
+  if (v === null || v === undefined) return '';
+  if (Array.isArray(v)) return v.map(x => (x && x.name) ? x.name : x).join(', ');
+  if (typeof v === 'object' && v.name) return v.name;
+  return String(v);
+}
+
+function cnum(v) {
+  if (Array.isArray(v)) v = v[0];
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
 
 async function loadConsulenze(utente) {
   const section = document.getElementById('consulenze-list');
   if (!section) return;
+
+  section.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Caricamento…</div>';
+
   try {
-    // Usa recId se disponibile (caricato dinamicamente da Airtable)
-    // altrimenti cerca l'agente per equipoint
-    // Usa nome agente per filtrare le provvigioni (recId non disponibile via proxy)
-    const nomeAgente = utente.nome.toLowerCase();
     const data = await proxyGet('tblUm22CELuEiGOtQ',
-      'fields[]=fldnyDCtYjNgCjnAU&fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx' +
-      '&fields[]=fldMsQrq1yPC1Vw9t&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD' +
-      '&fields[]=fldSJ8ekSE1OjeciO&fields[]=fldg1R7K3WjDgGZ8S' +
-      '&fields[]=fldtTLgh1yvF6GIzO&fields[]=fldiL8WLmHkxdEgk1' +
-      '&fields[]=fldUYrIMzAtjUf6a2&fields[]=fldsTr5zexCUcAazH' +
-      '&fields[]=fldwgv4IHMq6dN5IT&fields[]=fld9hqy9nJ00vouYB' +
-      '&fields[]=flddZ21kARkQ1erU2&fields[]=fldq1JGctpSdbQWZ3&fields[]=fldpnA9eG4ZqckEfJ&fields[]=fldiCGJx6urXm3MCK&fields[]=fldXMxJnMKEOCsBgC&fields[]=fldqOZUFtOpM5ysiJ&maxRecords=200'
+      'fields[]=' + FP.NOME + '&fields[]=' + FP.MESE + '&fields[]=' + FP.ANNO +
+      '&fields[]=' + FP.CODICE + '&fields[]=' + FP.CHIAVE +
+      '&fields[]=' + FP.VALORE + '&fields[]=' + FP.PROVV +
+      '&fields[]=' + FP.STATO + '&maxRecords=300'
     );
-    // Filtra per nome agente - il proxy restituisce campi con nome leggibile
-    const gf = (r, fid, ...nomi) => {
-      const f=r.fields||{}; const cv=r.cellValuesByFieldId||{};
-      if (f[fid]!==undefined) return f[fid];
-      if (cv[fid]!==undefined) return cv[fid];
-      for (const n of nomi) { if (f[n]!==undefined) return f[n]; }
-      return undefined;
-    };
-    const annoCorrente = String(new Date().getFullYear());
-    const nomeParti = nomeAgente.split(' ').filter(p => p.length > 2);
-    if ((data||[]).length > 0) console.log('CAMPI RECORD:', Object.keys((data||[])[0].fields||{}));
+
+    // Codici equipoint dell'utente, normalizzati
+    const codici = (utente.equipoint || [])
+      .map(c => String(c || '').trim().toUpperCase())
+      .filter(Boolean);
+    const nomeParti = String(utente.nome || '').toLowerCase().split(' ').filter(p => p.length > 2);
+
     const miei = (data || []).filter(r => {
-      const nomeRec = (gf(r,'fldnyDCtYjNgCjnAU','Nome','Name','name') || '').toLowerCase();
-      const nomeMatch = nomeParti.every(p => nomeRec.includes(p));
-      if (!nomeMatch) return false;
-      // Cerca anno in field ID o nome campo "Anno"
-      const anno = gf(r,'fldMsQrq1yPC1Vw9t','Anno','anno','Year');
-      const annoN = anno ? (typeof anno==='object' ? anno.name : String(anno)) : '';
-      return annoN === annoCorrente || annoN === '';
+      // 1° criterio: Codice Equipoint dell'agente (affidabile)
+      const cod = ctxt(cgf(r, FP.CODICE, 'Codice Equipoint (from Agente)')).trim().toUpperCase();
+      if (cod && codici.length) return codici.indexOf(cod) !== -1;
+      // 2° criterio di riserva: nome nel titolo del record
+      const nomeRec = ctxt(cgf(r, FP.NOME, 'Name', 'Nome')).toLowerCase();
+      return nomeParti.length > 0 && nomeParti.every(p => nomeRec.indexOf(p) !== -1);
     });
+
     if (!miei.length) {
-      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna consulenza disponibile</div>';
+      section.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Nessuna provvigione registrata</div>';
       return;
     }
-    miei.sort((a,b) => {
-      const ma = gf(a,'fldOt8LBoW3NKSTbx','Mese','mese','Month'), mb = gf(b,'fldOt8LBoW3NKSTbx','Mese','mese','Month');
-      const na = ma?(typeof ma==='object'?ma.name:ma):'', nb = mb?(typeof mb==='object'?mb.name:mb):'';
-      return MESI_ORD.indexOf(na) - MESI_ORD.indexOf(nb);
+
+    // Ordina per anno e mese
+    miei.sort((a, b) => {
+      const aa = ctxt(cgf(a, FP.ANNO, 'Anno')), ab = ctxt(cgf(b, FP.ANNO, 'Anno'));
+      if (aa !== ab) return aa.localeCompare(ab);
+      const ma = ctxt(cgf(a, FP.MESE, 'Mese')), mb = ctxt(cgf(b, FP.MESE, 'Mese'));
+      return MESI_ORD.indexOf(ma) - MESI_ORD.indexOf(mb);
     });
-    const totValore = miei.reduce((s,r) => s+parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0),0);
-    // Calcola provvigione: usa fldYAPIRg9pMQb8bD (formula Airtable) se disponibile
-    // altrimenti calcola da Valore * % (campi fldtTLgh1yvF6GIzO = % Silicon AUTO, ecc.)
-    const calcProvvigione = r => {
-      // 1. Usa Provvigione AUTO formula Airtable
-      // 1. Usa Provvigione AUTO € (ora formula corretta per tipo prodotto e profilo)
-      const formula = parseFloat(gf(r,'fldYAPIRg9pMQb8bD','Provvigione AUTO €')||0);
-      if (formula > 0) return formula;
-      // 2. Fallback: Provvigione Calcolata € (manuale)
-      const calcolata = parseFloat(gf(r,'fldq1JGctpSdbQWZ3','Provvigione Calcolata €','Provvigione Calcolata')||0);
-      if (calcolata > 0) return calcolata;
-      return 0;
-    };
-    const totAuto = miei.reduce((s,r) => s+calcProvvigione(r),0);
-    const nPagate   = miei.filter(r => { const s=gf(r,'fldg1R7K3WjDgGZ8S','Stato Pagamento'); return s&&(typeof s==='object'?s.name:s)==='Pagato'; }).length;
-    const badge = s => { const n=s?(typeof s==='object'?s.name:s):'Da pagare'; const cls=n==='Pagato'?'pagato':n==='Sospeso'?'sospeso':'da-pagare'; return '<span class="cons-badge '+cls+'">'+esc(n)+'</span>'; };
+
+    _consRecords = miei;
+
+    const totValore = miei.reduce((s, r) => s + cnum(cgf(r, FP.VALORE, 'Valore da Proposte €')), 0);
+    const totProvv  = miei.reduce((s, r) => s + cnum(cgf(r, FP.PROVV,  'Provvigione da Proposte €')), 0);
+    const nPagate   = miei.filter(r => ctxt(cgf(r, FP.STATO, 'Stato Pagamento')) === 'Pagato').length;
+
     section.innerHTML =
       '<div class="cons-grid">' +
-        '<div class="cons-kpi"><div class="cons-kpi-val">'+fmt(totAuto)+'</div><div class="cons-kpi-lbl">Totale maturato</div></div>' +
-        '<div class="cons-kpi"><div class="cons-kpi-val">'+fmt(totValore)+'</div><div class="cons-kpi-lbl">Fatturato base</div></div>' +
-        '<div class="cons-kpi"><div class="cons-kpi-val">'+nPagate+'</div><div class="cons-kpi-lbl">Pagate</div></div>' +
-        '<div class="cons-kpi"><div class="cons-kpi-val">'+miei.length+'</div><div class="cons-kpi-lbl">Mesi</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">' + fmt(totProvv) + '</div><div class="cons-kpi-lbl">Provvigione maturata</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">' + fmt(totValore) + '</div><div class="cons-kpi-lbl">Valore proposte</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">' + nPagate + '</div><div class="cons-kpi-lbl">Mesi pagati</div></div>' +
+        '<div class="cons-kpi"><div class="cons-kpi-val">' + miei.length + '</div><div class="cons-kpi-lbl">Mesi</div></div>' +
       '</div>' +
-      '<table class="cons-table"><thead><tr><th>Mese</th><th>Fatturato</th><th>Consulenza</th><th>Stato</th></tr></thead><tbody>' +
-      miei.map(r => {
-        const mese=gf(r,'fldOt8LBoW3NKSTbx','Mese','mese','Month'), meseN=mese?(typeof mese==='object'?mese.name:mese):'-';
-        const valRollup=parseFloat(gf(r,'flddZ21kARkQ1erU2','Valore Raggiunto AUTO')||0);
-        const valManuale=parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0);
-        const valore=valRollup>0?valRollup:valManuale;
-        const auto=calcProvvigione(r);
-        const stato=gf(r,'fldg1R7K3WjDgGZ8S','Stato Pagamento');
-        return '<tr>' +
-          '<td style="font-weight:600;color:var(--accent)">'+esc(meseN)+'</td>' +
-          '<td>'+(auto>0?fmt(valore):'<span style="color:var(--muted)">—</span>')+'</td>' +
-          '<td style="font-weight:700;color:'+(auto>0?'#27ae60':'var(--muted)')+'">'+(auto>0?fmt(auto):'—')+'</td>' +
-          '<td>'+badge(stato)+'</td>' +
-        '</tr>';
-      }).join('') +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Clicca su un mese per vedere le proposte che compongono l\'importo</div>' +
+      '<table class="cons-table"><thead><tr>' +
+        '<th>Mese</th><th>Valore proposte</th><th>Provvigione</th><th>Stato</th><th></th>' +
+      '</tr></thead><tbody id="cons-tbody">' +
+      miei.map((r, i) => renderConsRiga(r, i)).join('') +
       '</tbody></table>';
-  } catch(e) {
-    section.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px">Errore: '+e.message+'</div>';
+
+  } catch (e) {
+    section.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px">Errore: ' + esc(e.message) + '</div>';
   }
 }
+
+function renderConsRiga(r, i) {
+  const mese   = ctxt(cgf(r, FP.MESE, 'Mese')) || '—';
+  const anno   = ctxt(cgf(r, FP.ANNO, 'Anno'));
+  const valore = cnum(cgf(r, FP.VALORE, 'Valore da Proposte €'));
+  const provv  = cnum(cgf(r, FP.PROVV,  'Provvigione da Proposte €'));
+  const stato  = ctxt(cgf(r, FP.STATO,  'Stato Pagamento')) || 'Da pagare';
+  const chiave = ctxt(cgf(r, FP.CHIAVE, 'Chiave Provvigione'));
+  const cls    = stato === 'Pagato' ? 'pagato' : stato === 'Sospeso' ? 'sospeso' : 'da-pagare';
+  const aperto = _consAperto === chiave;
+
+  let html =
+    '<tr style="cursor:pointer" onclick="toggleConsMese(' + i + ')">' +
+      '<td style="font-weight:600;color:var(--accent)">' + esc(mese) + (anno ? ' <span style="color:var(--muted);font-weight:400">' + esc(anno) + '</span>' : '') + '</td>' +
+      '<td>' + (valore > 0 ? fmt(valore) : '<span style="color:var(--muted)">—</span>') + '</td>' +
+      '<td style="font-weight:700;color:' + (provv > 0 ? '#27ae60' : 'var(--muted)') + '">' + (provv > 0 ? fmt(provv) : '—') + '</td>' +
+      '<td><span class="cons-badge ' + cls + '">' + esc(stato) + '</span></td>' +
+      '<td style="text-align:right;color:var(--muted);font-size:14px">' + (aperto ? '▾' : '▸') + '</td>' +
+    '</tr>';
+
+  if (aperto) {
+    html += '<tr><td colspan="5" style="padding:0;background:var(--surface2)">' +
+              renderConsDettaglio(chiave) +
+            '</td></tr>';
+  }
+  return html;
+}
+
+function toggleConsMese(i) {
+  const r = _consRecords[i];
+  if (!r) return;
+  const chiave = ctxt(cgf(r, FP.CHIAVE, 'Chiave Provvigione'));
+  _consAperto = (_consAperto === chiave) ? null : chiave;
+  const tb = document.getElementById('cons-tbody');
+  if (tb) tb.innerHTML = _consRecords.map((rec, k) => renderConsRiga(rec, k)).join('');
+}
+
+// Dettaglio: le singole proposte che compongono la provvigione del mese
+function renderConsDettaglio(chiave) {
+  if (!chiave) {
+    return '<div style="padding:14px;font-size:12px;color:var(--muted)">Nessuna chiave associata a questo mese.</div>';
+  }
+
+  const righe = (allProposte || []).filter(p =>
+    ctxt(cgf(p, FPR.CHIAVE, 'Chiave Provvigione')).trim() === chiave.trim()
+  );
+
+  if (!righe.length) {
+    return '<div style="padding:14px;font-size:12px;color:var(--muted)">Nessuna proposta collegata a questo mese.</div>';
+  }
+
+  let totRiga = 0, totProvv = 0;
+  const body = righe.map(p => {
+    const cliente = ctxt(cgf(p, FPR.CLIENTE, 'Nome e cognome (from CONTATTO)')) || '—';
+    const tipo    = ctxt(cgf(p, FPR.TIPO, 'Tipo Provvigione (from negozio)')) || '—';
+    const qta     = cnum(cgf(p, FPR.QTA, 'Quantità')) || 1;
+    const tot     = cnum(cgf(p, FPR.TOTALE, 'Totale riga'));
+    const perc    = cnum(cgf(p, FPR.PERC, '% applicata'));
+    const pr      = cnum(cgf(p, FPR.PROVVRIG, 'Provvigione riga €'));
+    totRiga  += tot;
+    totProvv += pr;
+    return '<tr>' +
+      '<td style="font-weight:600">' + esc(cliente) + '</td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + esc(tipo) + '</td>' +
+      '<td style="text-align:center">' + qta + '</td>' +
+      '<td style="text-align:right">€ ' + tot.toLocaleString('it-IT', {minimumFractionDigits:2}) + '</td>' +
+      '<td style="text-align:right;color:var(--accent2);font-weight:600">' + (perc > 0 ? Math.round(perc * 100) + '%' : '—') + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:' + (pr > 0 ? '#27ae60' : 'var(--muted)') + '">' +
+        (pr > 0 ? '€ ' + pr.toLocaleString('it-IT', {minimumFractionDigits:2}) : '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  return '<div style="padding:12px 14px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">' +
+      '🛒 Proposte del mese (' + righe.length + ')</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden">' +
+      '<thead><tr>' +
+        '<th style="text-align:left;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Cliente</th>' +
+        '<th style="text-align:left;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Tipo</th>' +
+        '<th style="text-align:center;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Q.tà</th>' +
+        '<th style="text-align:right;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Totale</th>' +
+        '<th style="text-align:right;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">%</th>' +
+        '<th style="text-align:right;padding:7px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">Provvigione</th>' +
+      '</tr></thead>' +
+      '<tbody>' + body + '</tbody>' +
+      '<tfoot><tr style="border-top:2px solid var(--accent)">' +
+        '<td colspan="3" style="padding:8px 10px;font-weight:700;color:var(--accent)">Totale</td>' +
+        '<td style="text-align:right;padding:8px 10px;font-weight:700">€ ' + totRiga.toLocaleString('it-IT', {minimumFractionDigits:2}) + '</td>' +
+        '<td></td>' +
+        '<td style="text-align:right;padding:8px 10px;font-weight:800;color:#27ae60">€ ' + totProvv.toLocaleString('it-IT', {minimumFractionDigits:2}) + '</td>' +
+      '</tr></tfoot>' +
+    '</table></div>';
+}
+
 
 async function refreshAll() {
   const btn = document.getElementById('btn-refresh');
