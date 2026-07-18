@@ -490,8 +490,7 @@ function checkLogin() {
     $('login-screen').style.display = 'none';
     $('admin').style.display = 'block';
     sessionStorage.setItem('eq-admin', '1');
-    buildLinksMenu();
-    loadData();
+    initAdmin();
   } else {
     $('login-err').style.display = 'block';
     $('pwd-input').value = '';
@@ -510,7 +509,6 @@ function doLogout() {
 if (sessionStorage.getItem('eq-admin') === '1') {
   $('login-screen').style.display = 'none';
   $('admin').style.display = 'block';
-  buildLinksMenu();
 }
 
 // ─── LINKS MENU ───────────────────────────────────────────────────────
@@ -1437,10 +1435,104 @@ async function ricalcolaTutto() {
   }
 }
 
-// ─── AUTO INIT ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN — BLOCCO AGGIORNATO
+//
+//  Risolve due problemi:
+//  A) TOKEN_MAP scritto a mano e disallineato → ora gli agenti si
+//     caricano da Airtable (Equipoint & Profili). Nessun agente
+//     resta invisibile quando ne aggiungi uno nuovo.
+//  B) Le consulenze leggevano i campi obsoleti
+//     ("Provvigione AUTO €" e "Valore Raggiunto €" manuale)
+//     → ora usano i campi corretti:
+//        Valore da Proposte €      fldl1KD6ta8txfTjv
+//        Provvigione da Proposte € fldZyDdF5zQSMobPc
+// ═══════════════════════════════════════════════════════════════
 
-// CONSULENZE ADMIN — dinamico da Airtable
-const MESI_ORD_ADM = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+
+// ─── A. AGENTI DINAMICI DA AIRTABLE ──────────────────────────────
+// TOKEN_MAP resta come riserva se Airtable non risponde.
+// Dopo loadAgenti() viene riempito con i dati reali.
+
+const PALETTE = ['#e74c3c','#8e44ad','#2980b9','#27ae60','#e67e22','#16a085',
+                 '#c0392b','#d35400','#1abc9c','#9b59b6','#f39c12','#3498db',
+                 '#2c3e50','#7f8c8d','#af7ac5','#5499c7','#48c9b0','#f4d03f',
+                 '#eb984e','#cd6155','#5d6d7e','#45b39d','#dc7633'];
+
+let AGENTI_CARICATI = false;
+
+async function loadAgenti() {
+  try {
+    const recs = await proxyGet('tblmSrijxqNZ8Wd9n',
+      'fields[]=fldhHAx77O7ZdedHw' +   // Name
+      '&fields[]=fldUPfBDYi679z7FM' +  // Codice Equipoint
+      '&fields[]=fldUGpkKP19zHTLf1' +  // Token Dashboard
+      '&fields[]=fldhQ32TZbtJqGvFL' +  // Profilo Listino
+      '&maxRecords=100'
+    );
+
+    const gf = (r, fid) => {
+      const f = r.fields || {}, cv = r.cellValuesByFieldId || {};
+      return f[fid] !== undefined ? f[fid] : cv[fid];
+    };
+    const txt = v => (v && typeof v === 'object' && v.name) ? v.name : (v == null ? '' : String(v));
+
+    const nuovi = {};
+    let i = 0;
+    (recs || []).forEach(r => {
+      const nome    = txt(gf(r, 'fldhHAx77O7ZdedHw')).trim();
+      const codice  = txt(gf(r, 'fldUPfBDYi679z7FM')).trim();
+      const token   = txt(gf(r, 'fldUGpkKP19zHTLf1')).trim();
+      const profilo = txt(gf(r, 'fldhQ32TZbtJqGvFL')).trim();
+      if (!nome || !token || !codice) return;   // senza token non ha dashboard
+      nuovi[token] = {
+        nome: nome,
+        equipoint: [codice],
+        profilo: profilo,
+        recId: r.id,
+        color: PALETTE[i % PALETTE.length],
+      };
+      i++;
+    });
+
+    if (Object.keys(nuovi).length) {
+      // svuota la mappa hardcoded e la rimpiazza con i dati veri
+      Object.keys(TOKEN_MAP).forEach(k => delete TOKEN_MAP[k]);
+      Object.assign(TOKEN_MAP, nuovi);
+      AGENTI_CARICATI = true;
+      console.log('Agenti caricati da Airtable:', Object.keys(nuovi).length);
+    } else {
+      console.warn('Nessun agente da Airtable — uso TOKEN_MAP di riserva');
+    }
+  } catch (e) {
+    console.warn('Caricamento agenti fallito, uso TOKEN_MAP di riserva:', e.message);
+  }
+  buildLinksMenu();
+}
+
+// Avvio unico: prima gli agenti, poi tutto il resto
+async function initAdmin() {
+  await loadAgenti();
+  loadData();
+  loadClassifica();
+  loadConversione();
+  loadConsulenze();
+}
+
+
+// ─── B. CONSULENZE ADMIN (campi nuovi) ───────────────────────────
+const MESI_ORD_ADM = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO',
+                      'LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+
+// Field ID tabella Provvigioni
+const FA = {
+  AGENTE: 'fldxMvmS34agmCYyI',
+  MESE:   'fldOt8LBoW3NKSTbx',
+  ANNO:   'fldMsQrq1yPC1Vw9t',
+  VALORE: 'fldl1KD6ta8txfTjv',  // Valore da Proposte €
+  PROVV:  'fldZyDdF5zQSMobPc',  // Provvigione da Proposte €
+  STATO:  'fldg1R7K3WjDgGZ8S',
+};
 
 function scrollToConsulenze() {
   const s = document.getElementById('consulenze-admin-section');
@@ -1448,65 +1540,157 @@ function scrollToConsulenze() {
 }
 
 function fmtE(n) {
-  return '€ ' + Math.round(n).toLocaleString('it-IT');
+  return '€ ' + Math.round(n).toLocaleString('it-IT');
+}
+
+function agf(r, fid) {
+  const f = r.fields || {}, cv = r.cellValuesByFieldId || {};
+  return f[fid] !== undefined ? f[fid] : cv[fid];
+}
+
+function atxt(v) {
+  if (v === null || v === undefined) return '';
+  if (Array.isArray(v)) return v.map(x => (x && x.name) ? x.name : x).join(', ');
+  if (typeof v === 'object' && v.name) return v.name;
+  return String(v);
+}
+
+function anum(v) {
+  if (Array.isArray(v)) v = v[0];
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
 }
 
 async function loadConsulenze() {
   const section = document.getElementById('consulenze-admin-section');
   const grid    = document.getElementById('cons-admin-grid');
   if (!section || !grid) return;
-  grid.innerHTML = '<div class="cons-admin-empty">Caricamento...</div>';
-  const titleEl = document.getElementById('cons-admin-title-yr');
-  if (titleEl) titleEl.textContent = '💰 Consulenze Agenti ' + new Date().getFullYear();
+
+  grid.innerHTML = '<div class="cons-admin-empty">Caricamento…</div>';
+  section.style.display = '';
+
   try {
-    const gf = (r,fid) => { const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; };
-    const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n','fields[]=fldhHAx77O7ZdedHw&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100');
+    // 1. Anagrafica agenti (nome + profilo listino)
+    const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
+      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100');
+
     const agentiMap = {};
-    (eqRecs||[]).forEach(r => {
-      const nome=gf(r,'fldhHAx77O7ZdedHw')||'';
-      const profilo=gf(r,'fldhQ32TZbtJqGvFL');
-      if(nome) agentiMap[r.id]={nome,profilo:profilo?(typeof profilo==='object'?profilo.name:profilo):''};
+    (eqRecs || []).forEach(r => {
+      const nome = atxt(agf(r, 'fldhHAx77O7ZdedHw')).trim();
+      if (nome) {
+        agentiMap[r.id] = { nome: nome, profilo: atxt(agf(r, 'fldhQ32TZbtJqGvFL')) };
+      }
     });
+
+    // 2. Provvigioni dell'anno corrente
     const data = await proxyGet('tblUm22CELuEiGOtQ',
-      'fields[]=fldxMvmS34agmCYyI&fields[]=fldOt8LBoW3NKSTbx&fields[]=fldMsQrq1yPC1Vw9t' +
-      '&fields[]=fldExV7WZDakWl1Gy&fields[]=fldYAPIRg9pMQb8bD&fields[]=fldSJ8ekSE1OjeciO' +
-      '&fields[]=fldg1R7K3WjDgGZ8S&maxRecords=500');
+      'fields[]=' + FA.AGENTE + '&fields[]=' + FA.MESE + '&fields[]=' + FA.ANNO +
+      '&fields[]=' + FA.VALORE + '&fields[]=' + FA.PROVV + '&fields[]=' + FA.STATO +
+      '&maxRecords=500');
+
+    const annoCorr = String(new Date().getFullYear());
     const byAgente = {};
-    (data||[]).forEach(r => {
-      const anno=gf(r,'fldMsQrq1yPC1Vw9t','Anno','anno','Year');
-      const _annoCorr = String(new Date().getFullYear());
-      if(!anno||(typeof anno==='object'?anno.name:anno)!==_annoCorr) return;
-      const links=gf(r,'fldxMvmS34agmCYyI');
-      if(!links) return;
-      (Array.isArray(links)?links:[links]).forEach(l => {
-        const id=typeof l==='object'?l.id:l;
-        if(!agentiMap[id]) return;
-        if(!byAgente[id]) byAgente[id]=[];
+
+    (data || []).forEach(r => {
+      const anno = atxt(agf(r, FA.ANNO));
+      if (anno && anno !== annoCorr) return;      // tiene anche i record senza anno
+      const links = agf(r, FA.AGENTE);
+      if (!links) return;
+      (Array.isArray(links) ? links : [links]).forEach(l => {
+        const id = (typeof l === 'object' && l !== null) ? l.id : l;
+        if (!agentiMap[id]) return;
+        if (!byAgente[id]) byAgente[id] = [];
         byAgente[id].push(r);
       });
     });
-    if(!Object.keys(byAgente).length){grid.innerHTML='<div class="cons-admin-empty">Nessuna consulenza trovata</div>';section.style.display='';return;}
-    const calcAuto=r=>{const a=parseFloat(gf(r,'fldYAPIRg9pMQb8bD','Provvigione AUTO €','Provvigione Calcolata €','Provvigione Calcolata')||0);if(a>0)return a;return Math.round(parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0)*parseFloat(gf(r,'fldSJ8ekSE1OjeciO')||0)*100)/100;};
-    const badge=s=>{const n=s?(typeof s==='object'?s.name:s):'Da pagare';const cls=n==='Pagato'?'cons-stato-pagato':n==='Sospeso'?'cons-stato-sospeso':'cons-stato-da';return '<span class="cons-admin-stato '+cls+'">'+esc(n)+'</span>';};
-    let htmlOut='';
-    Object.keys(byAgente).sort((a,b)=>(agentiMap[a].nome||'').localeCompare(agentiMap[b].nome||'')).forEach(id=>{
-      const info=agentiMap[id];
-      const rows=byAgente[id].sort((a,b)=>{const ma=gf(a,'fldOt8LBoW3NKSTbx'),mb=gf(b,'fldOt8LBoW3NKSTbx');const na=ma?(typeof ma==='object'?ma.name:ma):'',nb=mb?(typeof mb==='object'?mb.name:mb):'';return MESI_ORD_ADM.indexOf(na)-MESI_ORD_ADM.indexOf(nb);});
-      const totAuto=rows.reduce((s,r)=>s+calcAuto(r),0),totVal=rows.reduce((s,r)=>s+parseFloat(gf(r,'fldExV7WZDakWl1Gy','Valore Raggiunto €','Valore Raggiunto')||0),0);
-      htmlOut+='<div class="cons-admin-card"><div class="cons-admin-agent"><span>'+esc(info.nome)+'</span>'+(info.profilo?'<span class="cons-admin-profilo">'+esc(info.profilo)+'</span>':'')+
-        '</div><div class="cons-admin-kpi"><div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totAuto)+'</div><div class="cons-admin-k-lbl">Consulenza tot.</div></div>'+
-        '<div class="cons-admin-k"><div class="cons-admin-k-val">'+fmtE(totVal)+'</div><div class="cons-admin-k-lbl">Fatturato base</div></div></div><div class="cons-admin-rows">'+
-        rows.map(r=>{const mese=gf(r,'fldOt8LBoW3NKSTbx','Mese','mese','Month'),meseN=mese?(typeof mese==='object'?mese.name:mese):'-';const auto=calcAuto(r),stato=gf(r,'fldg1R7K3WjDgGZ8S','Stato Pagamento');
-          return '<div class="cons-admin-row"><span class="cons-admin-mese">'+esc(meseN)+'</span><span class="cons-admin-importo">'+(auto>0?fmtE(auto):'—')+'</span>'+badge(stato)+'</div>';}).join('')+
-        '</div></div>';
+
+    if (!Object.keys(byAgente).length) {
+      grid.innerHTML = '<div class="cons-admin-empty">Nessuna provvigione registrata per il ' + annoCorr + '</div>';
+      return;
+    }
+
+    const badge = s => {
+      const n   = atxt(s) || 'Da pagare';
+      const cls = n === 'Pagato' ? 'cons-stato-pagato'
+                : n === 'Sospeso' ? 'cons-stato-sospeso'
+                : 'cons-stato-da';
+      return '<span class="cons-admin-stato ' + cls + '">' + esc(n) + '</span>';
+    };
+
+    // 3. Ordina gli agenti per provvigione totale (decrescente)
+    const ids = Object.keys(byAgente).sort((a, b) => {
+      const ta = byAgente[a].reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
+      const tb = byAgente[b].reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
+      return tb - ta;
     });
-    grid.innerHTML=htmlOut||'<div class="cons-admin-empty">Nessuna consulenza</div>';
-    section.style.display='';
-  } catch(e) { if(grid) grid.innerHTML='<div class="cons-admin-empty">Errore: '+e.message+'</div>'; section.style.display=''; }
+
+    let html = '';
+    let granTotProvv = 0, granTotVal = 0;
+
+    ids.forEach(id => {
+      const info = agentiMap[id];
+      const rows = byAgente[id].sort((a, b) =>
+        MESI_ORD_ADM.indexOf(atxt(agf(a, FA.MESE))) - MESI_ORD_ADM.indexOf(atxt(agf(b, FA.MESE)))
+      );
+
+      const totProvv = rows.reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
+      const totVal   = rows.reduce((s, r) => s + anum(agf(r, FA.VALORE)), 0);
+      granTotProvv += totProvv;
+      granTotVal   += totVal;
+
+      // segnala il caso "vende ma non prende provvigione" (listino mancante)
+      const alert = (totVal > 0 && totProvv === 0)
+        ? '<div style="font-size:10px;color:#e67e22;margin-top:6px">⚠️ Nessuna provvigione: verifica il listino</div>'
+        : '';
+
+      html += '<div class="cons-admin-card">' +
+        '<div class="cons-admin-agent"><span>' + esc(info.nome) + '</span>' +
+          (info.profilo ? '<span class="cons-admin-profilo">' + esc(info.profilo) + '</span>' : '') +
+        '</div>' +
+        '<div class="cons-admin-kpi">' +
+          '<div class="cons-admin-k"><div class="cons-admin-k-val">' + fmtE(totProvv) + '</div>' +
+            '<div class="cons-admin-k-lbl">Provvigione</div></div>' +
+          '<div class="cons-admin-k"><div class="cons-admin-k-val">' + fmtE(totVal) + '</div>' +
+            '<div class="cons-admin-k-lbl">Valore proposte</div></div>' +
+        '</div>' +
+        '<div class="cons-admin-rows">' +
+        rows.map(r => {
+          const meseN = atxt(agf(r, FA.MESE)) || '—';
+          const provv = anum(agf(r, FA.PROVV));
+          const val   = anum(agf(r, FA.VALORE));
+          return '<div class="cons-admin-row">' +
+            '<span class="cons-admin-mese">' + esc(meseN) +
+              (val > 0 ? ' <span style="opacity:.6">· ' + fmtE(val) + '</span>' : '') + '</span>' +
+            '<span class="cons-admin-importo">' + (provv > 0 ? fmtE(provv) : '—') + '</span>' +
+            badge(agf(r, FA.STATO)) +
+          '</div>';
+        }).join('') +
+        '</div>' + alert +
+      '</div>';
+    });
+
+    // riquadro riepilogo in testa
+    const riepilogo = '<div class="cons-admin-card" style="background:linear-gradient(135deg,#e8f0fe,#f5f9ff);border-color:var(--accent)">' +
+      '<div class="cons-admin-agent"><span>📊 TOTALE RETE</span></div>' +
+      '<div class="cons-admin-kpi">' +
+        '<div class="cons-admin-k"><div class="cons-admin-k-val">' + fmtE(granTotProvv) + '</div>' +
+          '<div class="cons-admin-k-lbl">Provvigioni ' + annoCorr + '</div></div>' +
+        '<div class="cons-admin-k"><div class="cons-admin-k-val">' + fmtE(granTotVal) + '</div>' +
+          '<div class="cons-admin-k-lbl">Valore proposte</div></div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">' +
+        ids.length + ' agenti con provvigioni</div>' +
+    '</div>';
+
+    grid.innerHTML = riepilogo + html;
+
+  } catch (e) {
+    grid.innerHTML = '<div class="cons-admin-empty">Errore: ' + esc(e.message) + '</div>';
+  }
 }
 
 
-if (sessionStorage.getItem('eq-admin') === '1') { loadData(); loadClassifica(); loadConversione(); loadConsulenze(); }
+if (sessionStorage.getItem('eq-admin') === '1') { initAdmin(); }
 </script>
 </body>
 </html>
