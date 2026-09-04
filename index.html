@@ -634,7 +634,7 @@ function openDrawer(tipo, titolo, colore) {
   document.querySelectorAll('.kpi').forEach(k => k.classList.remove('active'));
   const kpiEl = $('kpi-' + tipo);
   if (kpiEl) kpiEl.classList.add('active');
-  currentLista = getListaByTipo(tipo);
+  currentLista = applySort(getListaByTipo(tipo));
   const drawer = $('drawer');
   drawer.classList.add('open');
   drawer.innerHTML = `
@@ -741,7 +741,7 @@ function closeDrawer() {
 
 function refreshDrawer() {
   if (!activeKpi) return;
-  currentLista = getListaByTipo(activeKpi);
+  currentLista = applySort(getListaByTipo(activeKpi));
   const cnt = $('drawer-count');
   if (cnt) cnt.textContent = currentLista.length + ' contatti';
   buildSidebar();
@@ -750,14 +750,26 @@ function refreshDrawer() {
 
 function filterDrawer(q) {
   const ql = q.toLowerCase();
-  currentLista = getListaByTipo(activeKpi).filter(r =>
+  currentLista = applySort(getListaByTipo(activeKpi).filter(r =>
     JSON.stringify(r.fields).toLowerCase().includes(ql)
-  );
+  ));
   currentPage = 0;
   const cnt = $('drawer-count');
   if (cnt) cnt.textContent = currentLista.length + ' contatti';
   buildSidebar();
   renderPage();
+}
+
+// ── Ordinamento persistente della lista contatti ──────────────────
+// Default: data di creazione, dal piu' recente. Resta attivo anche dopo un salvataggio.
+let sortField = 'creaz';   // 'creaz' | 'att'
+let sortDirV  = -1;        // -1 = decrescente (piu' recente in alto), 1 = crescente
+function dateVal(r, tipo) {
+  if (tipo === 'att') return new Date(r.fields['DATA ATTIVITA'] || 0).getTime();
+  return new Date(r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || 0).getTime();
+}
+function applySort(list) {
+  return [...list].sort((a,b) => sortDirV * (dateVal(a, sortField) - dateVal(b, sortField)));
 }
 
 function getListaByTipo(tipo) {
@@ -2237,15 +2249,15 @@ function buildDonut(slices, total) {
 function applyDateFilter() {
   const da  = document.getElementById('filter-da')?.value;
   const a   = document.getElementById('filter-a')?.value;
-  if (!da && !a) { currentLista = getListaByTipo(activeKpi); }
+  if (!da && !a) { currentLista = applySort(getListaByTipo(activeKpi)); }
   else {
-    currentLista = getListaByTipo(activeKpi).filter(r => {
+    currentLista = applySort(getListaByTipo(activeKpi).filter(r => {
       const iso = r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || '';
       const d   = iso ? new Date(iso) : null;
       if (da && d && d < new Date(da)) return false;
       if (a  && d && d > new Date(a+'T23:59:59')) return false;
       return true;
-    });
+    }));
   }
   currentPage = 0;
   const cnt = $('drawer-count');
@@ -2258,25 +2270,18 @@ function clearDateFilter() {
   const a  = document.getElementById('filter-a');
   if (da) da.value='';
   if (a)  a.value='';
-  currentLista = getListaByTipo(activeKpi);
+  currentLista = applySort(getListaByTipo(activeKpi));
   currentPage  = 0;
   const cnt = $('drawer-count');
   if (cnt) cnt.textContent = currentLista.length + ' contatti';
   renderPage();
 }
 
-let sortDir = 1;
 function sortByDate(tipo) {
-  currentLista = [...currentLista].sort((a,b) => {
-    const da = tipo==='creaz'
-      ? new Date(a.fields['DATA DI CREAZIONE DATO']||a.createdTime||0)
-      : new Date(a.fields['DATA ATTIVITA']||0);
-    const db = tipo==='creaz'
-      ? new Date(b.fields['DATA DI CREAZIONE DATO']||b.createdTime||0)
-      : new Date(b.fields['DATA ATTIVITA']||0);
-    return sortDir * (da-db);
-  });
-  sortDir *= -1;
+  // stesso campo -> inverte la direzione; campo nuovo -> parte dal piu' recente
+  if (sortField === tipo) { sortDirV *= -1; }
+  else { sortField = tipo; sortDirV = -1; }
+  currentLista = applySort(currentLista);
   currentPage = 0;
   renderPage();
 }
