@@ -969,6 +969,25 @@ function renderTable(lista) {
 }
 
 // ── DETTAGLIO CONTATTO ─────────────────────────────────────────
+async function saveContactNote(recId) {
+  const ta = document.getElementById('detail-note-' + recId);
+  if (!ta) return;
+  const val = ta.value;
+  const btn = ta.parentElement.querySelector('button');
+  if (btn) { btn.textContent = '⏳ Salvo…'; btn.disabled = true; }
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, { 'Notes': val });
+    const rec = allMiei.find(r => r.id === recId);
+    if (rec) rec.fields['Notes'] = val;
+    showToast('✅ Nota salvata!');
+    if (btn) { btn.textContent = '✅ Salvata'; setTimeout(() => { if (btn) { btn.textContent = '💾 Salva nota'; btn.disabled = false; } }, 1500); }
+    refreshDrawer();
+  } catch(e) {
+    showToast('❌ Errore nel salvataggio', true);
+    if (btn) { btn.textContent = '💾 Salva nota'; btn.disabled = false; }
+  }
+}
+
 function openContactDetail(recId) {
   const rec = allMiei.find(r=>r.id===recId);
   if (!rec) return;
@@ -1037,10 +1056,13 @@ function openContactDetail(recId) {
         <div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-bottom:4px">📦 Scadenza noleggio</div>
         <div style="font-size:13px;font-weight:700;color:var(--orange)">${scad}</div>
       </div>` : ''}
-      ${note ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Note</div>
-        <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${esc(note)}</div>
-      </div>` : ''}
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Note</div>
+        <textarea id="detail-note-${recId}" placeholder="Scrivi una nota…" style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;line-height:1.6;outline:none;resize:vertical;background:#fff">${esc(note)}</textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button onclick="saveContactNote('${recId}')" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">💾 Salva nota</button>
+        </div>
+      </div>
     </div>
 
     <!-- Prodotti proposti -->
