@@ -588,7 +588,7 @@ function buildSidebar(filter) {
   const count   = document.getElementById('sidebar-count');
   if (!sidebar) return;
   let lista = currentLista;
-  if (_sidebarQ) lista = lista.filter(r=>(r.fields['Nome e cognome']||'').toLowerCase().includes(_sidebarQ));
+  if (_sidebarQ) lista = lista.filter(r=>normTxt(r.fields['Nome e cognome']).includes(normTxt(_sidebarQ)));
   if (count) count.textContent = lista.length;
   sidebar.innerHTML = lista.map(r => {
     const nome = r.fields['Nome e cognome']||'—', stato = r.fields['Status']||'';
@@ -748,10 +748,13 @@ function refreshDrawer() {
   renderPage();
 }
 
+// normalizza: minuscolo, spazi multipli/finali ridotti a spazio singolo
+function normTxt(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+
 function filterDrawer(q) {
-  const ql = q.toLowerCase();
+  const ql = normTxt(q);
   currentLista = applySort(getListaByTipo(activeKpi).filter(r =>
-    JSON.stringify(r.fields).toLowerCase().includes(ql)
+    normTxt(JSON.stringify(r.fields)).includes(ql)
   ));
   currentPage = 0;
   const cnt = $('drawer-count');
@@ -1418,7 +1421,7 @@ async function loadData(utente) {
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio&maxRecords=3000'),
+        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio&maxRecords=10000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -2339,7 +2342,7 @@ function openAddActivity(isoDate) {
 function cercaContattoAA(q) {
   const res = document.getElementById('aa-results');
   if (!q || q.length < 2) { res.style.display='none'; return; }
-  const hits = allMiei.filter(r => (r.fields['Nome e cognome']||'').toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const hits = allMiei.filter(r => normTxt(r.fields['Nome e cognome']).includes(normTxt(q))).slice(0,8);
   if (!hits.length) { res.style.display='none'; return; }
   res.style.display = 'block';
   res.innerHTML = hits.map(r => `
