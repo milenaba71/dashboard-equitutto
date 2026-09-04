@@ -1547,7 +1547,7 @@ async function loadData(utente) {
           const sc=new Date(r.fields['data scadenza noleggio']);
           const diff=Math.round((sc-oggi)/86400000);
           const cls=diff<=7?'badge-red':diff<=15?'badge-orange':'badge-green';
-          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${diff<=0?'Scaduto':diff+'gg'}</span></div>`;
+          return `<div class="row-item" onclick="openContactDetail('${r.id}')" style="cursor:pointer" title="Apri la scheda del contatto"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${sc.toLocaleDateString('it-IT')}</div></div><span class="badge ${cls}">${diff<=0?'Scaduto':diff+'gg'}</span></div>`;
         }).join('')
       : '<div class="empty">Nessun noleggio in scadenza ✓</div>';
 
@@ -1555,7 +1555,7 @@ async function loadData(utente) {
       ? recenti.map(r=>{
           const d=new Date(r.fields['DATA ATTIVITA']);
           const venduto=!!r.fields['Data Vendita'];
-          return `<div class="row-item"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${esc(r.fields['Status']||'—')} · ${d.toLocaleDateString('it-IT')}</div></div><span class="badge ${venduto?'badge-green':'badge-blue'}">${venduto?'Vendita':'Aperto'}</span></div>`;
+          return `<div class="row-item" onclick="openContactDetail('${r.id}')" style="cursor:pointer" title="Apri la scheda del contatto"><div><div class="row-nome">${esc(r.fields['Nome e cognome']||'—')}</div><div class="row-sub">${esc(r.fields['Status']||'—')} · ${d.toLocaleDateString('it-IT')}</div></div><span class="badge ${venduto?'badge-green':'badge-blue'}">${venduto?'Vendita':'Aperto'}</span></div>`;
         }).join('')
       : '<div class="empty">Nessun contatto recente</div>';
 
