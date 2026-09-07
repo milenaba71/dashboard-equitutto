@@ -302,6 +302,7 @@ const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
 const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
+const FLD_IDX_SCONTO     = 'fldHdbgSaCUNr9WCf'; // Sconto €
 
 // Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
 const TOKEN_MAP = {
@@ -389,16 +390,17 @@ function getValoreProposte(props) {
     // 1. Usa Totale riga (formula Airtable) se disponibile
     var totaleRiga = parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0);
     if (totaleRiga > 0) return s + totaleRiga;
-    // 2. Calcola da prezzo unitario x quantità
+    // 2. Calcola da prezzo unitario x quantità (al netto dello sconto)
     var qta = parseFloat(f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1);
+    var sconto = parseFloat(f['fldHdbgSaCUNr9WCf'] || f['Sconto €'] || 0);
     var prezzoUnitario = parseFloat(f['fldN4u3S8ngsBAWuL'] || f['Prezzo unitario'] || 0);
-    if (prezzoUnitario > 0) return s + (prezzoUnitario * qta);
+    if (prezzoUnitario > 0) return s + Math.max(prezzoUnitario * qta - sconto, 0);
     // 3. Fallback: cerca nel prodotto collegato
     var pl = getProdottoDaProposta(p);
     var prodId = Array.isArray(pl) ? (pl[0] && pl[0].id ? pl[0].id : pl[0]) : null;
     var prod = prodId ? (allProdotti||[]).find(function(x){ return x.id === prodId; }) : null;
     var prezzo = prod ? prodPrezzo(prod) : 0;
-    return s + (prezzo * qta);
+    return s + Math.max(prezzo * qta - sconto, 0);
   }, 0);
 }
 
@@ -1822,6 +1824,7 @@ function openProdottiPanel(recId) {
         propId: p.id,
         qta:    f['fldw2aCMC8pVKbJ2N'] || f['Quantità'] || 1,
         prezzo: prezzo,
+        sconto: parseFloat(f['fldHdbgSaCUNr9WCf'] || f['Sconto €'] || 0),
         nomeProd: prod ? prodNome(prod) : (prodLink && prodLink.name ? prodLink.name : ('ID:'+prodId)),
         totRiga: parseFloat(f['fldSVSzsslNzmI8HY'] || f['Totale riga'] || 0),
       });
@@ -1836,6 +1839,7 @@ function openProdottiPanel(recId) {
           propId: p.id,
           qta: f2['fldw2aCMC8pVKbJ2N'] || f2['Quantità'] || 1,
           prezzo: prezzo2,
+          sconto: parseFloat(f2['fldHdbgSaCUNr9WCf'] || f2['Sconto €'] || 0),
           nomeProd: nomeProp,
           totRiga: tot2,
         });
@@ -1883,30 +1887,39 @@ function buildIdxCart() {
       var prod = (allProdotti||[]).find(function(x){ return x.id === prodId; });
       var nome = prod ? prodNome(prod) : (entry.nomeProd || prodId);
       var prezzo = prod ? prodPrezzo(prod) : (entry.prezzo || 0);
-      var tot = prezzo * entry.qta;
+      var sconto = entry.sconto || 0;
+      var lordo = prezzo * entry.qta;
+      var tot = Math.max(lordo - sconto, 0);
       var safeId = prodId.replace(/'/g, '');
       rows.push(
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
         '<div style="flex:1;">' +
         '<div style="font-size:13px;font-weight:600;">' + esc(nome) + '</div>' +
-        '<div style="font-size:11px;color:var(--muted)">€ ' + prezzo.toLocaleString('it-IT',{minimumFractionDigits:2}) + ' × ' + entry.qta + ' = <strong>€ ' + tot.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</strong></div>' +
+        '<div style="font-size:11px;color:var(--muted)">€ ' + prezzo.toLocaleString('it-IT',{minimumFractionDigits:2}) + ' × ' + entry.qta + (sconto>0 ? ' − <span style="color:#c0392b">€ ' + sconto.toLocaleString('it-IT',{minimumFractionDigits:2}) + ' sconto</span>' : '') + ' = <strong>€ ' + tot.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</strong></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:4px;">' +
         '<button data-qta-minus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">−</button>' +
         '<span style="font-size:13px;font-weight:700;min-width:22px;text-align:center">' + entry.qta + '</span>' +
         '<button data-qta-plus="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;line-height:1;">+</button>' +
         '<button data-remove-cart="' + safeId + '" style="width:26px;height:26px;border-radius:6px;border:none;background:#fdecea;color:#c0392b;cursor:pointer;font-size:14px;font-weight:700;">✕</button>' +
-        '</div></div>'
+        '</div></div>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
+        '<span style="font-size:11px;color:var(--muted)">Sconto €</span>' +
+        '<input type="number" min="0" step="0.01" value="' + (sconto || '') + '" placeholder="0,00" data-sconto="' + safeId + '" ' +
+        'style="width:90px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;" />' +
+        '</div>' +
+        '</div>'
       );
     });
     var totCarr = 0;
-    idxCartSelIds.forEach(function(e){ totCarr += (e.prezzo || 0) * e.qta; });
+    idxCartSelIds.forEach(function(e){ totCarr += Math.max((e.prezzo || 0) * e.qta - (e.sconto || 0), 0); });
     selectedHtml = '<div style="background:#e8f0fe;border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
       '<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🛒 Prodotti selezionati (' + idxCartSelIds.size + ')</div>' +
       rows.join('') +
       '<div style="margin-top:10px;padding-top:10px;border-top:2px solid var(--accent);display:flex;justify-content:space-between;align-items:center;">' +
       '<span style="font-size:13px;font-weight:700;color:var(--accent)">Totale proposta</span>' +
-      '<span style="font-size:16px;font-weight:800;color:var(--accent)">€ ' + totCarr.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</span>' +
+      '<span id="idx-cart-tot" style="font-size:16px;font-weight:800;color:var(--accent)">€ ' + totCarr.toLocaleString('it-IT',{minimumFractionDigits:2}) + '</span>' +
       '</div></div>';
   }
 
@@ -2001,6 +2014,22 @@ function buildIdxCart() {
     ${linksHtml?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">💳 Link pagamento</div>${linksHtml}</div>`:''}`;
 }
 
+// Aggiornamento sconto per riga nel carrello (input event delegato)
+document.addEventListener('input', function(e){
+  var el = e.target.closest('[data-sconto]');
+  if (!el) return;
+  var prodId = el.dataset.sconto;
+  var entry = idxCartSelIds.get(prodId);
+  if (!entry) return;
+  var val = parseFloat(String(el.value).replace(',', '.')) || 0;
+  idxCartSelIds.set(prodId, Object.assign({}, entry, { sconto: Math.max(0, val) }));
+  // Non ricostruisco tutto (perderei il focus): aggiorno solo il totale in fondo
+  var totCarr = 0;
+  idxCartSelIds.forEach(function(x){ totCarr += Math.max((x.prezzo||0)*x.qta - (x.sconto||0), 0); });
+  var totEl = document.getElementById('idx-cart-tot');
+  if (totEl) totEl.textContent = '€ ' + totCarr.toLocaleString('it-IT',{minimumFractionDigits:2});
+});
+
 function changeQtaCart(prodId, delta) {
   const entry = idxCartSelIds.get(prodId);
   if (!entry) return;
@@ -2048,9 +2077,10 @@ async function saveIdxCart() {
       // Salta le proposte senza prodotto (prefisso 'prop_')
       if (prodId.startsWith('prop_')) {
         if (entry.propId) {
-          // Aggiorna quantità proposta esistente senza prodotto
+          // Aggiorna quantità e sconto della proposta esistente senza prodotto
           ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, {
             'Quantità': entry.qta || 1,
+            [FLD_IDX_SCONTO]: entry.sconto || 0,
           }));
         }
         continue;
@@ -2061,6 +2091,7 @@ async function saveIdxCart() {
         [FLD_IDX_PRODOTTO]: [prodId],
         'Quantità':         entry.qta || 1,
         'Prezzo unitario':  prod ? prodPrezzo(prod) : (entry.prezzo || 0),
+        [FLD_IDX_SCONTO]:   entry.sconto || 0,
       };
       // ANTI-DOPPIONE: se propId manca, cerca una proposta gia' esistente
       // per stesso contatto + stesso prodotto, e in tal caso aggiorna quella
