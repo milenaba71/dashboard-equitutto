@@ -2062,8 +2062,24 @@ async function saveIdxCart() {
         'Quantità':         entry.qta || 1,
         'Prezzo unitario':  prod ? prodPrezzo(prod) : (entry.prezzo || 0),
       };
-      if (entry.propId) {
-        ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, fields));
+      // ANTI-DOPPIONE: se propId manca, cerca una proposta gia' esistente
+      // per stesso contatto + stesso prodotto, e in tal caso aggiorna quella
+      // invece di crearne una nuova. Evita i duplicati al risalvataggio.
+      let targetId = entry.propId;
+      if (!targetId) {
+        const esistente = (allProposte||[]).find(function(p){
+          var cl = p.fields[FLD_IDX_CONTATTO] || p.fields['CONTATTO'] || [];
+          var pl = p.fields[FLD_IDX_PRODOTTO] || p.fields['negozio'] || [];
+          if (!Array.isArray(cl) || !Array.isArray(pl) || !pl.length) return false;
+          var cOk = cl.some(function(x){ return ((typeof x==='object'&&x)?x.id:x) === idxCartRecId; });
+          var pOk = ((typeof pl[0]==='object'&&pl[0])?pl[0].id:pl[0]) === prodId;
+          return cOk && pOk;
+        });
+        if (esistente) targetId = esistente.id;
+      }
+      if (targetId) {
+        ops.push(proxyPatch(TABLE_PROPOSTE_IDX, targetId, fields));
+        idxCartSelIds.set(prodId, { ...entry, propId: targetId });
       } else {
         ops.push(
           proxyPost(TABLE_PROPOSTE_IDX, fields).then(function(res) {
