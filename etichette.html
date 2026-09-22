@@ -6,7 +6,7 @@
 <title>Etichette Scatole · Equistasi</title>
 <!-- JsBarcode per il codice a barre -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bwip-js/4.11.4/bwip-js-min.js"></script>
 <style>
   :root{
     --bg:#f0f4f8; --surface:#fff; --border:#d0dae8; --accent:#003d7a;
@@ -62,8 +62,9 @@
   .et-codici{margin-top:2mm;display:flex;align-items:center;justify-content:center;gap:2mm;}
   .et-barcode{text-align:center;flex:1;}
   .et-barcode svg{max-width:100%;height:9mm;}
-  .et-dm{flex-shrink:0;}
-  .et-dm canvas{width:11mm;height:11mm;}
+  .et-dm-wrap{flex-shrink:0;display:flex;align-items:center;gap:1mm;}
+  .et-udi-sym{border:1.2pt solid #000;border-radius:1mm;font-weight:800;font-size:8pt;padding:1mm 1.5mm;line-height:1;letter-spacing:.5px;}
+  .et-dm-wrap canvas{width:11mm;height:11mm;}
 
   @media print{
     .toolbar,.hint{display:none !important;}
@@ -112,6 +113,8 @@ const F = {
   SERIALE:  'Seriale (from SERIE)',
   ABBIN:    'Abbinamento seriali (testo)',
   UDI:      'CODICE UDI',
+  FABBR:    'DATA DI FABBRICAZIONE',
+  LOTTO:    'LOTTO',
 };
 
 let RECORDS = [];
@@ -211,7 +214,23 @@ function genera(){
     const kit     = txt(gf(rec,F.KIT));
     const seriali = txt(gf(rec,F.SERIALE));
     const abbin   = txt(gf(rec,F.ABBIN));
-    const udi     = txt(gf(rec,F.UDI));
+    const udiBase = txt(gf(rec,F.UDI));
+    const fabbr   = txt(gf(rec,F.FABBR));   // data fabbricazione (AAAA-MM-GG)
+    const lotto   = txt(gf(rec,F.LOTTO));   // numero di lotto
+
+    // Stringa UDI completa in formato GS1: (01)GTIN (11)AAMMGG (10)LOTTO
+    let udiFull = udiBase;
+    if(fabbr){
+      const d = new Date(fabbr);
+      if(!isNaN(d)){
+        const aa = String(d.getFullYear()).slice(-2);
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const gg = String(d.getDate()).padStart(2,'0');
+        udiFull += '(11)' + aa + mm + gg;
+      }
+    }
+    if(lotto){ udiFull += '(10)' + lotto; }
+
     return `
     <div class="etichetta"><div class="et-inner">
       <div class="et-titolo">Equistasi® · Scatola dispositivo</div>
@@ -219,10 +238,11 @@ function genera(){
       ${kit     ? `<div class="et-riga"><b>Kit:</b> ${esc(kit)}</div>` : ''}
       ${seriali ? `<div class="et-riga"><b>Seriali:</b> ${esc(seriali)}</div>` : ''}
       ${abbin   ? `<div class="et-riga"><b>Abbinamento:</b> ${esc(abbin)}</div>` : ''}
-      ${udi     ? `<div class="et-riga"><b>UDI:</b> ${esc(udi)}</div>` : ''}
+      ${lotto   ? `<div class="et-riga"><b>Lotto:</b> ${esc(lotto)}</div>` : ''}
+      ${udiBase ? `<div class="et-riga"><b>UDI:</b> ${esc(udiFull)}</div>` : ''}
       <div class="et-codici">
         <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
-        ${udi ? `<div class="et-dm"><canvas class="dm" data-udi="${esc(udi)}"></canvas></div>` : ''}
+        ${udiBase ? `<div class="et-dm-wrap"><div class="et-udi-sym">UDI</div><canvas class="dm" data-udi="${esc(udiFull)}"></canvas></div>` : ''}
       </div>
     </div></div>`;
   };
@@ -255,17 +275,24 @@ function genera(){
     }catch(e){}
   });
   // Data Matrix per il codice UDI (standard dispositivi medici)
-  document.querySelectorAll('canvas.dm').forEach(function(cv){
+  disegnaDataMatrix();
+}
+
+function disegnaDataMatrix(tentativo){
+  tentativo = tentativo || 0;
+  const canvases = document.querySelectorAll('canvas.dm');
+  if(!canvases.length) return;
+  if(typeof bwipjs==='undefined'){
+    // libreria non ancora pronta: riprova fino a ~3 secondi
+    if(tentativo < 30){ setTimeout(function(){ disegnaDataMatrix(tentativo+1); }, 100); }
+    return;
+  }
+  canvases.forEach(function(cv){
     const udi = cv.getAttribute('data-udi') || '';
-    if(!udi || typeof bwipjs==='undefined') return;
+    if(!udi) return;
     try{
-      bwipjs.toCanvas(cv, {
-        bcid:'datamatrix',
-        text:udi,
-        scale:3,
-        padding:0
-      });
-    }catch(e){}
+      bwipjs.toCanvas(cv, { bcid:'datamatrix', text:udi, scale:4, padding:0 });
+    }catch(e){ console.warn('Data Matrix errore:', e); }
   });
 }
 
