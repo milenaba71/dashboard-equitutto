@@ -60,7 +60,7 @@
   .et-riga{font-size:7.5pt;color:#000;line-height:1.3;margin-bottom:.6mm;word-break:break-word;display:flex;align-items:center;gap:1.2mm;}
   .et-riga b{color:#003d7a;}
   /* simboli riquadrati (MD, REF, LOT, SN, UDI) */
-  .sym-box{border:.9pt solid #000;border-radius:.6mm;font-weight:800;font-size:6.5pt;padding:.4mm 1mm;line-height:1;letter-spacing:.3px;flex-shrink:0;white-space:nowrap;}
+  .sym-box{border:1pt solid #000;font-weight:800;font-size:6.8pt;padding:.5mm 1.2mm;line-height:1;letter-spacing:.3px;flex-shrink:0;white-space:nowrap;}
   /* simboli con icona SVG (fabbricante, data fabbricazione) */
   .sym-ico{width:5mm;height:4mm;flex-shrink:0;}
   .sym-ico svg{width:100%;height:100%;}
@@ -72,7 +72,7 @@
   .et-barcode{text-align:center;flex:1;}
   .et-barcode svg{max-width:100%;height:9mm;}
   .et-dm-wrap{flex-shrink:0;display:flex;align-items:center;gap:1mm;}
-  .et-udi-sym{border:1.2pt solid #000;border-radius:1mm;font-weight:800;font-size:8pt;padding:1mm 1.5mm;line-height:1;letter-spacing:.5px;}
+  .et-udi-sym{border:1.2pt solid #000;font-weight:800;font-size:8pt;padding:1mm 1.5mm;line-height:1;letter-spacing:.5px;}
   .et-dm-wrap canvas{width:11mm;height:11mm;}
 
   @media print{
@@ -256,13 +256,13 @@ function genera(){
     if(lotto)    udiFull += '(10)'+lotto;
 
     // icone SVG (ISO 15223): fabbricante (fabbrica) e data fabbricazione (calendario)
-    const icoCal = '<svg viewBox="0 0 30 22" fill="none" stroke="#000" stroke-width="1.8" stroke-linejoin="round"><path d="M3 20 V9 L8 12 L13 9 L18 12 L23 9 V6 h4 V20 Z"/></svg>';
+    const icoCal = '<svg viewBox="0 0 30 22" fill="#000"><path d="M2 21 V8 L8 11.5 L14 8 L20 11.5 L20 5 L26 5 L26 21 Z"/></svg>';
     // ISO 15223-1 5.3.2 - Tenere al riparo dalla luce solare: sole con raggi e barra di riparo sopra
     const icoSole = '<svg viewBox="0 0 26 26" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round"><circle cx="13" cy="10" r="3.4"/><g><line x1="13" y1="3.2" x2="13" y2="1"/><line x1="13" y1="16.8" x2="13" y2="14.6"/><line x1="6.2" y1="10" x2="4" y2="10"/><line x1="22" y1="10" x2="19.8" y2="10"/><line x1="8.2" y1="5.2" x2="6.6" y2="3.6"/><line x1="19.4" y1="16.4" x2="17.8" y2="14.8"/><line x1="17.8" y1="5.2" x2="19.4" y2="3.6"/><line x1="6.6" y1="16.4" x2="8.2" y2="14.8"/></g><line x1="3" y1="22" x2="23" y2="22" stroke-width="2"/></svg>';
     // Riciclo plastica: nastro di Mobius (tre frecce a triangolo)
     const icoRic = '<svg viewBox="0 0 26 26" fill="none" stroke="#000" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M13 4 L16.5 10 L13.2 10"/><path d="M17 10 l1.5-2.6"/><path d="M20.5 11 L23.5 16.5 L20 18.5"/><path d="M22 18 l-3 .3"/><path d="M17.5 20.5 L11 20.5 L12.8 23.5"/><path d="M11 20.5 l1.8-3.1"/><path d="M8.5 18.5 L5.5 13 L2.5 15"/><path d="M5.5 13 l-.3 3.4"/><path d="M6 11 L9.5 5 L6 3.5"/><path d="M9.5 5 l-3.3 .4"/></svg>';
     // ISO 15223-1 5.3.7 - Limite di temperatura (senza valori): riquadro con tacca max in alto, min in basso e linea centrale
-    const icoTemp = '<svg viewBox="0 0 40 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"><line x1="14" y1="4" x2="26" y2="4"/><line x1="14" y1="20" x2="26" y2="20"/><line x1="20" y1="4" x2="20" y2="20"/><line x1="4" y1="4" x2="12" y2="4"/><line x1="4" y1="20" x2="12" y2="20"/><line x1="28" y1="4" x2="36" y2="4"/><line x1="28" y1="20" x2="36" y2="20"/></svg>';
+    const icoTemp = '<svg viewBox="0 0 40 24" fill="none" stroke="#000" stroke-width="2"><line x1="6" y1="4" x2="34" y2="4"/><line x1="6" y1="20" x2="34" y2="20"/><line x1="20" y1="4" x2="20" y2="20"/><line x1="6" y1="4" x2="6" y2="9"/><line x1="34" y1="4" x2="34" y2="9"/><line x1="6" y1="20" x2="6" y2="15"/><line x1="34" y1="20" x2="34" y2="15"/></svg>';
 
     return `
     <div class="etichetta"><div class="et-inner">
@@ -273,7 +273,7 @@ function genera(){
       ${lotto   ? `<div class="et-riga"><span class="sym-box">LOT</span><span class="et-val">${esc(lotto)}</span></div>` : ''}
       ${seriali ? `<div class="et-riga"><span class="sym-box">SN</span><span class="et-val">${esc(seriali)}</span></div>` : ''}
       ${fabbrIt ? `<div class="et-riga"><span class="sym-ico">${icoCal}</span><span class="et-val">${esc(fabbrIt)}</span></div>` : ''}
-      ${abbin   ? `<div class="et-riga"><b>Abbinati:</b> <span class="et-val">${esc(abbin)}</span></div>` : ''}
+      ${abbin   ? `<div class="et-riga"><span class="sym-box">SN</span><span class="et-val">${esc(abbin)}</span></div>` : ''}
       <div class="et-simboli"><span class="sym-amb" title="Limite di temperatura +5°C / +40°C">${icoTemp}</span><span class="sym-amb" title="Tenere al riparo dalla luce solare">${icoSole}</span><span class="sym-amb" title="Riciclabile con la plastica">${icoRic}</span></div>
       <div class="et-codici">
         <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
