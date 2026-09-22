@@ -52,14 +52,14 @@
     width:53mm;height:87.5mm;
     transform:translate(-50%,-50%) rotate(90deg);
     transform-origin:center center;
-    padding:3mm 3.5mm;display:flex;flex-direction:column;
+    padding:2.5mm 3.5mm;display:flex;flex-direction:column;
   }
   .et-titolo{font-size:8pt;font-weight:800;color:#003d7a;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1mm;}
   .et-scatola{font-size:13pt;font-weight:800;color:#000;line-height:1;margin-bottom:1mm;}
   .et-riga{font-size:7.5pt;color:#000;line-height:1.25;margin-bottom:.4mm;word-break:break-word;}
   .et-riga b{color:#003d7a;}
-  .et-barcode{margin-top:auto;text-align:center;}
-  .et-barcode svg{max-width:100%;height:12mm;}
+  .et-barcode{margin-top:2mm;text-align:center;}
+  .et-barcode svg{max-width:100%;height:9mm;}
 
   @media print{
     .toolbar,.hint{display:none !important;}
@@ -244,7 +244,7 @@ function genera(){
     const code = svg.getAttribute('data-code') || '';
     if(!code) return;
     try{
-      JsBarcode(svg, code, {format:'CODE128', displayValue:true, fontSize:14, height:40, margin:0});
+      JsBarcode(svg, code, {format:'CODE128', displayValue:true, fontSize:12, height:30, margin:0});
     }catch(e){}
   });
 }
