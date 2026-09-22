@@ -26,6 +26,9 @@
   .hint{padding:10px 22px;font-size:12px;color:var(--muted);background:#e8eef5;border-bottom:1px solid var(--border);}
 
   .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
+  .sc-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);white-space:nowrap;}
+  .sc-item input{width:16px;height:16px;cursor:pointer;}
+  .sc-item label{cursor:pointer;}
 
   /* ---------- FOGLIO A4 con etichette Markin C582 ---------- */
   /* A4 = 210 x 297 mm. Etichetta 87,5 x 53 mm, 2 colonne x 5 righe = 10 per foglio. Contenuto ruotato 90 gradi orari. */
@@ -71,14 +74,16 @@
 
 <div class="toolbar">
   <h1>🏷️ Etichette Scatole</h1>
-  <div>
-    <label>Scatola</label><br>
-    <select id="sel-scatola"><option>Caricamento…</option></select>
+  <div style="flex:1;min-width:220px">
+    <label>Scatole (spunta quelle da stampare)</label><br>
+    <input type="text" id="cerca" placeholder="🔍 filtra per codice…" oninput="filtra(this.value)"
+      style="width:100%;max-width:280px;margin-bottom:4px">
   </div>
   <div>
-    <label>Copie</label><br>
+    <label>Copie per scatola</label><br>
     <input type="number" id="n-copie" min="1" max="200" value="10">
   </div>
+  <span id="conta-sel" style="font-size:12px;color:rgba(255,255,255,.85)">0 selezionate</span>
   <button class="btn" onclick="genera()">Genera</button>
   <button class="btn print" onclick="window.print()">🖨️ Stampa</button>
 </div>
@@ -86,7 +91,10 @@
   Etichetta 87,5 × 53 mm · testo ruotato 90° · 10 per foglio A4. In stampa: imposta margini «Nessuno» e scala «100%». I bordi tratteggiati non vengono stampati.
 </div>
 
-<div id="area"><div class="loading">Carico le scatole da Airtable…</div></div>
+<div id="lista-scatole" style="max-height:220px;overflow-y:auto;background:#fff;border-bottom:1px solid var(--border);padding:8px 22px;display:flex;flex-wrap:wrap;gap:6px 18px;">
+  <div class="loading">Carico le scatole da Airtable…</div>
+</div>
+<div id="area"><div class="loading">Spunta una o più scatole e premi «Genera».</div></div>
 
 <script>
 // ---- CONFIG ----
@@ -156,32 +164,51 @@ async function init(){
     RECORDS = await proxyGet(TABLE_ABB, 'maxRecords=2000');
     // ordina per codice scatola
     RECORDS.sort((a,b)=> txt(gf(a,F.SCATOLA)).localeCompare(txt(gf(b,F.SCATOLA))));
-    const sel = document.getElementById('sel-scatola');
-    sel.innerHTML = RECORDS
-      .filter(r=>txt(gf(r,F.SCATOLA)).trim()!=='')
-      .map(r=>`<option value="${r.id}">${esc(txt(gf(r,F.SCATOLA)))}</option>`).join('')
-      || '<option>Nessuna scatola</option>';
-    document.getElementById('area').innerHTML = '<div class="loading">Scegli una scatola e premi «Genera».</div>';
+    RECORDS = RECORDS.filter(r=>txt(gf(r,F.SCATOLA)).trim()!=='');
+    renderLista();
+    document.getElementById('area').innerHTML = '<div class="loading">Spunta una o più scatole e premi «Genera».</div>';
   }catch(e){
     document.getElementById('area').innerHTML = '<div class="loading">Errore nel caricamento: '+esc(e.message)+'</div>';
   }
 }
 
+function renderLista(term){
+  const q = (term||'').toLowerCase().trim();
+  const cont = document.getElementById('lista-scatole');
+  const visibili = RECORDS.filter(r=>!q || txt(gf(r,F.SCATOLA)).toLowerCase().includes(q));
+  cont.innerHTML = visibili.map(r=>{
+    const cod = esc(txt(gf(r,F.SCATOLA)));
+    return `<div class="sc-item">
+      <input type="checkbox" id="cb-${r.id}" value="${r.id}" onchange="aggiornaConta()">
+      <label for="cb-${r.id}">${cod}</label>
+    </div>`;
+  }).join('') || '<div class="loading">Nessuna scatola trovata</div>';
+  aggiornaConta();
+}
+function filtra(v){ renderLista(v); }
+function selezionate(){
+  return Array.from(document.querySelectorAll('#lista-scatole input:checked')).map(c=>c.value);
+}
+function aggiornaConta(){
+  const n = selezionate().length;
+  const el = document.getElementById('conta-sel');
+  if(el) el.textContent = n + (n===1?' selezionata':' selezionate');
+}
+
 function genera(){
-  const sel = document.getElementById('sel-scatola');
-  const recId = sel.value;
-  const rec = RECORDS.find(r=>r.id===recId);
-  if(!rec){ return; }
+  const ids = selezionate();
+  if(!ids.length){ document.getElementById('area').innerHTML = '<div class="loading">Spunta almeno una scatola.</div>'; return; }
   let copie = parseInt(document.getElementById('n-copie').value,10)||1;
   copie = Math.max(1, Math.min(200, copie));
 
-  const scatola = txt(gf(rec,F.SCATOLA));
-  const kit     = txt(gf(rec,F.KIT));
-  const seriali = txt(gf(rec,F.SERIALE));
-  const abbin   = txt(gf(rec,F.ABBIN));
-  const udi     = txt(gf(rec,F.UDI));
-
-  const etichetta = () => `
+  // costruisce l'HTML di una etichetta per una scatola
+  const etichettaDi = (rec) => {
+    const scatola = txt(gf(rec,F.SCATOLA));
+    const kit     = txt(gf(rec,F.KIT));
+    const seriali = txt(gf(rec,F.SERIALE));
+    const abbin   = txt(gf(rec,F.ABBIN));
+    const udi     = txt(gf(rec,F.UDI));
+    return `
     <div class="etichetta"><div class="et-inner">
       <div class="et-titolo">Equistasi® · Scatola dispositivo</div>
       <div class="et-scatola">${esc(scatola)}</div>
@@ -191,13 +218,23 @@ function genera(){
       ${udi     ? `<div class="et-riga"><b>UDI:</b> ${esc(udi)}</div>` : ''}
       <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
     </div></div>`;
+  };
 
-  // impagina in fogli da 10
+  // costruisce l'elenco completo: N copie per OGNI scatola selezionata, di seguito
+  const etichette = [];
+  ids.forEach(function(id){
+    const rec = RECORDS.find(r=>r.id===id);
+    if(!rec) return;
+    const el = etichettaDi(rec);
+    for(let c=0;c<copie;c++) etichette.push(el);
+  });
+
+  // impagina di seguito, 10 per foglio A4
   let html = '';
   let i = 0;
-  while(i < copie){
+  while(i < etichette.length){
     html += '<div class="foglio">';
-    for(let k=0;k<10 && i<copie;k++,i++){ html += etichetta(); }
+    for(let k=0;k<10 && i<etichette.length;k++,i++){ html += etichette[i]; }
     html += '</div>';
   }
   document.getElementById('area').innerHTML = html;
