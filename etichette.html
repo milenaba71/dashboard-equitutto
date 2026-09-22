@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etichette Scatole · Equistasi</title>
+<!-- JsBarcode per il codice a barre -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --bg:#f0f4f8; --surface:#fff; --border:#d0dae8; --accent:#003d7a;
+    --muted:#6b7f96; --text:#1a2a3a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;}
+
+  /* ---------- BARRA COMANDI (non si stampa) ---------- */
+  .toolbar{background:var(--accent);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,61,122,.25);}
+  .toolbar h1{font-size:16px;font-weight:800;margin-right:auto;}
+  .toolbar label{font-size:12px;font-weight:600;color:rgba(255,255,255,.85);}
+  .toolbar select,.toolbar input{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);outline:none;min-width:120px;}
+  .toolbar input[type=number]{width:80px;min-width:0;}
+  .btn{background:#0072bc;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn:hover{opacity:.9;}
+  .btn.print{background:#27ae60;}
+  .hint{padding:10px 22px;font-size:12px;color:var(--muted);background:#e8eef5;border-bottom:1px solid var(--border);}
+
+  .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
+
+  /* ---------- FOGLIO A4 con etichette Markin C582 ---------- */
+  /* A4 = 210 x 297 mm. Etichetta 97,5 x 53 mm, 2 colonne x 5 righe = 10 per foglio. */
+  .foglio{
+    width:210mm; min-height:297mm; background:#fff; margin:20px auto;
+    padding:8mm 6mm;                 /* margini foglio (regolabili) */
+    display:grid;
+    grid-template-columns:97.5mm 97.5mm;
+    grid-auto-rows:53mm;
+    column-gap:3mm;                  /* spazio tra le 2 colonne */
+    row-gap:0;
+    box-shadow:0 4px 24px rgba(0,0,0,.12);
+  }
+  .etichetta{
+    width:97.5mm;height:53mm;overflow:hidden;
+    padding:3mm 4mm;display:flex;flex-direction:column;
+    /* bordo tratteggiato solo a schermo, per vedere i confini; sparisce in stampa */
+    outline:1px dashed #c9d4e2;
+  }
+  .et-titolo{font-size:8pt;font-weight:800;color:#003d7a;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1mm;}
+  .et-scatola{font-size:13pt;font-weight:800;color:#000;line-height:1;margin-bottom:1mm;}
+  .et-riga{font-size:7.5pt;color:#000;line-height:1.25;margin-bottom:.4mm;word-break:break-word;}
+  .et-riga b{color:#003d7a;}
+  .et-barcode{margin-top:auto;text-align:center;}
+  .et-barcode svg{max-width:100%;height:12mm;}
+
+  @media print{
+    .toolbar,.hint{display:none !important;}
+    body{background:#fff;}
+    .foglio{margin:0;box-shadow:none;page-break-after:always;}
+    .etichetta{outline:none;}     /* niente bordi in stampa */
+    @page{size:A4;margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>🏷️ Etichette Scatole</h1>
+  <div>
+    <label>Scatola</label><br>
+    <select id="sel-scatola"><option>Caricamento…</option></select>
+  </div>
+  <div>
+    <label>Copie</label><br>
+    <input type="number" id="n-copie" min="1" max="200" value="10">
+  </div>
+  <button class="btn" onclick="genera()">Genera</button>
+  <button class="btn print" onclick="window.print()">🖨️ Stampa</button>
+</div>
+<div class="hint">
+  Markin C582 · 97,5 × 53 mm · 10 etichette per foglio A4. In stampa: imposta margini «Nessuno» e scala «100%». I bordi tratteggiati non vengono stampati.
+</div>
+
+<div id="area"><div class="loading">Carico le scatole da Airtable…</div></div>
+
+<script>
+// ---- CONFIG ----
+const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
+const TABLE_ABB = 'tbldfuiVOiGFIq9vv'; // Abbinamento Kit
+
+// Campi (Abbinamento Kit)
+const F = {
+  SCATOLA:  'fldr98vQtqjklIzO4', // Codice scatola e Lotto (primario)
+  KIT:      'fldbg9LTx3vKKw6Jg', // Codice KIt
+  SERIALE:  'fldtyDpFAg95c9bwx', // Seriale (from SERIE)
+  ABBIN:    'fldZURjRnNiGEAB2t', // abbinamento dispositivi
+  UDI:      'fldks54Hz7sSKY1hI', // CODICE UDI
+};
+
+let RECORDS = [];
+
+function txt(v){
+  if(v==null) return '';
+  if(Array.isArray(v)) return v.map(x=>(x&&x.name)?x.name:x).join(', ');
+  if(typeof v==='object'&&v.name) return v.name;
+  return String(v);
+}
+function gf(r,fid){ const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; }
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+async function proxyGet(table, qs=''){
+  let all=[],offset=null,guard=0;
+  do{
+    const q = qs + (offset?'&offset='+encodeURIComponent(offset):'');
+    const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(q)}`);
+    const d = await res.json();
+    if(d&&d.records) all=all.concat(d.records);
+    offset = d?d.offset:null; guard++;
+  } while(offset && guard<50);
+  return all;
+}
+
+async function init(){
+  try{
+    RECORDS = await proxyGet(TABLE_ABB, 'maxRecords=2000');
+    // ordina per codice scatola
+    RECORDS.sort((a,b)=> txt(gf(a,F.SCATOLA)).localeCompare(txt(gf(b,F.SCATOLA))));
+    const sel = document.getElementById('sel-scatola');
+    sel.innerHTML = RECORDS
+      .filter(r=>txt(gf(r,F.SCATOLA)).trim()!=='')
+      .map(r=>`<option value="${r.id}">${esc(txt(gf(r,F.SCATOLA)))}</option>`).join('')
+      || '<option>Nessuna scatola</option>';
+    document.getElementById('area').innerHTML = '<div class="loading">Scegli una scatola e premi «Genera».</div>';
+  }catch(e){
+    document.getElementById('area').innerHTML = '<div class="loading">Errore nel caricamento: '+esc(e.message)+'</div>';
+  }
+}
+
+function genera(){
+  const sel = document.getElementById('sel-scatola');
+  const recId = sel.value;
+  const rec = RECORDS.find(r=>r.id===recId);
+  if(!rec){ return; }
+  let copie = parseInt(document.getElementById('n-copie').value,10)||1;
+  copie = Math.max(1, Math.min(200, copie));
+
+  const scatola = txt(gf(rec,F.SCATOLA));
+  const kit     = txt(gf(rec,F.KIT));
+  const seriali = txt(gf(rec,F.SERIALE));
+  const abbin   = txt(gf(rec,F.ABBIN));
+  const udi     = txt(gf(rec,F.UDI));
+
+  const etichetta = () => `
+    <div class="etichetta">
+      <div class="et-titolo">Equistasi® · Scatola dispositivo</div>
+      <div class="et-scatola">${esc(scatola)}</div>
+      ${kit     ? `<div class="et-riga"><b>Kit:</b> ${esc(kit)}</div>` : ''}
+      ${seriali ? `<div class="et-riga"><b>Seriali:</b> ${esc(seriali)}</div>` : ''}
+      ${abbin   ? `<div class="et-riga"><b>Abbinamento:</b> ${esc(abbin)}</div>` : ''}
+      ${udi     ? `<div class="et-riga"><b>UDI:</b> ${esc(udi)}</div>` : ''}
+      <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
+    </div>`;
+
+  // impagina in fogli da 10
+  let html = '';
+  let i = 0;
+  while(i < copie){
+    html += '<div class="foglio">';
+    for(let k=0;k<10 && i<copie;k++,i++){ html += etichetta(); }
+    html += '</div>';
+  }
+  document.getElementById('area').innerHTML = html;
+
+  // genera i codici a barre
+  document.querySelectorAll('svg.bc').forEach(function(svg){
+    const code = svg.getAttribute('data-code') || '';
+    if(!code) return;
+    try{
+      JsBarcode(svg, code, {format:'CODE128', displayValue:true, fontSize:14, height:40, margin:0});
+    }catch(e){}
+  });
+}
+
+init();
+</script>
+</body>
+</html>
