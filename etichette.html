@@ -28,22 +28,28 @@
   .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
 
   /* ---------- FOGLIO A4 con etichette Markin C582 ---------- */
-  /* A4 = 210 x 297 mm. Etichetta 97,5 x 53 mm, 2 colonne x 5 righe = 10 per foglio. */
+  /* A4 = 210 x 297 mm. Etichetta 87,5 x 53 mm, 2 colonne x 5 righe = 10 per foglio. Contenuto ruotato 90 gradi orari. */
   .foglio{
     width:210mm; min-height:297mm; background:#fff; margin:20px auto;
     padding:8mm 6mm;                 /* margini foglio (regolabili) */
     display:grid;
-    grid-template-columns:97.5mm 97.5mm;
+    grid-template-columns:87.5mm 87.5mm;
     grid-auto-rows:53mm;
     column-gap:3mm;                  /* spazio tra le 2 colonne */
     row-gap:0;
     box-shadow:0 4px 24px rgba(0,0,0,.12);
   }
   .etichetta{
-    width:97.5mm;height:53mm;overflow:hidden;
-    padding:3mm 4mm;display:flex;flex-direction:column;
-    /* bordo tratteggiato solo a schermo, per vedere i confini; sparisce in stampa */
-    outline:1px dashed #c9d4e2;
+    width:87.5mm;height:53mm;overflow:hidden;position:relative;
+    outline:1px dashed #c9d4e2;   /* solo a schermo, sparisce in stampa */
+  }
+  /* contenuto ruotato 90 gradi in senso orario: box 53 x 87,5 centrato nella cella */
+  .et-inner{
+    position:absolute;top:50%;left:50%;
+    width:53mm;height:87.5mm;
+    transform:translate(-50%,-50%) rotate(90deg);
+    transform-origin:center center;
+    padding:3mm 3.5mm;display:flex;flex-direction:column;
   }
   .et-titolo{font-size:8pt;font-weight:800;color:#003d7a;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1mm;}
   .et-scatola{font-size:13pt;font-weight:800;color:#000;line-height:1;margin-bottom:1mm;}
@@ -77,7 +83,7 @@
   <button class="btn print" onclick="window.print()">🖨️ Stampa</button>
 </div>
 <div class="hint">
-  Markin C582 · 97,5 × 53 mm · 10 etichette per foglio A4. In stampa: imposta margini «Nessuno» e scala «100%». I bordi tratteggiati non vengono stampati.
+  Etichetta 87,5 × 53 mm · testo ruotato 90° · 10 per foglio A4. In stampa: imposta margini «Nessuno» e scala «100%». I bordi tratteggiati non vengono stampati.
 </div>
 
 <div id="area"><div class="loading">Carico le scatole da Airtable…</div></div>
@@ -90,9 +96,9 @@ const TABLE_ABB = 'tbldfuiVOiGFIq9vv'; // Abbinamento Kit
 // Campi (Abbinamento Kit)
 const F = {
   SCATOLA:  'Codice scatola e Lotto',
-  KIT:      'Codice KIt',
+  KIT:      'Codice prodotto prodotto (from Codice KIt)',
   SERIALE:  'Seriale (from SERIE)',
-  ABBIN:    'abbinamento dispositivi',
+  ABBIN:    'Abbinamento seriali (testo)',
   UDI:      'CODICE UDI',
 };
 
@@ -100,9 +106,35 @@ let RECORDS = [];
 
 function txt(v){
   if(v==null) return '';
-  if(Array.isArray(v)) return v.map(x=>(x&&x.name)?x.name:x).join(', ');
-  if(typeof v==='object'&&v.name) return v.name;
-  return String(v);
+  // stringa semplice
+  if(typeof v==='string') return v;
+  if(typeof v==='number') return String(v);
+  // campo "from ..." con valuesByLinkedRecordId
+  if(typeof v==='object' && v.valuesByLinkedRecordId){
+    var out=[];
+    Object.values(v.valuesByLinkedRecordId).forEach(function(arr){
+      (Array.isArray(arr)?arr:[arr]).forEach(function(x){
+        out.push(cellStr(x));
+      });
+    });
+    return out.filter(Boolean).join(', ');
+  }
+  if(Array.isArray(v)) return v.map(cellStr).filter(Boolean).join(', ');
+  return cellStr(v);
+}
+// Converte un singolo valore-cella in testo leggibile
+function cellStr(x){
+  if(x==null) return '';
+  if(typeof x==='string') return x;
+  if(typeof x==='number') return String(x);
+  if(typeof x==='object'){
+    if(x.text!==undefined) return String(x.text);   // barcode/testo
+    if(x.name!==undefined) return String(x.name);   // linked record
+    if(x.value!==undefined) return String(x.value);
+    // NON restituire l'id se e' solo {id:...}
+    if(x.id!==undefined && Object.keys(x).length===1) return '';
+  }
+  return '';
 }
 function gf(r,fid){ const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:(cv[fid]!==undefined?cv[fid]:undefined); }
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -150,7 +182,7 @@ function genera(){
   const udi     = txt(gf(rec,F.UDI));
 
   const etichetta = () => `
-    <div class="etichetta">
+    <div class="etichetta"><div class="et-inner">
       <div class="et-titolo">Equistasi® · Scatola dispositivo</div>
       <div class="et-scatola">${esc(scatola)}</div>
       ${kit     ? `<div class="et-riga"><b>Kit:</b> ${esc(kit)}</div>` : ''}
@@ -158,7 +190,7 @@ function genera(){
       ${abbin   ? `<div class="et-riga"><b>Abbinamento:</b> ${esc(abbin)}</div>` : ''}
       ${udi     ? `<div class="et-riga"><b>UDI:</b> ${esc(udi)}</div>` : ''}
       <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
-    </div>`;
+    </div></div>`;
 
   // impagina in fogli da 10
   let html = '';
