@@ -89,11 +89,11 @@ const TABLE_ABB = 'tbldfuiVOiGFIq9vv'; // Abbinamento Kit
 
 // Campi (Abbinamento Kit)
 const F = {
-  SCATOLA:  'fldr98vQtqjklIzO4', // Codice scatola e Lotto (primario)
-  KIT:      'fldbg9LTx3vKKw6Jg', // Codice KIt
-  SERIALE:  'fldtyDpFAg95c9bwx', // Seriale (from SERIE)
-  ABBIN:    'fldZURjRnNiGEAB2t', // abbinamento dispositivi
-  UDI:      'fldks54Hz7sSKY1hI', // CODICE UDI
+  SCATOLA:  'Codice scatola e Lotto',
+  KIT:      'Codice KIt',
+  SERIALE:  'Seriale (from SERIE)',
+  ABBIN:    'abbinamento dispositivi',
+  UDI:      'CODICE UDI',
 };
 
 let RECORDS = [];
@@ -104,7 +104,7 @@ function txt(v){
   if(typeof v==='object'&&v.name) return v.name;
   return String(v);
 }
-function gf(r,fid){ const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:cv[fid]; }
+function gf(r,fid){ const f=r.fields||{},cv=r.cellValuesByFieldId||{}; return f[fid]!==undefined?f[fid]:(cv[fid]!==undefined?cv[fid]:undefined); }
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 async function proxyGet(table, qs=''){
