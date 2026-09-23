@@ -2549,13 +2549,13 @@ async function saveEditContact(recId) {
   btn.textContent = '⏳ Salvo…';
   errEl.style.display = 'none';
 
-  const fields = {
-    'Nome e cognome':      nome,
-    'recapito telefonico': tel,
-    'Status':              stato,
-    'Tipologia cliente':   tipo,
-    'Notes':               note,
-  };
+  // Campi a scelta singola: se vuoti vanno inviati come null (svuota),
+  // MAI come "" (Airtable proverebbe a creare un'opzione vuota -> errore permessi)
+  const fields = { 'Nome e cognome': nome };
+  fields['recapito telefonico'] = tel || '';         // testo: '' va bene
+  fields['Notes'] = note || '';                       // testo lungo: '' va bene
+  fields['Status'] = stato ? stato : null;            // select: null se vuoto
+  fields['Tipologia cliente'] = tipo ? tipo : null;   // select: null se vuoto
 
   try {
     await proxyPatch(TABLE_RUBRICA, recId, fields);
