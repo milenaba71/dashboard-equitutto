@@ -438,7 +438,15 @@ async function proxyPatch(table, recordId, fields) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields }),
   });
-  return res.json();
+  const data = await res.json().catch(function(){ return {}; });
+  // Airtable/proxy segnalano gli errori nel corpo o con status non-2xx
+  if (!res.ok || (data && data.error)) {
+    const msg = data && data.error
+      ? (typeof data.error === 'object' ? (data.error.message || data.error.type || JSON.stringify(data.error)) : data.error)
+      : ('HTTP ' + res.status);
+    throw new Error(msg);
+  }
+  return data;
 }
 
 async function proxyPost(table, fields) {
@@ -545,7 +553,7 @@ document.addEventListener('click', function(e) {
         showToast('✅ Salvato su Airtable!');
         refreshDrawer();
       })
-      .catch(() => { showToast('❌ Errore nel salvataggio', true); refreshDrawer(); });
+      .catch((e) => { showToast('❌ ' + (e && e.message ? e.message : 'Errore nel salvataggio'), true); refreshDrawer(); });
     return;
   }
 
