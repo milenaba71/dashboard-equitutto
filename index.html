@@ -1009,6 +1009,9 @@ function openContactDetail(recId) {
   const nome   = rec.fields['Nome e cognome']||'—';
   const stato  = rec.fields['Status']||'—';
   const tel    = rec.fields['recapito telefonico']||'';
+  const email  = rec.fields['E-Mail']||'';
+  const regione= rec.fields['Regione']||'';
+  const provincia = rec.fields['Provincia']||'';
   const note   = rec.fields['Notes']||'';
   const scad   = rec.fields['data scadenza noleggio'] ? new Date(rec.fields['data scadenza noleggio']).toLocaleDateString('it-IT') : '';
 
@@ -1062,6 +1065,14 @@ function openContactDetail(recId) {
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Telefono</div>
         <div style="font-size:13px;font-weight:700">${tel ? `<a href="tel:${esc(tel)}" style="color:var(--accent)">${esc(tel)}</a>` : '—'}</div>
       </div>
+      ${email ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Email</div>
+        <div style="font-size:13px;font-weight:700"><a href="mailto:${esc(email)}" style="color:var(--accent)">${esc(email)}</a></div>
+      </div>` : ''}
+      ${(regione || provincia) ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Regione / Provincia</div>
+        <div style="font-size:13px;font-weight:700">${esc(regione)}${(regione&&provincia)?' · ':''}${esc(provincia)}</div>
+      </div>` : ''}
       ${scad ? `<div style="background:rgba(230,126,34,.1);border-radius:8px;padding:12px;grid-column:1/-1">
         <div style="font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-bottom:4px">📦 Scadenza noleggio</div>
         <div style="font-size:13px;font-weight:700;color:var(--orange)">${scad}</div>
@@ -1453,7 +1464,8 @@ async function loadData(utente) {
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
-        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio&maxRecords=10000'),
+        '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio' +
+        '&fields[]=E-Mail&fields[]=Regione&fields[]=Provincia&maxRecords=10000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -2500,6 +2512,18 @@ function openEditContact(recId) {
           <input id="ec-tel" type="tel" value="${esc(f['recapito telefonico']||'')}">
         </div>
         <div class="form-group">
+          <label>Email</label>
+          <input id="ec-email" type="email" value="${esc(f['E-Mail']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Regione</label>
+          <input id="ec-regione" type="text" value="${esc(f['Regione']||'')}">
+        </div>
+        <div class="form-group">
+          <label>Provincia</label>
+          <input id="ec-provincia" type="text" value="${esc(f['Provincia']||'')}">
+        </div>
+        <div class="form-group">
           <label>Stato</label>
           <select id="ec-stato">
             ${STATUS_OPTIONS.map(o=>`<option ${f['Status']===o?'selected':''}>${o}</option>`).join('')}
@@ -2551,9 +2575,16 @@ async function saveEditContact(recId) {
 
   // Campi a scelta singola: se vuoti vanno inviati come null (svuota),
   // MAI come "" (Airtable proverebbe a creare un'opzione vuota -> errore permessi)
+  const email     = document.getElementById('ec-email')?.value.trim();
+  const regione   = document.getElementById('ec-regione')?.value.trim();
+  const provincia = document.getElementById('ec-provincia')?.value.trim();
+
   const fields = { 'Nome e cognome': nome };
   fields['recapito telefonico'] = tel || '';         // testo: '' va bene
   fields['Notes'] = note || '';                       // testo lungo: '' va bene
+  fields['E-Mail'] = email || '';                     // email: '' va bene
+  fields['Regione'] = regione || '';                  // testo: '' va bene
+  fields['Provincia'] = provincia || '';              // testo: '' va bene
   fields['Status'] = stato ? stato : null;            // select: null se vuoto
   fields['Tipologia cliente'] = tipo ? tipo : null;   // select: null se vuoto
 
