@@ -549,7 +549,7 @@ document.addEventListener('click', function(e) {
     proxyPatch(TABLE_RUBRICA, recId, { [field]: value })
       .then(() => {
         const rec = allMiei.find(r => r.id === recId);
-        if (rec) rec.fields[field] = value;
+        if (rec) { rec.fields[field] = value; rec.fields['Ultima modifica'] = new Date().toISOString(); }
         showToast('✅ Salvato su Airtable!');
         refreshDrawer();
       })
@@ -775,10 +775,11 @@ function filterDrawer(q) {
 
 // ── Ordinamento persistente della lista contatti ──────────────────
 // Default: data di creazione, dal piu' recente. Resta attivo anche dopo un salvataggio.
-let sortField = 'creaz';   // 'creaz' | 'att'
-let sortDirV  = -1;        // -1 = decrescente (piu' recente in alto), 1 = crescente
+let sortField = 'modifica';   // 'modifica' | 'creaz' | 'att'
+let sortDirV  = -1;           // -1 = decrescente (piu' recente in alto), 1 = crescente
 function dateVal(r, tipo) {
   if (tipo === 'att') return new Date(r.fields['DATA ATTIVITA'] || 0).getTime();
+  if (tipo === 'modifica') return new Date(r.fields['Ultima modifica'] || r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || 0).getTime();
   return new Date(r.fields['DATA DI CREAZIONE DATO'] || r.createdTime || 0).getTime();
 }
 function applySort(list) {
@@ -988,7 +989,7 @@ async function saveContactNote(recId) {
   try {
     await proxyPatch(TABLE_RUBRICA, recId, { 'Notes': val });
     const rec = allMiei.find(r => r.id === recId);
-    if (rec) rec.fields['Notes'] = val;
+    if (rec) { rec.fields['Notes'] = val; rec.fields['Ultima modifica'] = new Date().toISOString(); }
     showToast('✅ Nota salvata!');
     if (btn) { btn.textContent = '✅ Salvata'; setTimeout(() => { if (btn) { btn.textContent = '💾 Salva nota'; btn.disabled = false; } }, 1500); }
     refreshDrawer();
@@ -1465,7 +1466,7 @@ async function loadData(utente) {
         '&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO&fields[]=Datavisita' +
         '&fields[]=data+ultima+telefonata&fields[]=CONVERSIONE+IN+VENDITA&fields[]=Data+noleggio' +
-        '&fields[]=E-Mail&fields[]=Regione&fields[]=Provincia&maxRecords=10000'),
+        '&fields[]=E-Mail&fields[]=Regione&fields[]=Provincia&fields[]=Ultima+modifica&maxRecords=10000'),
       proxyGet('tblTAA7KFUVtcPnZt',
         'fields[]=MESE&fields[]=Valore+Raggiunto&fields[]=Valore+Obiettivo' +
         '&fields[]=Name+(from+Commerciale)&fields[]=Tipo+Obiettivo&maxRecords=500'),
@@ -2602,7 +2603,7 @@ async function saveEditContact(recId) {
     } catch(e) { console.warn('Aggiornamento valore raggiunto:', e); }
     // Aggiorna cache locale
     const rec = allMiei.find(r=>r.id===recId);
-    if (rec) rec.fields = { ...rec.fields, ...fields };
+    if (rec) { rec.fields = { ...rec.fields, ...fields }; rec.fields['Ultima modifica'] = new Date().toISOString(); }
     document.getElementById('edit-contact-modal').remove();
     showToast('✅ Contatto aggiornato!');
     refreshDrawer();
