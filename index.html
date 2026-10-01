@@ -2574,20 +2574,31 @@ async function saveEditContact(recId) {
   btn.textContent = '⏳ Salvo…';
   errEl.style.display = 'none';
 
-  // Campi a scelta singola: se vuoti vanno inviati come null (svuota),
-  // MAI come "" (Airtable proverebbe a creare un'opzione vuota -> errore permessi)
   const email     = document.getElementById('ec-email')?.value.trim();
   const regione   = document.getElementById('ec-regione')?.value.trim();
   const provincia = document.getElementById('ec-provincia')?.value.trim();
 
-  const fields = { 'Nome e cognome': nome };
-  fields['recapito telefonico'] = tel || '';         // testo: '' va bene
-  fields['Notes'] = note || '';                       // testo lungo: '' va bene
-  fields['E-Mail'] = email || '';                     // email: '' va bene
-  fields['Regione'] = regione || '';                  // testo: '' va bene
-  fields['Provincia'] = provincia || '';              // testo: '' va bene
-  fields['Status'] = stato ? stato : null;            // select: null se vuoto
-  fields['Tipologia cliente'] = tipo ? tipo : null;   // select: null se vuoto
+  // ANTI-CANCELLAZIONE: invio SOLO i campi che l'utente ha davvero cambiato
+  // rispetto al valore originale. Cosi' un campo non toccato (es. le Note)
+  // non viene mai sovrascritto/svuotato per errore.
+  const orig = (allMiei.find(r => r.id === recId) || {}).fields || {};
+  const norm = v => (v === undefined || v === null) ? '' : String(v);
+  const fields = {};
+  if (norm(nome)  !== norm(orig['Nome e cognome']))      fields['Nome e cognome'] = nome;
+  if (norm(tel)   !== norm(orig['recapito telefonico'])) fields['recapito telefonico'] = tel;
+  if (norm(note)  !== norm(orig['Notes']))               fields['Notes'] = note;
+  if (norm(email) !== norm(orig['E-Mail']))              fields['E-Mail'] = email;
+  if (norm(regione)   !== norm(orig['Regione']))         fields['Regione'] = regione;
+  if (norm(provincia) !== norm(orig['Provincia']))       fields['Provincia'] = provincia;
+  if (norm(stato) !== norm(orig['Status']))              fields['Status'] = stato ? stato : null;
+  if (norm(tipo)  !== norm(orig['Tipologia cliente']))   fields['Tipologia cliente'] = tipo ? tipo : null;
+
+  // se non e' cambiato nulla, non serve scrivere
+  if (Object.keys(fields).length === 0) {
+    document.getElementById('edit-contact-modal')?.remove();
+    showToast('Nessuna modifica da salvare');
+    return;
+  }
 
   try {
     await proxyPatch(TABLE_RUBRICA, recId, fields);
