@@ -332,6 +332,8 @@ const APPUNTAMENTO_OPTIONS = ['SI','NO','DA FISSARE','FISSATO','RIMANDATO','FATT
 
 const CONVERSIONE_OPTIONS = ['VENDUTO','NOLEGGIATO','-'];
 
+const QUALITA_OPTIONS = ['QUALIFICATO','CONVERTITO','NON QUALIFICATO','PERSO'];
+
 
 const $ = id => document.getElementById(id);
 const fmt  = n => '€\u00a0' + Math.round(n).toLocaleString('it-IT');
@@ -512,7 +514,9 @@ document.addEventListener('click', function(e) {
     const recId   = statEl.dataset.id;
     const field   = statEl.dataset.field;
     const current = statEl.dataset.value || '';
-    const optsArr = field === 'Preso appuntamento' ? APPUNTAMENTO_OPTIONS : STATUS_OPTIONS;
+    const optsArr = field === 'Preso appuntamento' ? APPUNTAMENTO_OPTIONS
+      : field === "QUALITA' CONTATTO" ? QUALITA_OPTIONS
+      : STATUS_OPTIONS;
     const opts    = optsArr.map(o => `<option ${o===current?'selected':''}>${esc(o)}</option>`).join('');
     td.innerHTML = `
       <select class="edit-select" id="es-${recId}">${opts}</select>
@@ -520,6 +524,28 @@ document.addEventListener('click', function(e) {
         <button class="btn-save" data-save="${recId}" data-field="${field}" data-select="1">Salva</button>
         <button class="btn-cancel" data-cancel="1">Annulla</button>
       </div>`;
+    return;
+  }
+
+  // Click su invalidità >34% (checkbox toggle)
+  const invEl = e.target.closest('[data-inval]');
+  if (invEl) {
+    const recId = invEl.dataset.id;
+    const cur   = invEl.dataset.value === '1';
+    const td    = invEl.closest('td');
+    if (td) td.style.opacity = '.5';
+    proxyPatch(TABLE_RUBRICA, recId, { 'fldltpS0NH4CiTy8F': !cur })
+      .then(() => {
+        const rec = allMiei.find(r => r.id === recId);
+        if (rec) {
+          let set = false;
+          for (const k in rec.fields) { if (k.toLowerCase().indexOf('invalidit') >= 0) { rec.fields[k] = !cur; set = true; break; } }
+          if (!set) rec.fields['ha invalidità >34% '] = !cur;
+        }
+        showToast('✅ Salvato su Airtable!');
+        refreshDrawer();
+      })
+      .catch((e) => { showToast('❌ ' + (e && e.message ? e.message : 'Errore nel salvataggio'), true); refreshDrawer(); });
     return;
   }
 
@@ -907,6 +933,21 @@ function renderTable(lista) {
           data-stato="1" data-id="${id}" data-field="Status" data-value="${esc(stato)}"
           title="Clicca per modificare">${esc(stato)}</span>
       </td>
+      <td>${(() => {
+        const q = r.fields["QUALITA' CONTATTO"];
+        const qn = q ? (typeof q === 'object' ? q.name : q) : '';
+        const qCls = qn==='CONVERTITO' ? 'badge-green' : qn==='QUALIFICATO' ? 'badge-blue' : qn==='NON QUALIFICATO' ? 'badge-orange' : qn==='PERSO' ? 'badge-red' : '';
+        return qn
+          ? `<span class="badge ${qCls} editable" data-stato="1" data-id="${id}" data-field="QUALITA' CONTATTO" data-value="${esc(qn)}" title="Modifica qualità">${esc(qn)}</span>`
+          : `<span class="editable" style="font-size:11px;color:var(--muted);opacity:.7" data-stato="1" data-id="${id}" data-field="QUALITA' CONTATTO" data-value="" title="Imposta qualità">+ qualità</span>`;
+      })()}</td>
+      <td style="text-align:center">${(() => {
+        let inv; for (const k in r.fields) { if (k.toLowerCase().indexOf('invalidit') >= 0) { inv = r.fields[k]; break; } }
+        const on = inv === true || inv === 'true' || inv === 1;
+        return on
+          ? `<span class="badge badge-green editable" data-inval="1" data-id="${id}" data-value="1" title="Invalidità >34% — clic per cambiare" style="cursor:pointer">♿ Sì</span>`
+          : `<span class="editable" data-inval="1" data-id="${id}" data-value="0" title="Invalidità >34% — clic per cambiare" style="cursor:pointer;color:var(--muted);opacity:.6;font-size:12px">—</span>`;
+      })()}</td>
       <td>
         ${tel
           ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -964,6 +1005,8 @@ function renderTable(lista) {
       <tr>
         <th>Nome</th>
         <th>Stato ✏️</th>
+        <th>Qualità ✏️</th>
+        <th>Inval. &gt;34%</th>
         <th>Telefono ✏️</th>
         <th style="cursor:pointer" onclick="sortByDate('creaz')">Data creazione ↕</th>
         <th style="cursor:pointer" onclick="sortByDate('att')">Ultima attività ↕</th>
@@ -1460,6 +1503,8 @@ async function loadData(utente) {
     const [rubrica, obiettivi, prodotti, proposteRaw] = await Promise.all([
       proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
+        "&fields[]=QUALITA'+CONTATTO" +
+        "&fields[]=fldltpS0NH4CiTy8F" +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
