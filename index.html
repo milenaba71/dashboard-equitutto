@@ -527,28 +527,6 @@ document.addEventListener('click', function(e) {
     return;
   }
 
-  // Click su invalidità >34% (checkbox toggle)
-  const invEl = e.target.closest('[data-inval]');
-  if (invEl) {
-    const recId = invEl.dataset.id;
-    const cur   = invEl.dataset.value === '1';
-    const td    = invEl.closest('td');
-    if (td) td.style.opacity = '.5';
-    proxyPatch(TABLE_RUBRICA, recId, { 'fldltpS0NH4CiTy8F': !cur })
-      .then(() => {
-        const rec = allMiei.find(r => r.id === recId);
-        if (rec) {
-          let set = false;
-          for (const k in rec.fields) { if (k.toLowerCase().indexOf('invalidit') >= 0) { rec.fields[k] = !cur; set = true; break; } }
-          if (!set) rec.fields['ha invalidità >34% '] = !cur;
-        }
-        showToast('✅ Salvato su Airtable!');
-        refreshDrawer();
-      })
-      .catch((e) => { showToast('❌ ' + (e && e.message ? e.message : 'Errore nel salvataggio'), true); refreshDrawer(); });
-    return;
-  }
-
   // Click su Salva
   const saveBtn = e.target.closest('[data-save]');
   if (saveBtn) {
@@ -873,6 +851,25 @@ function editDataTel(recId, currVal) {
   }, 100);
 }
 
+async function toggleInvalidita(recId, checked, el) {
+  if (el) el.disabled = true;
+  try {
+    await proxyPatch(TABLE_RUBRICA, recId, { 'ha invalidità >34% ': !!checked });
+    const rec = allMiei.find(r => r.id === recId);
+    if (rec) {
+      let set = false;
+      for (const k in rec.fields) { if (k.toLowerCase().indexOf('invalidit') >= 0) { rec.fields[k] = !!checked; set = true; break; } }
+      if (!set) rec.fields['ha invalidità >34% '] = !!checked;
+    }
+    showToast('✅ Salvato su Airtable!');
+  } catch (e) {
+    showToast('❌ ' + (e && e.message ? e.message : 'Errore nel salvataggio'), true);
+    if (el) el.checked = !checked;
+  } finally {
+    if (el) el.disabled = false;
+  }
+}
+
 async function saveDataTel(recId) {
   var inp = document.getElementById('dtel-input');
   var val = inp ? inp.value : '';
@@ -944,9 +941,7 @@ function renderTable(lista) {
       <td style="text-align:center">${(() => {
         let inv; for (const k in r.fields) { if (k.toLowerCase().indexOf('invalidit') >= 0) { inv = r.fields[k]; break; } }
         const on = inv === true || inv === 'true' || inv === 1;
-        return on
-          ? `<span class="badge badge-green editable" data-inval="1" data-id="${id}" data-value="1" title="Invalidità >34% — clic per cambiare" style="cursor:pointer">♿ Sì</span>`
-          : `<span class="editable" data-inval="1" data-id="${id}" data-value="0" title="Invalidità >34% — clic per cambiare" style="cursor:pointer;color:var(--muted);opacity:.6;font-size:12px">—</span>`;
+        return `<input type="checkbox" ${on ? 'checked' : ''} onchange="toggleInvalidita('${id}', this.checked, this)" title="Invalidità >34% (spunta per salvare)" style="width:18px;height:18px;cursor:pointer;accent-color:#27ae60">`;
       })()}</td>
       <td>
         ${tel
