@@ -2266,7 +2266,7 @@ function buildCalendar(eventsData) {
     const d3 = r.fields['data scadenza noleggio'];
     const nome = r.fields['Nome e cognome'] || '—';
     const stato = r.fields['Status'] || '';
-    // Appuntamenti fissati dall'assistente telefonico AI (Bland): lo scenario Make scrive in Notes "📞 Telefonata AI"
+    // Appuntamenti fissati da Rodolfo, l'assistente telefonico AI (Bland): lo scenario Make scrive in Notes "📞 Telefonata AI"
     const ai = String(r.fields['Notes'] || '').includes('📞 Telefonata AI');
     const add = (iso, tipo) => {
       if (!iso) return;
@@ -2330,7 +2330,7 @@ function buildCalendar(eventsData) {
         <div style="display:flex;align-items:center;gap:8px">
           <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
             <span><span style="color:#0072bc">📅</span> Visita</span>
-            <span>🤖 Fissata da assistente AI</span>
+            <span>🤖 Fissata da Rodolfo (AI)</span>
             <span><span style="color:#27ae60">✅</span> Attività</span>
             <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
           </div>
@@ -2372,7 +2372,7 @@ function showCalPopup(e, nome, stato, tipo, iso, ai) {
     <div class="cal-popup-nome">👤 ${nome}</div>
     <div class="cal-popup-row">📌 ${stato}</div>
     <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>${ai ? `
-    <div class="cal-popup-row">🤖 Fissata dall'assistente telefonico</div>` : ''}`;
+    <div class="cal-popup-row">🤖 Fissata da Rodolfo, assistente telefonico AI</div>` : ''}`;
   e.target.closest('.cal-event').style.position = 'relative';
   e.target.closest('.cal-event').appendChild(popup);
   setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
