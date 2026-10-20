@@ -797,7 +797,7 @@ function getListaByTipo(tipo) {
     case 'contatti':     return allMiei;
     case 'ricontattare': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA RISPOSTO'); });
     case 'trattativa':   return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
-    case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
+    case 'appuntamenti': return allMiei.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&String(p).toUpperCase()!=='NO'; });
     case 'vendite':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
     case 'venduto':      return allMiei.filter(r=>{ return (r.fields['Status']||'').toUpperCase()==='VENDUTO'; });
     case 'noleggi':      return allMiei.filter(r=>{ 
@@ -2266,11 +2266,19 @@ function buildCalendar(eventsData) {
     const d3 = r.fields['data scadenza noleggio'];
     const nome = r.fields['Nome e cognome'] || '—';
     const stato = r.fields['Status'] || '';
+    // Appuntamenti fissati dall'assistente telefonico AI (Bland): lo scenario Make scrive in Notes "📞 Telefonata AI"
+    const ai = String(r.fields['Notes'] || '').includes('📞 Telefonata AI');
     const add = (iso, tipo) => {
       if (!iso) return;
-      const key = iso.substring(0,10);
+      // Data/ora in UTC: usa il giorno locale, altrimenti un appuntamento serale finisce sul giorno sbagliato
+      let key = iso.substring(0,10), ora = '';
+      if (iso.length > 10) {
+        const dt = new Date(iso);
+        key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        ora = dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+      }
       if (!evMap[key]) evMap[key] = [];
-      evMap[key].push({ nome, stato, tipo, iso });
+      evMap[key].push({ nome, stato, tipo, iso, ora, ai: tipo==='app' && ai });
     };
     add(d1, 'app');
     add(d2, 'att');
@@ -2299,10 +2307,11 @@ function buildCalendar(eventsData) {
     const key = c.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}` : '';
     const evs = evMap[key] || [];
     const evHtml = evs.slice(0,3).map(ev => {
-      const label = ev.tipo==='app' ? '📅' : ev.tipo==='scad' ? '⚠️' : '✅';
+      const label = ev.tipo==='app' ? (ev.ai ? '🤖' : '📅') : ev.tipo==='scad' ? '⚠️' : '✅';
+      const ora = ev.tipo==='app' && ev.ora ? ev.ora + ' ' : '';
       return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)}"
-        onclick="showCalPopup(event,'${esc(ev.nome)}','${esc(ev.stato)}','${ev.tipo}','${ev.iso}')">
-        ${label} ${esc(ev.nome.split(' ')[0])}
+        onclick="showCalPopup(event,'${esc(ev.nome)}','${esc(ev.stato)}','${ev.tipo}','${ev.iso}',${ev.ai})">
+        ${label} ${ora}${esc(ev.nome.split(' ')[0])}
       </div>`;
     }).join('');
     const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
@@ -2321,6 +2330,7 @@ function buildCalendar(eventsData) {
         <div style="display:flex;align-items:center;gap:8px">
           <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
             <span><span style="color:#0072bc">📅</span> Visita</span>
+            <span>🤖 Fissata da assistente AI</span>
             <span><span style="color:#27ae60">✅</span> Attività</span>
             <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
           </div>
@@ -2351,7 +2361,7 @@ function changeMonth(dir) {
   if (calEl) calEl.innerHTML = buildCalendar(allMiei);
 }
 
-function showCalPopup(e, nome, stato, tipo, iso) {
+function showCalPopup(e, nome, stato, tipo, iso, ai) {
   e.stopPropagation();
   document.querySelectorAll('.cal-popup').forEach(p => p.remove());
   const tipoLabel = tipo==='app' ? 'Data visita' : tipo==='scad' ? 'Scadenza noleggio' : 'Ultima attività';
@@ -2361,7 +2371,8 @@ function showCalPopup(e, nome, stato, tipo, iso) {
   popup.innerHTML = `
     <div class="cal-popup-nome">👤 ${nome}</div>
     <div class="cal-popup-row">📌 ${stato}</div>
-    <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>`;
+    <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>${ai ? `
+    <div class="cal-popup-row">🤖 Fissata dall'assistente telefonico</div>` : ''}`;
   e.target.closest('.cal-event').style.position = 'relative';
   e.target.closest('.cal-event').appendChild(popup);
   setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
