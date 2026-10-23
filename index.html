@@ -303,6 +303,7 @@ const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
 const FLD_IDX_PREZZO      = 'fldN4u3S8ngsBAWuL'; // Prezzo unitario
 const FLD_IDX_SCONTO     = 'fldHdbgSaCUNr9WCf'; // Sconto €
+const FLD_IDX_DATA       = 'fld6mOpX0RZAz9XYR'; // Data proposta
 
 // Filtro per Codice Equipoint (singleSelect) — nessun account Airtable richiesto
 const TOKEN_MAP = {
@@ -464,7 +465,15 @@ async function proxyPost(table, fields) {
 async function proxyDelete(table, recordId) {
   const url = `${PROXY}?table=${encodeURIComponent(table)}&recordId=${encodeURIComponent(recordId)}`;
   const res = await fetch(url, { method: 'DELETE' });
-  return res.json();
+  const data = await res.json().catch(function(){ return {}; });
+  // Prima gli errori venivano ignorati: la proposta restava su Airtable senza avvisi
+  if (!res.ok || (data && data.error)) {
+    const msg = data && data.error
+      ? (typeof data.error === 'object' ? (data.error.message || data.error.type || JSON.stringify(data.error)) : data.error)
+      : ('HTTP ' + res.status);
+    throw new Error('Eliminazione non riuscita: ' + msg);
+  }
+  return data;
 }
 
 // ── Editing tramite data attributes (niente apostrofi nel JS inline) ──
@@ -1865,6 +1874,12 @@ const NOLO_ORDER_IDX = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'K
 let idxCartRecId  = null;
 let idxCartSelIds = new Map(); // prodId → { propId, qta, prezzo }
 let idxCartTab    = 'noleggio';
+let idxCartData   = ''; // Data proposta (YYYY-MM-DD)
+
+function oggiISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 
 function openProdottiPanel(recId) {
   idxCartRecId = recId;
@@ -1872,6 +1887,13 @@ function openProdottiPanel(recId) {
   if (!rec) return;
 
   idxCartSelIds = new Map();
+  // Data della proposta: quella già salvata (la prima trovata), altrimenti oggi
+  idxCartData = '';
+  getProposteContatto(recId).forEach(function(p) {
+    var d = (p.fields || {})[FLD_IDX_DATA] || (p.fields || {})['Data proposta'];
+    if (d && !idxCartData) idxCartData = String(d).slice(0, 10);
+  });
+  if (!idxCartData) idxCartData = oggiISO();
   getProposteContatto(recId).forEach(function(p) {
     var prodLinks = getProdottoDaProposta(p);
     if (prodLinks && prodLinks.length > 0) {
@@ -2058,7 +2080,17 @@ function buildIdxCart() {
       </div>`;
     }).join('');
 
-  return `${selectedHtml}${tabsHtml}${grid}
+  const nSalvate = getProposteContatto(idxCartRecId).length;
+  const dataHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;">' +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--accent);">📅 Data proposta' +
+    '<input type="date" data-cart-data="1" value="' + esc(idxCartData) + '" ' +
+    'style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;" /></label>' +
+    (nSalvate > 0
+      ? '<button onclick="deleteIdxProposta()" style="background:#fdecea;color:#c0392b;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑️ Elimina proposta</button>'
+      : '') +
+    '</div>';
+
+  return `${dataHtml}${selectedHtml}${tabsHtml}${grid}
     <div style="background:rgba(0,61,122,.06);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="font-size:11px;color:var(--muted)">Totale proposta</div>
@@ -2077,6 +2109,8 @@ function buildIdxCart() {
 
 // Aggiornamento sconto per riga nel carrello (input event delegato)
 document.addEventListener('input', function(e){
+  var dataEl = e.target.closest('[data-cart-data]');
+  if (dataEl) { idxCartData = dataEl.value; return; }
   var el = e.target.closest('[data-sconto]');
   if (!el) return;
   var prodId = el.dataset.sconto;
@@ -2142,6 +2176,7 @@ async function saveIdxCart() {
           ops.push(proxyPatch(TABLE_PROPOSTE_IDX, entry.propId, {
             'Quantità': entry.qta || 1,
             [FLD_IDX_SCONTO]: entry.sconto || 0,
+            [FLD_IDX_DATA]: idxCartData || null,
           }));
         }
         continue;
@@ -2153,6 +2188,7 @@ async function saveIdxCart() {
         'Quantità':         entry.qta || 1,
         'Prezzo unitario':  prod ? prodPrezzo(prod) : (entry.prezzo || 0),
         [FLD_IDX_SCONTO]:   entry.sconto || 0,
+        [FLD_IDX_DATA]:     idxCartData || null,
       };
       // ANTI-DOPPIONE: se propId manca, cerca una proposta gia' esistente
       // per stesso contatto + stesso prodotto, e in tal caso aggiorna quella
@@ -2209,27 +2245,10 @@ async function saveIdxCart() {
 
     daEliminare.forEach(function(p) {
       ops.push(proxyDelete(TABLE_PROPOSTE_IDX, p.id));
-      allProposte = allProposte.filter(function(x){ return x.id !== p.id; });
     });
 
     await Promise.all(ops);
-
-    // Ricarica proposte aggiornate da Airtable
-    const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
-    allProposte = nuoveProposte.map(function(p) {
-      const cv = p.cellValuesByFieldId || {};
-      const f  = p.fields || {};
-      return { ...p, fields: { ...f, ...cv } };
-    });
-
-    // Aggiorna Valore raggiunto nella rubrica
-    try {
-      const propContatto = getProposteContatto(idxCartRecId);
-      const totVal = getValoreProposte(propContatto);
-      await proxyPatch(TABLE_RUBRICA, idxCartRecId, { 'Valore raggiunto': totVal });
-      const recUp = allMiei.find(function(r){ return r.id === idxCartRecId; });
-      if (recUp) recUp.fields['Valore raggiunto'] = totVal;
-    } catch(e2) { console.warn('Aggiornamento valore raggiunto:', e2); }
+    await ricaricaProposteContatto(idxCartRecId);
 
     document.getElementById('idx-cart-modal')?.remove();
     showToast('✅ Prodotti salvati!');
@@ -2238,6 +2257,40 @@ async function saveIdxCart() {
     console.error('❌ saveIdxCart errore:', e);
     showToast('❌ Errore: ' + e.message, true);
     if (btn) { btn.textContent = '💾 Salva su Airtable'; btn.disabled = false; }
+  }
+}
+
+// Ricarica le proposte da Airtable e aggiorna il Valore raggiunto del contatto
+async function ricaricaProposteContatto(recId) {
+  const nuoveProposte = await proxyGet(TABLE_PROPOSTE_IDX, 'maxRecords=5000');
+  allProposte = nuoveProposte.map(function(p) {
+    const cv = p.cellValuesByFieldId || {};
+    const f  = p.fields || {};
+    return { ...p, fields: { ...f, ...cv } };
+  });
+  try {
+    const totVal = getValoreProposte(getProposteContatto(recId));
+    await proxyPatch(TABLE_RUBRICA, recId, { 'Valore raggiunto': totVal });
+    const recUp = allMiei.find(function(r){ return r.id === recId; });
+    if (recUp) recUp.fields['Valore raggiunto'] = totVal;
+  } catch(e2) { console.warn('Aggiornamento valore raggiunto:', e2); }
+}
+
+// Elimina tutte le righe della proposta del contatto aperto
+async function deleteIdxProposta() {
+  if (!idxCartRecId) return;
+  const righe = getProposteContatto(idxCartRecId);
+  if (!righe.length) return;
+  if (!confirm('Eliminare la proposta (' + righe.length + ' prodotti) da Airtable?')) return;
+  try {
+    await Promise.all(righe.map(function(p){ return proxyDelete(TABLE_PROPOSTE_IDX, p.id); }));
+    await ricaricaProposteContatto(idxCartRecId);
+    document.getElementById('idx-cart-modal')?.remove();
+    showToast('🗑️ Proposta eliminata');
+    refreshDrawer();
+  } catch(e) {
+    console.error('❌ deleteIdxProposta errore:', e);
+    showToast('❌ ' + e.message, true);
   }
 }
 
