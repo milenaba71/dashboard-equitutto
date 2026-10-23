@@ -1068,14 +1068,16 @@ function openContactDetail(recId) {
 
   const prodHTML = mieProposte.length > 0
     ? mieProposte.map(p => {
+        // Il collegamento può arrivare come "recXXX" oppure come {id, name}
         const prodLinks = getProdottoDaProposta(p);
-        const prodId    = prodLinks?.[0]?.id;
+        const link0     = Array.isArray(prodLinks) ? prodLinks[0] : null;
+        const prodId    = (link0 && typeof link0 === 'object') ? link0.id : link0;
         const prod      = (allProdotti||[]).find(x=>x.id===prodId);
-        const nomeProd  = prod ? prodNome(prod) : (prodLinks?.[0]?.name||'—');
-        const prezzo    = prod ? prodPrezzo(prod) : 0;
         const f         = p.fields || {};
+        const nomeProd  = prod ? prodNome(prod) : ((link0 && link0.name) || f['Nome proposta'] || f['fldWe4dM6FbXxN07z'] || '—');
+        const prezzo    = prod ? prodPrezzo(prod) : parseFloat(f[FLD_IDX_PREZZO] || f['Prezzo unitario'] || 0);
         const qta       = f[FLD_IDX_QTA] || f['Quantità'] || 1;
-        const totale    = prezzo * qta;
+        const totale    = getValoreProposte([p]);
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(nomeProd)}</div>
