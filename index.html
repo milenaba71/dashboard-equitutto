@@ -425,13 +425,43 @@ async function proxyGet(table, qs='') {
   do {
     const qsFull = qs + (offset ? '&offset=' + encodeURIComponent(offset) : '');
     const url = `${PROXY}?table=${encodeURIComponent(table)}&qs=${encodeURIComponent(qsFull)}`;
-    const res = await fetch(url);
-    const d   = await res.json();
-    if (d && d.records) all = all.concat(d.records);
-    offset = d ? d.offset : null;
+    const d = await proxyGetPage(url);
+    all = all.concat(d.records);
+    offset = d.offset || null;
     guard++;
   } while (offset && all.length < cap && guard < 200);
   return all;
+}
+
+// Prova prima con il filtro; se il proxy o Airtable lo rifiutano, carica senza filtro
+// (il filtro per Equipoint viene comunque riapplicato dopo, nel browser)
+async function proxyGetFiltrato(table, filtro, qs) {
+  if (filtro) {
+    try { return await proxyGet(table, filtro.slice(1) + '&' + qs); }
+    catch (e) { console.warn('Filtro non applicato, carico tutto:', e.message); }
+  }
+  return proxyGet(table, qs);
+}
+
+// Una pagina con nuovi tentativi: Airtable accetta 5 richieste/secondo per base e,
+// con più colleghi collegati insieme, risponde 429. Prima la pagina persa
+// interrompeva il caricamento in silenzio e i dati arrivavano a metà.
+async function proxyGetPage(url) {
+  let ultimoErrore = '';
+  for (let tentativo = 0; tentativo < 6; tentativo++) {
+    if (tentativo > 0) await new Promise(r => setTimeout(r, 600 * Math.pow(2, tentativo - 1) + Math.random() * 400));
+    try {
+      const res = await fetch(url);
+      const d   = await res.json().catch(() => null);
+      if (res.ok && d && Array.isArray(d.records)) return d;
+      ultimoErrore = (d && d.error) ? (d.error.message || d.error.type || JSON.stringify(d.error)) : ('HTTP ' + res.status);
+      // Errori che un nuovo tentativo non risolve (formula o campo sbagliato)
+      if (res.status === 422 || res.status === 404 || res.status === 403) break;
+    } catch (e) {
+      ultimoErrore = e.message;
+    }
+  }
+  throw new Error('Caricamento dati non riuscito (' + ultimoErrore + ')');
 }
 
 async function proxyPatch(table, recordId, fields) {
@@ -1506,8 +1536,15 @@ async function loadData(utente) {
   try {
     const firstName = utente.nome.split(' ')[0].toUpperCase();
 
+    // Solo i contatti dei propri Equipoint: poche pagine invece di tutta la Rubrica
+    const codiciEq = (utente.equipoint || []).filter(Boolean);
+    const filtroEq = codiciEq.length
+      ? '&filterByFormula=' + encodeURIComponent('OR(' + codiciEq.map(eq =>
+          "LOWER(TRIM({Codice Equipoint}&''))='" + String(eq).trim().toLowerCase().replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"
+        ).join(',') + ')')
+      : '';
     const [rubrica, obiettivi, prodotti, proposteRaw] = await Promise.all([
-      proxyGet(TABLE_RUBRICA,
+      proxyGetFiltrato(TABLE_RUBRICA, filtroEq,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         "&fields[]=QUALITA'+CONTATTO" +
         "&fields[]=fldltpS0NH4CiTy8F" +
