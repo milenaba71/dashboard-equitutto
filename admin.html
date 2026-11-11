@@ -1492,11 +1492,11 @@ let AGENTI_CARICATI = false;
 async function loadAgenti() {
   try {
     const recs = await proxyGet('tblmSrijxqNZ8Wd9n',
-      'fields[]=fldhHAx77O7ZdedHw' +   // Name
-      '&fields[]=fldUPfBDYi679z7FM' +  // Codice Equipoint
-      '&fields[]=fldUGpkKP19zHTLf1' +  // Token Dashboard
-      '&fields[]=fldhQ32TZbtJqGvFL' +  // Profilo Listino
-      '&maxRecords=100'
+      'fields[]=Name' +            // Name
+      '&fields[]=Codice+Equipoint' +  // Codice Equipoint
+      '&fields[]=Token+Dashboard' +   // Token Dashboard
+      '&fields[]=Profilo+Listino' +   // Profilo Listino
+      '&maxRecords=1000'
     );
 
     const gf = (r, fid) => {
@@ -1508,10 +1508,10 @@ async function loadAgenti() {
     const nuovi = {};
     let i = 0;
     (recs || []).forEach(r => {
-      const nome    = txt(gf(r, 'fldhHAx77O7ZdedHw')).trim();
-      const codice  = txt(gf(r, 'fldUPfBDYi679z7FM')).trim();
-      const token   = txt(gf(r, 'fldUGpkKP19zHTLf1')).trim();
-      const profilo = txt(gf(r, 'fldhQ32TZbtJqGvFL')).trim();
+      const nome    = txt(gf(r, 'Name')).trim();
+      const codice  = txt(gf(r, 'Codice Equipoint')).trim();
+      const token   = txt(gf(r, 'Token Dashboard')).trim();
+      const profilo = txt(gf(r, 'Profilo Listino')).trim();
       if (!nome || !token || !codice) return;   // senza token non ha dashboard
       nuovi[token] = {
         nome: nome,
@@ -1553,13 +1553,14 @@ const MESI_ORD_ADM = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO',
                       'LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 
 // Field ID tabella Provvigioni
+// Nomi dei campi (il proxy restituisce i campi per NOME, non per ID)
 const FA = {
-  AGENTE: 'fldxMvmS34agmCYyI',
-  MESE:   'fldOt8LBoW3NKSTbx',
-  ANNO:   'fldMsQrq1yPC1Vw9t',
-  VALORE: 'fldl1KD6ta8txfTjv',  // Valore da Proposte €
-  PROVV:  'fldZyDdF5zQSMobPc',  // Provvigione da Proposte €
-  STATO:  'fldg1R7K3WjDgGZ8S',
+  AGENTE: 'Agente',
+  MESE:   'Mese',
+  ANNO:   'Anno',
+  VALORE: 'Valore da Proposte €',
+  PROVV:  'Provvigione da Proposte €',
+  STATO:  'Stato Pagamento',
 };
 
 function scrollToConsulenze() {
@@ -1600,21 +1601,18 @@ async function loadConsulenze() {
   try {
     // 1. Anagrafica agenti (nome + profilo listino)
     const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
-      'fields[]=fldhHAx77O7ZdedHw&fields[]=fldhQ32TZbtJqGvFL&maxRecords=100');
+      'fields[]=Name&fields[]=Profilo+Listino&maxRecords=1000');
 
     const agentiMap = {};
     (eqRecs || []).forEach(r => {
-      const nome = atxt(agf(r, 'fldhHAx77O7ZdedHw')).trim();
+      const nome = atxt(agf(r, 'Name')).trim();
       if (nome) {
-        agentiMap[r.id] = { nome: nome, profilo: atxt(agf(r, 'fldhQ32TZbtJqGvFL')) };
+        agentiMap[r.id] = { nome: nome, profilo: atxt(agf(r, 'Profilo Listino')) };
       }
     });
 
-    // 2. Provvigioni dell'anno corrente
-    const data = await proxyGet('tblUm22CELuEiGOtQ',
-      'fields[]=' + FA.AGENTE + '&fields[]=' + FA.MESE + '&fields[]=' + FA.ANNO +
-      '&fields[]=' + FA.VALORE + '&fields[]=' + FA.PROVV + '&fields[]=' + FA.STATO +
-      '&maxRecords=500');
+    // 2. Provvigioni dell'anno corrente (tutti i campi, letti per nome)
+    const data = await proxyGet('tblUm22CELuEiGOtQ', 'maxRecords=1000');
 
     const annoCorr = String(new Date().getFullYear());
     const byAgente = {};
