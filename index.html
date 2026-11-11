@@ -1548,6 +1548,7 @@ async function loadData(utente) {
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
         "&fields[]=QUALITA'+CONTATTO" +
         "&fields[]=fldltpS0NH4CiTy8F" +
+        '&fields[]=consulenza+fatta' +
         '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=Valore+raggiunto' +
@@ -2628,6 +2629,27 @@ async function saveActivity() {
 }
 
 // ── Modifica contatto ───────────────────────────────────────────
+var FORM_QUESTIONARIO = 'https://airtable.com/appI8mMIC0khEkLqK/pagdmAshwqkOOB3AV/form';
+function apriQuestionarioWhatsApp(nome, tel, recId) {
+  let d = String(tel || '').replace(/\D/g, '');
+  if (d && !d.startsWith('39') && d.length <= 10) d = '39' + d; // numero italiano senza prefisso
+  const nomeTrim = (nome || '').trim();
+  const saluto = nomeTrim ? ('Gentile ' + nomeTrim.split(' ')[0]) : 'Gentile cliente';
+  // link al form Airtable, con nome e riferimento gia' compilati
+  let form = FORM_QUESTIONARIO;
+  const qp = [];
+  if (nomeTrim) qp.push('prefill_Cliente=' + encodeURIComponent(nomeTrim));
+  if (recId)    qp.push('prefill_Contatto+ID=' + encodeURIComponent(recId) + '&hide_Contatto+ID=true');
+  if (qp.length) form += '?' + qp.join('&');
+  const testo =
+    saluto + ', grazie per aver scelto Equistasi\u00ae! \ud83d\ude4f\n' +
+    'Ci aiuti con un brevissimo questionario di soddisfazione? \u00C8 un minuto, bastano 5 tocchi:\n' +
+    form + '\n\n' +
+    'Il tuo parere ci aiuta a migliorare. Grazie!';
+  const url = (d ? 'https://wa.me/' + d : 'https://wa.me/') + '?text=' + encodeURIComponent(testo);
+  window.open(url, '_blank');
+}
+
 function openEditContact(recId) {
   const rec = allMiei.find(r=>r.id===recId);
   if (!rec) return;
@@ -2682,7 +2704,12 @@ function openEditContact(recId) {
           <textarea id="ec-note" rows="4">${esc(f['Notes']||'')}</textarea>
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:16px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer">
+        <input type="checkbox" id="ec-consulenza" ${f['consulenza fatta'] ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        ✅ Consulenza fatta
+        <span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:auto;text-align:right">spuntando parte il questionario WhatsApp</span>
+      </label>
+      <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn-primary" style="margin:0;flex:1" id="ec-btn" onclick="saveEditContact('${recId}')">
           💾 Salva modifiche
         </button>
@@ -2735,6 +2762,17 @@ async function saveEditContact(recId) {
   if (norm(provincia) !== norm(orig['Provincia']))       fields['Provincia'] = provincia;
   if (norm(stato) !== norm(orig['Status']))              fields['Status'] = stato ? stato : null;
   if (norm(tipo)  !== norm(orig['Tipologia cliente']))   fields['Tipologia cliente'] = tipo ? tipo : null;
+
+  // Consulenza fatta (checkbox) + questionario WhatsApp
+  const consCheck = document.getElementById('ec-consulenza');
+  const consNow   = consCheck ? !!consCheck.checked : !!orig['consulenza fatta'];
+  const consPrima = !!orig['consulenza fatta'];
+  if (consNow !== consPrima) fields['consulenza fatta'] = consNow;
+  // se la consulenza e' stata APPENA spuntata, apri WhatsApp col questionario.
+  // Lo apro ORA (siamo ancora nel gesto del click) per non farlo bloccare dal popup-blocker.
+  if (consNow && !consPrima) {
+    try { apriQuestionarioWhatsApp(nome, tel, recId); } catch(e) { console.warn('WA questionario:', e); }
+  }
 
   // se non e' cambiato nulla, non serve scrivere
   if (Object.keys(fields).length === 0) {
