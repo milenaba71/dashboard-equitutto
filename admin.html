@@ -1599,39 +1599,52 @@ async function loadConsulenze() {
   section.style.display = '';
 
   try {
-    // 1. Anagrafica agenti (nome + profilo listino)
-    const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
-      'fields[]=Name&fields[]=Profilo+Listino&maxRecords=1000');
-
-    const agentiMap = {};
-    (eqRecs || []).forEach(r => {
-      const nome = atxt(agf(r, 'Name')).trim();
-      if (nome) {
-        agentiMap[r.id] = { nome: nome, profilo: atxt(agf(r, 'Profilo Listino')) };
+    // lettura robusta: prova prima il NOME del campo, poi l'ID
+    const pick = (r, keys) => {
+      const f = r.fields || {}, cv = r.cellValuesByFieldId || {};
+      for (const k of keys) {
+        if (f[k] !== undefined)  return f[k];
+        if (cv[k] !== undefined) return cv[k];
       }
-    });
+      return undefined;
+    };
+    const K = {
+      AGENTE: ['Agente', 'fldxMvmS34agmCYyI'],
+      MESE:   ['Mese', 'fldOt8LBoW3NKSTbx'],
+      ANNO:   ['Anno', 'fldMsQrq1yPC1Vw9t'],
+      VALORE: ['Valore da Proposte €', 'fldl1KD6ta8txfTjv'],
+      PROVV:  ['Provvigione da Proposte €', 'fldZyDdF5zQSMobPc'],
+      STATO:  ['Stato Pagamento', 'fldg1R7K3WjDgGZ8S'],
+    };
 
-    // 2. Provvigioni dell'anno corrente (tutti i campi, letti per nome)
-    const data = await proxyGet('tblUm22CELuEiGOtQ', 'maxRecords=1000');
+    // profilo listino per nome agente (facoltativo, solo estetico)
+    const profiloByNome = {};
+    try {
+      const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
+        'fields[]=Name&fields[]=Profilo+Listino&maxRecords=1000');
+      (eqRecs || []).forEach(r => {
+        const nome = atxt(pick(r, ['Name', 'fldhHAx77O7ZdedHw'])).trim();
+        if (nome) profiloByNome[nome] = atxt(pick(r, ['Profilo Listino', 'fldhQ32TZbtJqGvFL']));
+      });
+    } catch (e) { /* non essenziale */ }
+
+    // provvigioni (tutti i campi)
+    const data = await proxyGet('tblUm22CELuEiGOtQ', 'maxRecords=2000');
 
     const annoCorr = String(new Date().getFullYear());
     const byAgente = {};
 
     (data || []).forEach(r => {
-      const anno = atxt(agf(r, FA.ANNO));
-      if (anno && anno !== annoCorr) return;      // tiene anche i record senza anno
-      const links = agf(r, FA.AGENTE);
-      if (!links) return;
-      (Array.isArray(links) ? links : [links]).forEach(l => {
-        const id = (typeof l === 'object' && l !== null) ? l.id : l;
-        if (!agentiMap[id]) return;
-        if (!byAgente[id]) byAgente[id] = [];
-        byAgente[id].push(r);
-      });
+      const anno = atxt(pick(r, K.ANNO)).trim();
+      if (anno && anno !== annoCorr) return;          // tiene anche i record senza anno
+      const nome = atxt(pick(r, K.AGENTE)).trim();    // raggruppa per NOME agente
+      if (!nome) return;
+      (byAgente[nome] = byAgente[nome] || []).push(r);
     });
 
     if (!Object.keys(byAgente).length) {
-      grid.innerHTML = '<div class="cons-admin-empty">Nessuna provvigione registrata per il ' + annoCorr + '</div>';
+      grid.innerHTML = '<div class="cons-admin-empty">Nessuna provvigione registrata per il ' + annoCorr +
+        '<br><span style="font-size:11px;opacity:.6">(letti ' + (Array.isArray(data) ? data.length : 0) + ' record)</span></div>';
       return;
     }
 
@@ -1644,23 +1657,23 @@ async function loadConsulenze() {
     };
 
     // 3. Ordina gli agenti per provvigione totale (decrescente)
-    const ids = Object.keys(byAgente).sort((a, b) => {
-      const ta = byAgente[a].reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
-      const tb = byAgente[b].reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
+    const nomi = Object.keys(byAgente).sort((a, b) => {
+      const ta = byAgente[a].reduce((s, r) => s + anum(pick(r, K.PROVV)), 0);
+      const tb = byAgente[b].reduce((s, r) => s + anum(pick(r, K.PROVV)), 0);
       return tb - ta;
     });
 
     let html = '';
     let granTotProvv = 0, granTotVal = 0;
 
-    ids.forEach(id => {
-      const info = agentiMap[id];
-      const rows = byAgente[id].sort((a, b) =>
-        MESI_ORD_ADM.indexOf(atxt(agf(a, FA.MESE))) - MESI_ORD_ADM.indexOf(atxt(agf(b, FA.MESE)))
+    nomi.forEach(nome => {
+      const profilo = profiloByNome[nome] || '';
+      const rows = byAgente[nome].sort((a, b) =>
+        MESI_ORD_ADM.indexOf(atxt(pick(a, K.MESE))) - MESI_ORD_ADM.indexOf(atxt(pick(b, K.MESE)))
       );
 
-      const totProvv = rows.reduce((s, r) => s + anum(agf(r, FA.PROVV)), 0);
-      const totVal   = rows.reduce((s, r) => s + anum(agf(r, FA.VALORE)), 0);
+      const totProvv = rows.reduce((s, r) => s + anum(pick(r, K.PROVV)), 0);
+      const totVal   = rows.reduce((s, r) => s + anum(pick(r, K.VALORE)), 0);
       granTotProvv += totProvv;
       granTotVal   += totVal;
 
@@ -1670,8 +1683,8 @@ async function loadConsulenze() {
         : '';
 
       html += '<div class="cons-admin-card">' +
-        '<div class="cons-admin-agent"><span>' + esc(info.nome) + '</span>' +
-          (info.profilo ? '<span class="cons-admin-profilo">' + esc(info.profilo) + '</span>' : '') +
+        '<div class="cons-admin-agent"><span>' + esc(nome) + '</span>' +
+          (profilo ? '<span class="cons-admin-profilo">' + esc(profilo) + '</span>' : '') +
         '</div>' +
         '<div class="cons-admin-kpi">' +
           '<div class="cons-admin-k"><div class="cons-admin-k-val">' + fmtE(totProvv) + '</div>' +
@@ -1681,14 +1694,14 @@ async function loadConsulenze() {
         '</div>' +
         '<div class="cons-admin-rows">' +
         rows.map(r => {
-          const meseN = atxt(agf(r, FA.MESE)) || '—';
-          const provv = anum(agf(r, FA.PROVV));
-          const val   = anum(agf(r, FA.VALORE));
+          const meseN = atxt(pick(r, K.MESE)) || '—';
+          const provv = anum(pick(r, K.PROVV));
+          const val   = anum(pick(r, K.VALORE));
           return '<div class="cons-admin-row">' +
             '<span class="cons-admin-mese">' + esc(meseN) +
               (val > 0 ? ' <span style="opacity:.6">· ' + fmtE(val) + '</span>' : '') + '</span>' +
             '<span class="cons-admin-importo">' + (provv > 0 ? fmtE(provv) : '—') + '</span>' +
-            badge(agf(r, FA.STATO)) +
+            badge(pick(r, K.STATO)) +
           '</div>';
         }).join('') +
         '</div>' + alert +
@@ -1705,7 +1718,7 @@ async function loadConsulenze() {
           '<div class="cons-admin-k-lbl">Valore proposte</div></div>' +
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">' +
-        ids.length + ' agenti con provvigioni</div>' +
+        nomi.length + ' agenti con provvigioni</div>' +
     '</div>';
 
     grid.innerHTML = riepilogo + html;
