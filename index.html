@@ -118,7 +118,10 @@
 
   /* Calendario */
   .cal-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:22px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,61,122,.06); }
-  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+  .cal-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .cal-legend { display:flex; gap:12px; font-size:11px; color:var(--muted); flex-wrap:wrap; }
+  @media(max-width:700px){ .cal-legend { display:none; } .cal-tools { width:100%; justify-content:space-between; } }
   .cal-title { font-size:15px; font-weight:700; color:var(--accent); }
   .cal-nav { display:flex; gap:6px; }
   .cal-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--accent); font-weight:600; }
@@ -135,6 +138,10 @@
   .cal-event.app  { background:rgba(0,114,188,.15); color:#0072bc; }
   .cal-event.att  { background:rgba(39,174,96,.15);  color:#27ae60; }
   .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
+  .cal-event.occ  { background:repeating-linear-gradient(45deg,rgba(90,100,115,.16),rgba(90,100,115,.16) 4px,rgba(90,100,115,.08) 4px,rgba(90,100,115,.08) 8px); color:#4a5568; }
+  .cal-btn-occ { background:#4a5568; color:#fff; border-color:#4a5568; }
+  .cal-btn-occ:hover { background:#2d3748; border-color:#2d3748; }
+  .occ-del { margin-top:10px; background:var(--red); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
 
   /* Popup evento calendario */
   .cal-popup { position:absolute; z-index:200; background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px 16px; min-width:220px; box-shadow:0 8px 24px rgba(0,0,0,.15); font-size:13px; top:100%; left:0; }
@@ -328,6 +335,8 @@
 const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
 const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
 const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
+// Periodi in cui l'agente è occupato (tabella "Agenti – Occupato")
+const TABLE_OCCUPATO = 'tblK9ttUFVfz8E2qB';
 const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
 const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
@@ -374,6 +383,7 @@ const col  = p => p>=100 ? '#34c77b' : p>=50 ? '#f59e0b' : '#ef4444';
 const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 let allMiei   = [];
+let allOccupato = [];
 let activeKpi = null;
 let allProdotti  = []; // cache prodotti negozio
 let allProposte  = []; // nuova tabella Proposte Prodotti
@@ -1309,6 +1319,7 @@ async function init() {
   _currentUtente = utente;
   await loadData(utente);
   loadConsulenze(utente);
+  loadOccupato(utente);
 
   // Auto-refresh ogni 5 minuti
   setInterval(() => refreshAll(), 5 * 60 * 1000);
@@ -2408,6 +2419,24 @@ function buildCalendar(eventsData) {
     add(d3, 'scad');
   });
 
+  // Periodi "occupato": una riga vale per ogni giorno da Dal ad Al, nella fascia Dalle–Alle
+  allOccupato.forEach(r => {
+    const f = r.fields || {};
+    const dal = f['Dal'], al = f['Al'] || f['Dal'];
+    if (!dal) return;
+    const fascia = (f['Dalle'] && f['Alle']) ? `${f['Dalle']}–${f['Alle']}` : 'Tutto il giorno';
+    const [y1,m1,g1] = dal.split('-').map(Number);
+    const [y2,m2,g2] = al.split('-').map(Number);
+    const d = new Date(y1, m1-1, g1), fine = new Date(y2, m2-1, g2);
+    let guard = 0;
+    while (d <= fine && guard++ < 400) {
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (!evMap[key]) evMap[key] = [];
+      evMap[key].unshift({ tipo:'occ', recId:r.id, fascia });
+      d.setDate(d.getDate()+1);
+    }
+  });
+
   // celle
   const cells = [];
   // giorni mese precedente
@@ -2430,6 +2459,10 @@ function buildCalendar(eventsData) {
     const key = c.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}` : '';
     const evs = evMap[key] || [];
     const evHtml = evs.slice(0,3).map(ev => {
+      if (ev.tipo === 'occ') {
+        return `<div class="cal-event occ" title="Occupato: ${esc(ev.fascia)}"
+          onclick="showOccPopup(event,'${ev.recId}')">⛔ ${esc(ev.fascia)}</div>`;
+      }
       const label = ev.tipo==='app' ? (ev.ai ? '🤖' : '📅') : ev.tipo==='scad' ? '⚠️' : '✅';
       const ora = ev.tipo==='app' && ev.ora ? ev.ora + ' ' : '';
       return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)}"
@@ -2439,7 +2472,7 @@ function buildCalendar(eventsData) {
     }).join('');
     const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
     return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}"
-      onclick="openAddActivity('${c.iso}')" style="cursor:pointer"
+      onclick="openAddActivity('${key}')" style="cursor:pointer"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
       <div class="cal-day-num">${c.day}</div>
       ${evHtml}${more}
@@ -2450,14 +2483,16 @@ function buildCalendar(eventsData) {
     <div class="cal-card">
       <div class="cal-header">
         <div class="cal-title">📅 ${MESI_IT[calMonth]} ${calYear}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
+        <div class="cal-tools">
+          <div class="cal-legend">
             <span><span style="color:#0072bc">📅</span> Visita</span>
             <span>🤖 Fissata da Rodolfo (AI)</span>
             <span><span style="color:#27ae60">✅</span> Attività</span>
             <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
+            <span>⛔ Occupato</span>
           </div>
           <div class="cal-nav">
+            <button class="cal-btn cal-btn-occ" onclick="openOccupato()">⛔ Sono occupato</button>
             <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
             <button class="cal-btn" onclick="changeMonth(0)">Oggi</button>
             <button class="cal-btn" onclick="changeMonth(1)">›</button>
@@ -2496,9 +2531,177 @@ function showCalPopup(e, nome, stato, tipo, iso, ai) {
     <div class="cal-popup-row">📌 ${stato}</div>
     <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>${ai ? `
     <div class="cal-popup-row">🤖 Fissata da Rodolfo, assistente telefonico AI</div>` : ''}`;
-  e.target.closest('.cal-event').style.position = 'relative';
-  e.target.closest('.cal-event').appendChild(popup);
+  placeCalPopup(popup, e.target.closest('.cal-event'));
   setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
+}
+
+// Il popup va nel body con posizione fissa: dentro la cella veniva tagliato o coperto dai giorni accanto
+function placeCalPopup(popup, anchorEl) {
+  document.body.appendChild(popup);
+  const r = anchorEl.getBoundingClientRect();
+  popup.style.position = 'fixed';
+  popup.style.top = '0px'; popup.style.left = '0px';
+  const pw = popup.offsetWidth, ph = popup.offsetHeight;
+  let left = Math.min(r.left, window.innerWidth - pw - 8);
+  let top  = r.bottom + 4;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 4);
+  popup.style.left = Math.max(8, left) + 'px';
+  popup.style.top  = top + 'px';
+  window.addEventListener('scroll', () => popup.remove(), { once: true });
+}
+
+function refreshCalendar() {
+  const calEl = document.getElementById('cal-container');
+  if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+}
+
+// ── Sono occupato ──────────────────────────────────────────────
+async function loadOccupato(utente) {
+  try {
+    const codici = (utente?.equipoint || []).filter(Boolean);
+    if (!codici.length) return;
+    const filtro = 'filterByFormula=' + encodeURIComponent('OR(' + codici.map(eq =>
+      "LOWER(TRIM({Codice Equipoint}&''))='" + String(eq).trim().toLowerCase().replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"
+    ).join(',') + ')');
+    allOccupato = await proxyGet(TABLE_OCCUPATO, filtro + '&sort[0][field]=Dal&sort[0][direction]=asc');
+    refreshCalendar();
+  } catch (e) {
+    console.warn('Periodi occupato non caricati:', e.message);
+  }
+}
+
+function openOccupato() {
+  document.getElementById('occ-modal')?.remove();
+  const oggi = new Date();
+  const iso = `${oggi.getFullYear()}-${String(oggi.getMonth()+1).padStart(2,'0')}-${String(oggi.getDate()).padStart(2,'0')}`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'occ-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">⛔ Sono occupato</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">In questi giorni e orari non ricevi appuntamenti</div>
+        </div>
+        <button onclick="document.getElementById('occ-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Dal giorno *</label>
+          <input id="occ-dal" type="date" value="${iso}" onchange="const a=document.getElementById('occ-al'); if(!a.value||a.value<this.value) a.value=this.value">
+        </div>
+        <div class="form-group">
+          <label>Al giorno *</label>
+          <input id="occ-al" type="date" value="${iso}">
+        </div>
+        <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:8px">
+          <input id="occ-tutto" type="checkbox" onchange="document.getElementById('occ-orari').style.display=this.checked?'none':'grid'">
+          <label for="occ-tutto" style="text-transform:none;font-size:13px;letter-spacing:0">Tutto il giorno</label>
+        </div>
+        <div id="occ-orari" class="form-grid form-full">
+          <div class="form-group">
+            <label>Dalle ore</label>
+            <input id="occ-dalle" type="time" value="09:00" step="900">
+          </div>
+          <div class="form-group">
+            <label>Alle ore</label>
+            <input id="occ-alle" type="time" value="13:00" step="900">
+          </div>
+        </div>
+        <div class="form-group form-full">
+          <label>Motivo (facoltativo)</label>
+          <input id="occ-motivo" type="text" placeholder="Es. ferie, fiera, altro impegno…">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px">Gli orari valgono per ogni giorno del periodo.</div>
+      <div id="occ-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="occ-btn" style="margin-top:14px" onclick="saveOccupato()">💾 Salva</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function saveOccupato() {
+  const dal   = document.getElementById('occ-dal').value;
+  const al    = document.getElementById('occ-al').value || dal;
+  const tutto = document.getElementById('occ-tutto').checked;
+  const dalle = document.getElementById('occ-dalle').value;
+  const alle  = document.getElementById('occ-alle').value;
+  const motivo = document.getElementById('occ-motivo').value.trim();
+  const errEl = document.getElementById('occ-error');
+  const btn   = document.getElementById('occ-btn');
+  const errore = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+
+  if (!dal) return errore('⚠️ Inserisci il giorno di inizio');
+  if (al < dal) return errore('⚠️ Il giorno di fine è prima di quello di inizio');
+  if (!tutto && (!dalle || !alle)) return errore('⚠️ Inserisci gli orari oppure spunta "Tutto il giorno"');
+  if (!tutto && alle <= dalle) return errore("⚠️ L'ora di fine deve essere dopo quella di inizio");
+  const codice = _currentUtente?.equipoint?.[0];
+  if (!codice) return errore('⚠️ Codice Equipoint non trovato per il tuo profilo');
+
+  const it = d => d.split('-').reverse().join('/');
+  const fields = {
+    'Descrizione': `${_currentUtente.nome} – ${dal===al ? it(dal) : it(dal)+' → '+it(al)}${tutto ? ' (tutto il giorno)' : ' '+dalle+'–'+alle}`,
+    'Codice Equipoint': codice,
+    'Agente': _currentUtente.nome || '',
+    'Dal': dal,
+    'Al': al,
+  };
+  if (!tutto) { fields['Dalle'] = dalle; fields['Alle'] = alle; }
+  if (motivo) fields['Motivo'] = motivo;
+
+  btn.disabled = true; btn.textContent = '⏳ Salvo…';
+  errEl.style.display = 'none';
+  try {
+    const data = await proxyPost(TABLE_OCCUPATO, fields);
+    if (!data || data.error || !data.id) {
+      const e = data && data.error;
+      throw new Error(e ? (typeof e === 'object' ? (e.message || e.type || JSON.stringify(e)) : e) : 'risposta non valida');
+    }
+    allOccupato.push(data);
+    document.getElementById('occ-modal').remove();
+    refreshCalendar();
+    showToast('✅ Periodo occupato salvato');
+  } catch (e) {
+    errore('❌ Errore: ' + e.message);
+    btn.disabled = false; btn.textContent = '💾 Salva';
+  }
+}
+
+function showOccPopup(e, recId) {
+  e.stopPropagation();
+  document.querySelectorAll('.cal-popup').forEach(p => p.remove());
+  const r = allOccupato.find(x => x.id === recId);
+  if (!r) return;
+  const f = r.fields || {};
+  const it = d => d ? d.split('-').reverse().join('/') : '';
+  const periodo = (!f['Al'] || f['Al'] === f['Dal']) ? it(f['Dal']) : `dal ${it(f['Dal'])} al ${it(f['Al'])}`;
+  const fascia = (f['Dalle'] && f['Alle']) ? `dalle ${f['Dalle']} alle ${f['Alle']}` : 'tutto il giorno';
+  const popup = document.createElement('div');
+  popup.className = 'cal-popup';
+  popup.innerHTML = `
+    <div class="cal-popup-nome">⛔ Occupato</div>
+    <div class="cal-popup-row">🗓 ${esc(periodo)}</div>
+    <div class="cal-popup-row">🕘 ${esc(fascia)}</div>${f['Motivo'] ? `
+    <div class="cal-popup-row">📝 ${esc(f['Motivo'])}</div>` : ''}
+    <button class="occ-del" onclick="event.stopPropagation(); deleteOccupato('${recId}')">🗑 Elimina</button>`;
+  popup.addEventListener('click', ev => ev.stopPropagation());
+  placeCalPopup(popup, e.target.closest('.cal-event'));
+  setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
+}
+
+async function deleteOccupato(recId) {
+  if (!confirm('Eliminare questo periodo occupato?')) return;
+  try {
+    await proxyDelete(TABLE_OCCUPATO, recId);
+    allOccupato = allOccupato.filter(r => r.id !== recId);
+    refreshCalendar();
+    showToast('🗑 Periodo eliminato');
+  } catch (e) {
+    showToast('❌ ' + e.message, true);
+  }
 }
 
 function buildDonut(slices, total) {
@@ -2649,8 +2852,7 @@ async function saveActivity() {
     document.getElementById('add-activity-modal').remove();
     showToast('✅ Attività salvata!');
     // Ricarica calendario
-    const calEl = document.getElementById('cal-section');
-    if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+    refreshCalendar();
   } catch(e) {
     errEl.textContent = '❌ Errore: ' + e.message;
     errEl.style.display = 'block';
