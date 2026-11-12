@@ -126,6 +126,8 @@ const F = {
   UDI:      'CODICE UDI',
   FABBR:    'DATA DI FABBRICAZIONE',
   LOTTO:    'LOTTO',
+  FABBRICANTE: ['Fabbricante'],
+  SCADENZA:    ['⌛ Scadenza','⏳ Scadenza','Scadenza'],
 };
 
 let RECORDS = [];
@@ -237,6 +239,8 @@ function genera(){
     const udiBase = txt(gf(rec,F.UDI));
     const fabbr   = txt(gf(rec,F.FABBR));   // data fabbricazione (AAAA-MM-GG)
     const lotto   = txt(gf(rec,F.LOTTO));   // numero di lotto
+    const fabbrNome = txt(gf(rec,F.FABBRICANTE)) || 'Equistasi';  // fabbricante (default Equistasi)
+    const scad      = txt(gf(rec,F.SCADENZA));  // data di scadenza
 
     // data fabbricazione formattata GG/MM/AAAA e in AAMMGG per l'UDI
     let fabbrIt = '', fabbrUdi = '';
@@ -251,13 +255,29 @@ function genera(){
       }
     }
 
-    // Stringa UDI completa GS1: (01)GTIN (11)AAMMGG (10)LOTTO
+    // scadenza formattata GG/MM/AAAA e in AAMMGG per l'UDI (17)
+    let scadIt = '', scadUdi = '';
+    if(scad){
+      const ds = new Date(scad);
+      if(!isNaN(ds)){
+        const AA=String(ds.getFullYear()), aa=AA.slice(-2);
+        const mm=String(ds.getMonth()+1).padStart(2,'0');
+        const gg=String(ds.getDate()).padStart(2,'0');
+        scadIt = gg+'/'+mm+'/'+AA;
+        scadUdi = aa+mm+gg;
+      }
+    }
+
+    // Stringa UDI completa GS1: (01)GTIN (11)fabbr (17)scadenza (10)LOTTO
     let udiFull = udiBase;
     if(fabbrUdi) udiFull += '(11)'+fabbrUdi;
+    if(scadUdi)  udiFull += '(17)'+scadUdi;
     if(lotto)    udiFull += '(10)'+lotto;
 
     // icone SVG (ISO 15223): fabbricante (fabbrica) e data fabbricazione (calendario)
     const icoCal = '<svg viewBox="0 0 32 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linejoin="round"><path d="M3 22 V10 L9 13.5 L9 10 L15 13.5 L15 10 L21 13.5 L21 4 L26 4 L26 22 Z"/></svg>';
+    // ISO 15223-1 5.1.4 - Utilizzare entro / data di scadenza: clessidra
+    const icoClessidra = '<svg viewBox="0 0 20 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><line x1="4" y1="3" x2="16" y2="3"/><line x1="4" y1="21" x2="16" y2="21"/><path d="M5 3 L15 3 L10 12 Z"/><path d="M5 21 L15 21 L10 12 Z"/></svg>';
     // ISO 15223-1 5.3.2 - Tenere al riparo dalla luce solare: sole con raggi e barra di riparo sopra
     const icoSole = '<svg viewBox="0 0 26 26" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round"><circle cx="13" cy="10" r="3.4"/><g><line x1="13" y1="3.2" x2="13" y2="1"/><line x1="13" y1="16.8" x2="13" y2="14.6"/><line x1="6.2" y1="10" x2="4" y2="10"/><line x1="22" y1="10" x2="19.8" y2="10"/><line x1="8.2" y1="5.2" x2="6.6" y2="3.6"/><line x1="19.4" y1="16.4" x2="17.8" y2="14.8"/><line x1="17.8" y1="5.2" x2="19.4" y2="3.6"/><line x1="6.6" y1="16.4" x2="8.2" y2="14.8"/></g><line x1="3" y1="22" x2="23" y2="22" stroke-width="2"/></svg>';
     // Riciclo plastica: nastro di Mobius (tre frecce a triangolo)
@@ -274,6 +294,8 @@ function genera(){
       ${lotto   ? `<div class="et-riga"><span class="sym-box">LOT</span><span class="et-val">${esc(lotto)}</span></div>` : ''}
       ${seriali ? `<div class="et-riga"><span class="sym-box">SN</span><span class="et-val">${esc(seriali)}</span></div>` : ''}
       ${fabbrIt ? `<div class="et-riga"><span class="sym-ico">${icoCal}</span><span class="et-val">${esc(fabbrIt)}</span></div>` : ''}
+      <div class="et-riga"><span class="sym-ico">${icoCal}</span><span class="et-val">${esc(fabbrNome)}</span></div>
+      ${scadIt ? `<div class="et-riga"><span class="sym-ico">${icoClessidra}</span><span class="et-val">${esc(scadIt)}</span></div>` : ''}
       ${abbin   ? `<div class="et-riga"><span class="sym-box">SN</span><span class="et-val">${esc(abbin)}</span></div>` : ''}
       <div class="et-codici">
         <div class="et-barcode"><svg class="bc" data-code="${esc(scatola)}"></svg></div>
