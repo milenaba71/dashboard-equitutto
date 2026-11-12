@@ -138,6 +138,9 @@
   .cal-event.app  { background:rgba(0,114,188,.15); color:#0072bc; }
   .cal-event.att  { background:rgba(39,174,96,.15);  color:#27ae60; }
   .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
+  .cal-more { font-size:10px; color:var(--accent2); font-weight:700; cursor:pointer; }
+  .cal-popup-row.link { cursor:pointer; color:var(--accent); }
+  .cal-popup-row.link:hover { text-decoration:underline; }
   .cal-event.occ  { background:repeating-linear-gradient(45deg,rgba(90,100,115,.16),rgba(90,100,115,.16) 4px,rgba(90,100,115,.08) 4px,rgba(90,100,115,.08) 8px); color:#4a5568; }
   .cal-btn-occ { background:#4a5568; color:#fff; border-color:#4a5568; }
   .cal-day.focus { border-color:#e8833a !important; box-shadow:0 0 0 3px rgba(232,131,58,.35); animation:calFocus 1.2s ease-in-out 3; }
@@ -1206,6 +1209,10 @@ function openContactDetail(recId) {
       ${email ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Email</div>
         <div style="font-size:13px;font-weight:700"><a href="mailto:${esc(email)}" style="color:var(--accent)">${esc(email)}</a></div>
+      </div>` : ''}
+      ${rec.fields['Datavisita'] ? `<div style="background:rgba(0,114,188,.1);border-radius:8px;padding:12px;grid-column:1/-1">
+        <div style="font-size:10px;font-weight:700;color:#0072bc;text-transform:uppercase;margin-bottom:4px">📅 Appuntamento${String(note).includes('📞 Telefonata AI') ? ' · 🤖 fissato da Rodolfo' : ''}</div>
+        <div style="font-size:13px;font-weight:700">${esc(new Date(rec.fields['Datavisita']).toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}))}</div>
       </div>` : ''}
       ${(regione || provincia) ? `<div style="background:var(--surface2);border-radius:8px;padding:12px;grid-column:1/-1">
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Regione / Provincia</div>
@@ -2437,7 +2444,7 @@ function buildCalendar(eventsData) {
         ora = dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
       }
       if (!evMap[key]) evMap[key] = [];
-      evMap[key].push({ nome, stato, tipo, iso, ora, ai: tipo==='app' && ai });
+      evMap[key].push({ nome, stato, tipo, iso, ora, ai: tipo==='app' && ai, recId: r.id });
     };
     add(d1, 'app');
     add(d2, 'att');
@@ -2480,6 +2487,8 @@ function buildCalendar(eventsData) {
     }
   });
 
+  calEvMap = evMap;
+
   // celle
   const cells = [];
   // giorni mese precedente
@@ -2512,12 +2521,12 @@ function buildCalendar(eventsData) {
       }
       const label = ev.tipo==='app' ? (ev.ai ? '🤖' : '📅') : ev.tipo==='scad' ? '⚠️' : '✅';
       const ora = ev.tipo==='app' && ev.ora ? ev.ora + ' ' : '';
-      return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)}"
-        onclick="showCalPopup(event,'${esc(ev.nome)}','${esc(ev.stato)}','${ev.tipo}','${ev.iso}',${ev.ai})">
+      return `<div class="cal-event ${ev.tipo}" title="${esc(ev.nome)} – clicca per aprire la scheda"
+        onclick="event.stopPropagation(); openContactDetail('${ev.recId}')">
         ${label} ${ora}${esc(ev.nome.split(' ')[0])}
       </div>`;
     }).join('');
-    const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
+    const more = evs.length > 3 ? `<div class="cal-more" onclick="showCalDay(event,'${key}')">+${evs.length-3} altri</div>` : '';
     return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}${key && key===calFocusKey?' focus':''}" data-key="${key}"
       onclick="openAddActivity('${key}')" style="cursor:pointer"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
@@ -2570,19 +2579,23 @@ function changeMonth(dir) {
   loadGcal();
 }
 
-function showCalPopup(e, nome, stato, tipo, iso, ai) {
+// Elenco completo degli eventi di un giorno ("+N altri"): ogni appuntamento apre la scheda del contatto
+let calEvMap = {};
+function showCalDay(e, key) {
   e.stopPropagation();
   document.querySelectorAll('.cal-popup').forEach(p => p.remove());
-  const tipoLabel = tipo==='app' ? 'Data visita' : tipo==='scad' ? 'Scadenza noleggio' : 'Ultima attività';
-  const data = iso ? new Date(iso).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const evs = calEvMap[key] || [];
+  const titolo = new Date(key + 'T12:00').toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
   const popup = document.createElement('div');
   popup.className = 'cal-popup';
-  popup.innerHTML = `
-    <div class="cal-popup-nome">👤 ${nome}</div>
-    <div class="cal-popup-row">📌 ${stato}</div>
-    <div class="cal-popup-row">🗓 ${tipoLabel}: ${data}</div>${ai ? `
-    <div class="cal-popup-row">🤖 Fissata da Rodolfo, assistente telefonico AI</div>` : ''}`;
-  placeCalPopup(popup, e.target.closest('.cal-event'));
+  popup.innerHTML = `<div class="cal-popup-nome">🗓 ${esc(titolo)}</div>` + evs.map(ev => {
+    if (ev.tipo === 'occ') return `<div class="cal-popup-row">⛔ Occupato ${esc(ev.fascia)}</div>`;
+    if (ev.tipo === 'gcal') return `<div class="cal-popup-row">📆 Google ${esc(ev.fascia)}</div>`;
+    const ico = ev.tipo === 'app' ? (ev.ai ? '🤖' : '📅') : ev.tipo === 'scad' ? '⚠️' : '✅';
+    return `<div class="cal-popup-row link" onclick="document.querySelectorAll('.cal-popup').forEach(p=>p.remove()); openContactDetail('${ev.recId}')">${ico} ${ev.tipo === 'app' && ev.ora ? esc(ev.ora) + ' ' : ''}${esc(ev.nome)}</div>`;
+  }).join('');
+  popup.addEventListener('click', ev => ev.stopPropagation());
+  placeCalPopup(popup, e.target);
   setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 10);
 }
 
