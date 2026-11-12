@@ -1617,28 +1617,40 @@ async function loadConsulenze() {
       STATO:  ['Stato Pagamento', 'fldg1R7K3WjDgGZ8S'],
     };
 
-    // profilo listino per nome agente (facoltativo, solo estetico)
-    const profiloByNome = {};
+    // mappa ID record agente -> nome e profilo listino
+    const byId = {};
     try {
       const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
-        'fields[]=Name&fields[]=Profilo+Listino&maxRecords=1000');
+        'fields[]=Name&fields[]=Profilo+Listino&maxRecords=2000');
       (eqRecs || []).forEach(r => {
         const nome = atxt(pick(r, ['Name', 'fldhHAx77O7ZdedHw'])).trim();
-        if (nome) profiloByNome[nome] = atxt(pick(r, ['Profilo Listino', 'fldhQ32TZbtJqGvFL']));
+        if (nome) byId[r.id] = { nome: nome, profilo: atxt(pick(r, ['Profilo Listino', 'fldhQ32TZbtJqGvFL'])) };
       });
     } catch (e) { /* non essenziale */ }
+
+    // estrae l'ID record dal campo collegato "Agente" (puo' essere stringa o oggetto)
+    const estraiId = v => {
+      if (Array.isArray(v)) v = v[0];
+      if (v && typeof v === 'object') return v.id || '';
+      return v || '';
+    };
 
     // provvigioni (tutti i campi)
     const data = await proxyGet('tblUm22CELuEiGOtQ', 'maxRecords=2000');
 
     const annoCorr = String(new Date().getFullYear());
     const byAgente = {};
+    const profiloByNome = {};
 
     (data || []).forEach(r => {
       const anno = atxt(pick(r, K.ANNO)).trim();
       if (anno && anno !== annoCorr) return;          // tiene anche i record senza anno
-      const nome = atxt(pick(r, K.AGENTE)).trim();    // raggruppa per NOME agente
+      const ag = pick(r, K.AGENTE);
+      const id = estraiId(ag);
+      // nome vero dal profilo; se l'ID non e' in mappa, ripiega sul testo del link
+      const nome = (id && byId[id]) ? byId[id].nome : atxt(ag).trim();
       if (!nome) return;
+      if (id && byId[id]) profiloByNome[nome] = byId[id].profilo;
       (byAgente[nome] = byAgente[nome] || []).push(r);
     });
 
