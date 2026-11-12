@@ -2879,8 +2879,8 @@ function apriQuestionarioWhatsApp(nome, tel, recId) {
   if (recId)    qp.push('prefill_Contatto+ID=' + encodeURIComponent(recId) + '&hide_Contatto+ID=true');
   if (qp.length) form += '?' + qp.join('&');
   const testo =
-    saluto + ', grazie per aver scelto Equistasi\u00ae! \ud83d\ude4f\n' +
-    'Ci aiuti con un brevissimo questionario di soddisfazione? \u00C8 un minuto, bastano 5 tocchi:\n' +
+    saluto + ', grazie per aver parlato con noi! \ud83d\ude4f\n' +
+    'Ci aiuti con un brevissimo questionario sulla consulenza telefonica? \u00C8 un minuto, bastano 5 tocchi:\n' +
     form + '\n\n' +
     'Il tuo parere ci aiuta a migliorare. Grazie!';
   const url = (d ? 'https://wa.me/' + d : 'https://wa.me/') + '?text=' + encodeURIComponent(testo);
