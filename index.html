@@ -140,6 +140,12 @@
   .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
   .cal-event.occ  { background:repeating-linear-gradient(45deg,rgba(90,100,115,.16),rgba(90,100,115,.16) 4px,rgba(90,100,115,.08) 4px,rgba(90,100,115,.08) 8px); color:#4a5568; }
   .cal-btn-occ { background:#4a5568; color:#fff; border-color:#4a5568; }
+  .cal-day.focus { border-color:#e8833a !important; box-shadow:0 0 0 3px rgba(232,131,58,.35); animation:calFocus 1.2s ease-in-out 3; }
+  @keyframes calFocus { 50% { box-shadow:0 0 0 7px rgba(232,131,58,.15); } }
+  .cal-event.gcal { background:rgba(124,92,191,.14); color:#6b46c1; }
+  .cal-btn-gcal.on { background:rgba(124,92,191,.12); border-color:#6b46c1; color:#6b46c1; }
+  .gcal-steps { font-size:13px; color:var(--text); line-height:1.6; padding-left:18px; margin:0 0 14px; }
+  .gcal-steps li { margin-bottom:4px; }
   .cal-btn-occ:hover { background:#2d3748; border-color:#2d3748; }
   .occ-del { margin-top:10px; background:var(--red); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
 
@@ -337,6 +343,17 @@ const TABLE_RUBRICA   = 'tbllNx7iSqpAtbQde';
 const TABLE_PROPOSTE_IDX  = 'tblNf8akGNQD23UjH';
 // Periodi in cui l'agente è occupato (tabella "Agenti – Occupato")
 const TABLE_OCCUPATO = 'tblK9ttUFVfz8E2qB';
+// Calendario Google dell'agente: lo scenario Make legge solo le fasce occupate
+// (calendario condiviso con GCAL_ACCOUNT) e risponde {busy:[{start,end}]}
+const TABLE_EQUIPOINT = 'tblmSrijxqNZ8Wd9n';
+const FLD_GCAL_EMAIL  = 'fldijUcsJXvU3S0JF';
+const GCAL_HOOK    = 'https://hook.eu2.make.com/iqjks2gqsxfucqbsl8waxb27b6dcq96n';
+const GCAL_ACCOUNT = 'agente@equistasi.com';
+// Da attivare quando lo scenario Make che legge Google Calendar e' pronto
+const GCAL_ATTIVO = false;
+let gcalBusy = {};          // 'YYYY-MM' -> [{start,end}]
+let gcalStato = '';         // '', 'carico', 'ok', 'errore'
+let calFocusKey = '';       // giorno da evidenziare (link "Apri il calendario" della mail)
 const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
 const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
@@ -1277,7 +1294,7 @@ async function init() {
   try {
     // 1. Prima prova a caricare da Airtable Equipoint & Profili (dinamico)
     const eqRecs = await proxyGet('tblmSrijxqNZ8Wd9n',
-      'returnFieldsByFieldId=true&fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&maxRecords=100'
+      'returnFieldsByFieldId=true&fields[]=fldhHAx77O7ZdedHw&fields[]=fldUPfBDYi679z7FM&fields[]=fldUGpkKP19zHTLf1&fields[]=fldijUcsJXvU3S0JF&maxRecords=100'
     );
     // Legge un campo sia per field ID sia per nome leggibile (l'API puo' restituire l'uno o l'altro)
     const gf = (r, fid, ...nomi) => {
@@ -1295,7 +1312,8 @@ async function init() {
       const nome      = norm(gf(myRec,'fldhHAx77O7ZdedHw','Name','Nome')) || 'Agente';
       const equipoint = norm(gf(myRec,'fldUPfBDYi679z7FM','Codice Equipoint','Codice')) || '';
       const recId = myRec.id || null;
-      utente = { nome, equipoint: [equipoint], recId };
+      const gcalEmail = norm(gf(myRec,'fldijUcsJXvU3S0JF','Email Google Calendar'));
+      utente = { nome, equipoint: [equipoint], recId, gcalEmail };
     }
   } catch(e) {
     console.warn('Airtable lookup failed, using TOKEN_MAP:', e.message);
@@ -1321,6 +1339,8 @@ async function init() {
   await loadData(utente);
   loadConsulenze(utente);
   loadOccupato(utente);
+  apriCalendarioDaLink();
+  loadGcal();
 
   // Auto-refresh ogni 5 minuti
   setInterval(() => refreshAll(), 5 * 60 * 1000);
@@ -2442,6 +2462,24 @@ function buildCalendar(eventsData) {
     }
   });
 
+  // Fasce occupate dal calendario Google (divise per giorno)
+  const hhmm = dt => dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+  (gcalBusy[`${calYear}-${String(calMonth+1).padStart(2,'0')}`] || []).forEach(b => {
+    const ini = new Date(b.start), fin = new Date(b.end);
+    if (isNaN(ini) || isNaN(fin) || fin <= ini) return;
+    const g = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate());
+    let guard = 0;
+    while (g < fin && guard++ < 62) {
+      const gFine = new Date(g.getFullYear(), g.getMonth(), g.getDate()+1);
+      const a = ini > g ? ini : g, z = fin < gFine ? fin : gFine;
+      const tutto = a.getTime() === g.getTime() && z.getTime() === gFine.getTime();
+      const key = `${g.getFullYear()}-${String(g.getMonth()+1).padStart(2,'0')}-${String(g.getDate()).padStart(2,'0')}`;
+      if (!evMap[key]) evMap[key] = [];
+      evMap[key].unshift({ tipo:'gcal', fascia: tutto ? 'Tutto il giorno' : `${hhmm(a)}–${z.getTime()===gFine.getTime() ? '24:00' : hhmm(z)}` });
+      g.setDate(g.getDate()+1);
+    }
+  });
+
   // celle
   const cells = [];
   // giorni mese precedente
@@ -2464,6 +2502,10 @@ function buildCalendar(eventsData) {
     const key = c.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}` : '';
     const evs = evMap[key] || [];
     const evHtml = evs.slice(0,3).map(ev => {
+      if (ev.tipo === 'gcal') {
+        return `<div class="cal-event gcal" title="Occupato su Google Calendar: ${esc(ev.fascia)}"
+          onclick="event.stopPropagation()">📆 ${esc(ev.fascia)}</div>`;
+      }
       if (ev.tipo === 'occ') {
         return `<div class="cal-event occ" title="Occupato: ${esc(ev.fascia)}"
           onclick="showOccPopup(event,'${ev.recId}')">⛔ ${esc(ev.fascia)}</div>`;
@@ -2476,7 +2518,7 @@ function buildCalendar(eventsData) {
       </div>`;
     }).join('');
     const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
-    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}"
+    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}${key && key===calFocusKey?' focus':''}" data-key="${key}"
       onclick="openAddActivity('${key}')" style="cursor:pointer"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
       <div class="cal-day-num">${c.day}</div>
@@ -2495,9 +2537,12 @@ function buildCalendar(eventsData) {
             <span><span style="color:#27ae60">✅</span> Attività</span>
             <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
             <span>⛔ Occupato</span>
+            ${GCAL_ATTIVO ? '<span style="color:#6b46c1">📆 Google</span>' : ''}
           </div>
           <div class="cal-nav">
             <button class="cal-btn cal-btn-occ" onclick="openOccupato()">⛔ Sono occupato</button>
+            ${!GCAL_ATTIVO ? '' : `<button class="cal-btn cal-btn-gcal${_currentUtente?.gcalEmail ? ' on' : ''}" onclick="openGcal()"
+              title="${_currentUtente?.gcalEmail ? 'Collegato: ' + esc(_currentUtente.gcalEmail) : 'Collega il tuo calendario Google'}">📆 ${_currentUtente?.gcalEmail ? (gcalStato==='errore' ? 'Google ⚠️' : 'Google ✓') : 'Collega Google'}</button>`}
             <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
             <button class="cal-btn" onclick="changeMonth(0)">Oggi</button>
             <button class="cal-btn" onclick="changeMonth(1)">›</button>
@@ -2522,6 +2567,7 @@ function changeMonth(dir) {
   }
   const calEl = document.getElementById('cal-container');
   if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+  loadGcal();
 }
 
 function showCalPopup(e, nome, stato, tipo, iso, ai) {
@@ -2558,6 +2604,101 @@ function placeCalPopup(popup, anchorEl) {
 function refreshCalendar() {
   const calEl = document.getElementById('cal-container');
   if (calEl) calEl.innerHTML = buildCalendar(allMiei);
+}
+
+// Link della mail "Appuntamento fissato": ?token=...&giorno=AAAA-MM-GG#calendario
+function apriCalendarioDaLink() {
+  const giorno = new URLSearchParams(location.search).get('giorno') || '';
+  const valido = /^\d{4}-\d{2}-\d{2}$/.test(giorno);
+  if (!valido && location.hash !== '#calendario') return;
+  if (valido) {
+    calYear = +giorno.slice(0,4); calMonth = +giorno.slice(5,7) - 1;
+    calFocusKey = giorno;
+    refreshCalendar();
+  }
+  setTimeout(() => {
+    const el = document.querySelector(`.cal-day[data-key="${calFocusKey}"]`) || document.getElementById('cal-container');
+    el?.scrollIntoView({ behavior:'smooth', block: valido ? 'center' : 'start' });
+  }, 400);
+}
+
+// ── Calendario Google ─────────────────────────────────────────
+async function loadGcal(forza) {
+  const u = _currentUtente;
+  if (!GCAL_ATTIVO || !u?.gcalEmail) return;
+  const mese = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  if (gcalBusy[mese] && !forza) return;
+  const da = new Date(calYear, calMonth, 1), a = new Date(calYear, calMonth+1, 1);
+  gcalStato = 'carico';
+  try {
+    const url = `${GCAL_HOOK}?token=${encodeURIComponent(getToken())}&from=${encodeURIComponent(da.toISOString())}&to=${encodeURIComponent(a.toISOString())}`;
+    const res = await fetch(url);
+    const d = await res.json().catch(() => null);
+    if (!res.ok || !d || !Array.isArray(d.busy)) throw new Error(d?.error || ('HTTP ' + res.status));
+    gcalBusy[mese] = d.busy;
+    gcalStato = 'ok';
+  } catch (e) {
+    console.warn('Calendario Google non letto:', e.message);
+    gcalStato = 'errore';
+  }
+  refreshCalendar();
+}
+
+function openGcal() {
+  document.getElementById('gcal-modal')?.remove();
+  const u = _currentUtente || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'gcal-modal';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:500px;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:16px;font-weight:800;color:var(--accent)">📆 Collega il tuo calendario Google</div>
+        <button onclick="document.getElementById('gcal-modal').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <ol class="gcal-steps">
+        <li>Apri <a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener">Google Calendar → Impostazioni</a> dal computer.</li>
+        <li>A sinistra, sotto <b>Impostazioni dei miei calendari</b>, clicca il tuo calendario.</li>
+        <li>In <b>Condividi con persone e gruppi specifici</b> clicca <b>Aggiungi persone e gruppi</b>.</li>
+        <li>Scrivi <b>${GCAL_ACCOUNT}</b> e scegli il permesso <b>Vedere solo disponibilità (nascondere dettagli)</b>, poi <b>Invia</b>.</li>
+        <li>Qui sotto scrivi l'indirizzo Gmail del calendario che hai condiviso e salva.</li>
+      </ol>
+      <div class="form-group">
+        <label>La tua email Google</label>
+        <input id="gcal-email" type="email" placeholder="nome@gmail.com" value="${esc(u.gcalEmail || '')}">
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Nella dashboard vedrai solo le fasce occupate, senza titoli né dettagli dei tuoi impegni.</div>
+      <div id="gcal-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+      <button class="btn-primary" id="gcal-btn" style="margin-top:14px" onclick="saveGcal()">💾 Salva e collega</button>
+      ${u.gcalEmail ? `<button onclick="saveGcal(true)" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;color:var(--muted);cursor:pointer">Scollega il calendario</button>` : ''}
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function saveGcal(scollega) {
+  const u = _currentUtente;
+  const errEl = document.getElementById('gcal-error');
+  const errore = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+  const email = scollega ? '' : document.getElementById('gcal-email').value.trim().toLowerCase();
+  if (!scollega && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errore("⚠️ Scrivi un'email valida");
+  if (!u?.recId) return errore('⚠️ Profilo non trovato in Airtable: chiedi in ufficio di collegarlo');
+  const btn = document.getElementById('gcal-btn');
+  btn.disabled = true; btn.textContent = '⏳ Salvo…';
+  try {
+    await proxyPatch(TABLE_EQUIPOINT, u.recId, { 'Email Google Calendar': email || null });
+    u.gcalEmail = email;
+    gcalBusy = {}; gcalStato = '';
+    document.getElementById('gcal-modal').remove();
+    refreshCalendar();
+    if (email) { showToast('✅ Calendario Google collegato'); await loadGcal(true);
+      if (gcalStato === 'errore') showToast('⚠️ Calendario non leggibile: controlla la condivisione con ' + GCAL_ACCOUNT, true);
+    } else showToast('Calendario Google scollegato');
+  } catch (e) {
+    errore('❌ Errore: ' + e.message);
+    btn.disabled = false; btn.textContent = '💾 Salva e collega';
+  }
 }
 
 // ── Sono occupato ──────────────────────────────────────────────
