@@ -140,6 +140,8 @@
   .cal-event.scad { background:rgba(231,76,60,.15);  color:#e74c3c; }
   .cal-event.occ  { background:repeating-linear-gradient(45deg,rgba(90,100,115,.16),rgba(90,100,115,.16) 4px,rgba(90,100,115,.08) 4px,rgba(90,100,115,.08) 8px); color:#4a5568; }
   .cal-btn-occ { background:#4a5568; color:#fff; border-color:#4a5568; }
+  .cal-day.focus { border-color:#e8833a !important; box-shadow:0 0 0 3px rgba(232,131,58,.35); animation:calFocus 1.2s ease-in-out 3; }
+  @keyframes calFocus { 50% { box-shadow:0 0 0 7px rgba(232,131,58,.15); } }
   .cal-event.gcal { background:rgba(124,92,191,.14); color:#6b46c1; }
   .cal-btn-gcal.on { background:rgba(124,92,191,.12); border-color:#6b46c1; color:#6b46c1; }
   .gcal-steps { font-size:13px; color:var(--text); line-height:1.6; padding-left:18px; margin:0 0 14px; }
@@ -347,8 +349,11 @@ const TABLE_EQUIPOINT = 'tblmSrijxqNZ8Wd9n';
 const FLD_GCAL_EMAIL  = 'fldijUcsJXvU3S0JF';
 const GCAL_HOOK    = 'https://hook.eu2.make.com/iqjks2gqsxfucqbsl8waxb27b6dcq96n';
 const GCAL_ACCOUNT = 'agente@equistasi.com';
+// Da attivare quando lo scenario Make che legge Google Calendar e' pronto
+const GCAL_ATTIVO = false;
 let gcalBusy = {};          // 'YYYY-MM' -> [{start,end}]
 let gcalStato = '';         // '', 'carico', 'ok', 'errore'
+let calFocusKey = '';       // giorno da evidenziare (link "Apri il calendario" della mail)
 const FLD_IDX_CONTATTO    = 'fldgWb7KAXQ1i5sRC'; // CONTATTO → Rubrica
 const FLD_IDX_PRODOTTO    = 'fldpVAKpMGRRjnDnt'; // negozio → prodotto
 const FLD_IDX_QTA         = 'fldw2aCMC8pVKbJ2N'; // Quantità
@@ -1334,6 +1339,7 @@ async function init() {
   await loadData(utente);
   loadConsulenze(utente);
   loadOccupato(utente);
+  apriCalendarioDaLink();
   loadGcal();
 
   // Auto-refresh ogni 5 minuti
@@ -2512,7 +2518,7 @@ function buildCalendar(eventsData) {
       </div>`;
     }).join('');
     const more = evs.length > 3 ? `<div style="font-size:10px;color:var(--muted)">+${evs.length-3} altri</div>` : '';
-    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}"
+    return `<div class="cal-day${isToday?' today':''}${!c.cur?' other-month':''}${key && key===calFocusKey?' focus':''}" data-key="${key}"
       onclick="openAddActivity('${key}')" style="cursor:pointer"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isToday?'var(--accent)':'transparent'}'">
       <div class="cal-day-num">${c.day}</div>
@@ -2531,12 +2537,12 @@ function buildCalendar(eventsData) {
             <span><span style="color:#27ae60">✅</span> Attività</span>
             <span><span style="color:#e74c3c">⚠️</span> Scadenza</span>
             <span>⛔ Occupato</span>
-            <span style="color:#6b46c1">📆 Google</span>
+            ${GCAL_ATTIVO ? '<span style="color:#6b46c1">📆 Google</span>' : ''}
           </div>
           <div class="cal-nav">
             <button class="cal-btn cal-btn-occ" onclick="openOccupato()">⛔ Sono occupato</button>
-            <button class="cal-btn cal-btn-gcal${_currentUtente?.gcalEmail ? ' on' : ''}" onclick="openGcal()"
-              title="${_currentUtente?.gcalEmail ? 'Collegato: ' + esc(_currentUtente.gcalEmail) : 'Collega il tuo calendario Google'}">📆 ${_currentUtente?.gcalEmail ? (gcalStato==='errore' ? 'Google ⚠️' : 'Google ✓') : 'Collega Google'}</button>
+            ${!GCAL_ATTIVO ? '' : `<button class="cal-btn cal-btn-gcal${_currentUtente?.gcalEmail ? ' on' : ''}" onclick="openGcal()"
+              title="${_currentUtente?.gcalEmail ? 'Collegato: ' + esc(_currentUtente.gcalEmail) : 'Collega il tuo calendario Google'}">📆 ${_currentUtente?.gcalEmail ? (gcalStato==='errore' ? 'Google ⚠️' : 'Google ✓') : 'Collega Google'}</button>`}
             <button class="cal-btn" onclick="changeMonth(-1)">‹</button>
             <button class="cal-btn" onclick="changeMonth(0)">Oggi</button>
             <button class="cal-btn" onclick="changeMonth(1)">›</button>
@@ -2600,10 +2606,26 @@ function refreshCalendar() {
   if (calEl) calEl.innerHTML = buildCalendar(allMiei);
 }
 
+// Link della mail "Appuntamento fissato": ?token=...&giorno=AAAA-MM-GG#calendario
+function apriCalendarioDaLink() {
+  const giorno = new URLSearchParams(location.search).get('giorno') || '';
+  const valido = /^\d{4}-\d{2}-\d{2}$/.test(giorno);
+  if (!valido && location.hash !== '#calendario') return;
+  if (valido) {
+    calYear = +giorno.slice(0,4); calMonth = +giorno.slice(5,7) - 1;
+    calFocusKey = giorno;
+    refreshCalendar();
+  }
+  setTimeout(() => {
+    const el = document.querySelector(`.cal-day[data-key="${calFocusKey}"]`) || document.getElementById('cal-container');
+    el?.scrollIntoView({ behavior:'smooth', block: valido ? 'center' : 'start' });
+  }, 400);
+}
+
 // ── Calendario Google ─────────────────────────────────────────
 async function loadGcal(forza) {
   const u = _currentUtente;
-  if (!u?.gcalEmail) return;
+  if (!GCAL_ATTIVO || !u?.gcalEmail) return;
   const mese = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   if (gcalBusy[mese] && !forza) return;
   const da = new Date(calYear, calMonth, 1), a = new Date(calYear, calMonth+1, 1);
