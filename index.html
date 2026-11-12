@@ -902,6 +902,7 @@ function getListaByTipo(tipo) {
     case 'harbur':       return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('HARBUR')||s.includes('ATP'); });
     case 'terzi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('PASSATO A TERZI'); });
     case 'noncontattato': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON INTER')||s.includes('NON VUOLE ESSERE RICONTATTATO')||s.includes('NO RECAPITO')||s.includes('NUMERO ERRATO'); });
+    case 'statono':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').trim().toUpperCase(); return s==='NO'; });
     default: return [];
   }
 }
@@ -1709,7 +1710,8 @@ async function loadData(utente) {
         'proposti': getListaByTipo('proposti').length,
         'persi': getListaByTipo('persi').length,
         'scadenze': noleggiScad.length,
-        'harbur': getListaByTipo('harbur').length
+        'harbur': getListaByTipo('harbur').length,
+        'statono': getListaByTipo('statono').length
       };
       Object.entries(tabCounts).forEach(([k,v]) => {
         const el = document.getElementById('tc-'+k);
@@ -1848,6 +1850,9 @@ async function loadData(utente) {
         </button>
         <button class="nav-tab" onclick="openDrawer('noncontattato','Non contattato','#e74c3c')" id="navtab-noncontattato">
           🚫 Non contattato <span class="tab-count" id="tc-noncontattato">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('statono','Stato: NO','#e74c3c')" id="navtab-statono">
+          ⛔ NO <span class="tab-count" id="tc-statono">0</span>
         </button>
       </div>
       <!-- LAYOUT SIDEBAR + DRAWER -->
