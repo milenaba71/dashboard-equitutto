@@ -683,7 +683,7 @@ async function loadData() {
     const [rubrica, prodotti, proposteRaw] = await Promise.all([
       proxyGet(TABLE_RUBRICA,
         'fields[]=Nome+e+cognome&fields[]=Status&fields[]=Tipologia+cliente' +
-        '&fields[]=Preso+appuntamento&fields[]=Data+Vendita' +
+        '&fields[]=Preso+appuntamento&fields[]=Data+Vendita&fields[]=Tentativi+Rodolfo' +
         '&fields[]=data+scadenza+noleggio&fields[]=STATO+NOLEGGIO' +
         '&fields[]=DATA+ATTIVITA&fields[]=recapito+telefonico&fields[]=Notes' +
         '&fields[]=Codice+Equipoint&fields[]=DATA+DI+CREAZIONE+DATO' +
@@ -781,7 +781,10 @@ function getListaByTipo(tipo, recs) {
   const tra30 = new Date(); tra30.setDate(oggi.getDate()+30);
   switch(tipo) {
     case 'contatti':     return src;
-    case 'ricontattare': return src.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('DA RICONTATTARE')||s.includes('NON HA ANCORA RISPOSTO'); });
+    case 'ricontattare': return src.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); const t=+(r.fields['Tentativi Rodolfo']||0);
+      if (s.includes('OPERATORE DEVE RICONTATTARE')||s.includes('DA RICONTATTARE')) return true;
+      if (s.includes('NON HA ANCORA RISPOSTO')) return !(t>=1&&t<4);   // con 1-3 tentativi ci sta ancora lavorando Rodolfo
+      return false; });
     case 'trattativa':   return src.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('TRATTATIVA IN CORSO')||s.includes('INVIATO LINK')||s.includes('CAPARRA'); });
     case 'appuntamenti': return src.filter(r=>{ const p=r.fields['Preso appuntamento']; return p&&p!=='NO'; });
     case 'vendite':      return src.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('VENDUTO')||r.fields['Data Vendita']; });
@@ -1045,7 +1048,7 @@ function renderRow(r) {
   const ultTel   = r.fields['data ultima telefonata'] ? new Date(r.fields['data ultima telefonata']).toLocaleDateString('it-IT') : '—';
   const venduto  = !!(r.fields['Data Vendita']||(r.fields['Status']||'').toUpperCase().includes('VENDUTO'));
   const statoUp  = (r.fields['Status']||'').toUpperCase();
-  const bCls     = venduto?'badge-green':statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA')?'badge-orange':statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA')?'badge-blue':statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO')?'badge-red':'badge-blue';
+  const bCls     = venduto?'badge-green':statoUp.includes('TRATTATIVA')||statoUp.includes('CAPARRA')||statoUp.includes('OPERATORE DEVE')||statoUp.includes('PRESO APPUNTAMENTO')?'badge-orange':statoUp.includes('DA RICONTATTARE')||statoUp.includes('NON HA ANCORA')?'badge-blue':statoUp.includes('NON VUOLE')||statoUp.includes('NON INTER')||statoUp.includes('NUMERO ERRATO')?'badge-red':'badge-blue';
   const appCls   = appunto&&appunto!=='NO'?'badge-green':appunto==='NO'?'badge-red':'';
 
   // proposte
