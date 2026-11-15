@@ -75,6 +75,28 @@
   .acal-ev:hover{filter:brightness(.95)}
   .acal-ev.occ{background:repeating-linear-gradient(45deg,rgba(90,100,115,.14),rgba(90,100,115,.14) 4px,rgba(90,100,115,.06) 4px,rgba(90,100,115,.06) 8px);color:#4a5568}
   .acal-more{font-size:10px;color:var(--accent2);cursor:pointer;font-weight:700}
+  /* ── Rodolfo: chiamate e appuntamenti ── */
+  .rod-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  .rod-kpi{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .rod-kpi .v{font-size:24px;font-weight:800;color:var(--accent);line-height:1.1}
+  .rod-kpi .l{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+  .rod-kpi.ok .v{color:var(--green)}
+  .rod-per{display:flex;gap:6px;flex-wrap:wrap}
+  .rod-per .acal-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .rod-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+  .rod-tab{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+  .rod-tab th{text-align:left;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+  .rod-tab td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  .rod-tab tr:last-child td{border-bottom:none}
+  .rod-tab td.sum{color:var(--muted);max-width:380px}
+  .rod-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .rod-b-app{background:rgba(39,174,96,.14);color:#1e8449}
+  .rod-b-hum{background:rgba(0,114,188,.12);color:var(--accent2)}
+  .rod-b-vm{background:rgba(230,126,34,.14);color:#b9650f}
+  .rod-b-no{background:rgba(107,127,150,.14);color:var(--muted)}
+  .rod-b-ko{background:rgba(231,76,60,.12);color:var(--red)}
+  .rod-app{font-size:11px;font-weight:700;color:#1e8449;margin-top:3px}
+  @media(max-width:760px){ .rod-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
   .acal-pop{position:fixed;z-index:9000;background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:240px;max-width:320px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:13px}
   .acal-pop b{color:var(--accent)}
   .acal-pop .r{color:var(--muted);margin-top:4px}
@@ -408,6 +430,33 @@
       <div class="acal-legend" id="acal-legend"></div>
     </div>
 
+    <!-- RODOLFO: CHIAMATE E APPUNTAMENTI -->
+    <div class="acal-card" id="rod-card">
+      <div class="acal-head">
+        <div>
+          <div class="acal-title">🤖 Rodolfo – chiamate e appuntamenti</div>
+          <div class="acal-sub" id="rod-sub">Telefonate fatte dall'assistente AI e appuntamenti fissati</div>
+        </div>
+        <div class="acal-tools">
+          <div class="rod-per" id="rod-per">
+            <button class="acal-btn on" data-p="oggi" onclick="rodPeriodo('oggi')">Oggi</button>
+            <button class="acal-btn" data-p="ieri" onclick="rodPeriodo('ieri')">Ieri</button>
+            <button class="acal-btn" data-p="7" onclick="rodPeriodo('7')">7 giorni</button>
+            <button class="acal-btn" data-p="30" onclick="rodPeriodo('30')">30 giorni</button>
+          </div>
+          <button class="acal-btn" onclick="loadRodolfo(true)" title="Aggiorna">⟳</button>
+        </div>
+      </div>
+      <div class="rod-kpis">
+        <div class="rod-kpi"><div class="v" id="rod-k-chiamate">—</div><div class="l">📞 Chiamate</div></div>
+        <div class="rod-kpi"><div class="v" id="rod-k-contatti">—</div><div class="l">👤 Contatti chiamati</div></div>
+        <div class="rod-kpi"><div class="v" id="rod-k-risposte">—</div><div class="l">🗣️ Hanno risposto</div></div>
+        <div class="rod-kpi ok"><div class="v" id="rod-k-app">—</div><div class="l">📅 Appuntamenti presi</div></div>
+        <div class="rod-kpi"><div class="v" id="rod-k-perc">—</div><div class="l">% risposta</div></div>
+      </div>
+      <div id="rod-body"><div style="padding:24px;text-align:center;color:var(--muted)">Caricamento…</div></div>
+    </div>
+
     <!-- CONSULENZE AGENTI -->
     <div class="cons-admin-section" id="consulenze-admin-section" style="display:none">
       <div class="cons-admin-title">💰 Consulenze Agenti 2026 <span id="cons-admin-mese-label"></span></div>
@@ -665,7 +714,7 @@ async function loadData() {
   }
 }
 
-async function refreshAll() { await loadData(); acalCache = {}; loadAdminCal(); showToast('✅ Dati aggiornati!'); }
+async function refreshAll() { await loadData(); acalCache = {}; loadAdminCal(); loadRodolfo(true); showToast('✅ Dati aggiornati!'); }
 
 // ─── FILTRA PER AGENTE ────────────────────────────────────────────────
 function getFilteredRecords() {
@@ -1585,6 +1634,97 @@ async function loadAgenti() {
   buildLinksMenu();
 }
 
+// ── Rodolfo: chiamate e appuntamenti (letti dalle Note: ogni telefonata aggiunge una riga "📞 Telefonata AI del …") ──
+let rodRecords = null, rodPer = 'oggi';
+const ROD_RE = /📞 Telefonata AI del (\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}) \(tentativo (\d+), ([^,]*), ([\d.]+) min\): ?(.*)/;
+
+async function loadRodolfo(forza) {
+  try {
+    if (!rodRecords || forza) {
+      const formula = "AND({Tentativi Rodolfo}>0,IS_AFTER({Ultimo tentativo Rodolfo},DATEADD(NOW(),-32,'days')))";
+      rodRecords = await proxyGetTutto(TABLE_RUBRICA,
+        'filterByFormula=' + encodeURIComponent(formula) +
+        '&fields[]=Nome+e+cognome&fields[]=Notes&fields[]=Status&fields[]=Codice+Equipoint&fields[]=Datavisita' +
+        '&fields[]=Regione&fields[]=recapito+telefonico&pageSize=100');
+    }
+    renderRodolfo();
+  } catch (e) {
+    console.warn('Rodolfo non caricato:', e.message);
+    $('rod-body').innerHTML = `<div style="padding:24px;text-align:center;color:var(--red)">❌ Chiamate non caricate: ${esc(e.message)}</div>`;
+  }
+}
+
+function rodPeriodo(p) {
+  rodPer = p;
+  document.querySelectorAll('#rod-per .acal-btn').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  renderRodolfo();
+}
+
+function rodEsito(ans, app) {
+  if (app) return '<span class="rod-badge rod-b-app">📅 Appuntamento</span>';
+  const a = String(ans || '').toLowerCase();
+  if (a === 'human') return '<span class="rod-badge rod-b-hum">🗣️ Ha risposto</span>';
+  if (a === 'voicemail') return '<span class="rod-badge rod-b-vm">📼 Segreteria</span>';
+  return '<span class="rod-badge rod-b-no">📵 Non ha risposto</span>';
+}
+
+function renderRodolfo() {
+  if (!rodRecords) return;
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  let da = new Date(oggi), a = new Date(oggi); a.setDate(a.getDate() + 1);
+  if (rodPer === 'ieri') { da.setDate(da.getDate() - 1); a = new Date(oggi); }
+  else if (rodPer === '7') da.setDate(da.getDate() - 6);
+  else if (rodPer === '30') da.setDate(da.getDate() - 29);
+  const etichetta = { oggi: 'oggi', ieri: 'ieri', '7': 'ultimi 7 giorni', '30': 'ultimi 30 giorni' }[rodPer];
+
+  const chiamate = [];
+  rodRecords.forEach(r => {
+    const f = r.fields || {};
+    const nome = String(f['Nome e cognome'] || '').trim();
+    if (/^test$/i.test(nome)) return;                       // contatto di prova
+    const agente = typeof f['Codice Equipoint'] === 'object' && f['Codice Equipoint'] ? (f['Codice Equipoint'].name || '') : (f['Codice Equipoint'] || '');
+    const status = typeof f.Status === 'object' && f.Status ? (f.Status.name || '') : (f.Status || '');
+    const righe = String(f.Notes || '').split(/\n+/).map(x => x.trim()).filter(x => x.startsWith('📞 Telefonata AI del'));
+    righe.forEach((riga, i) => {
+      const m = riga.match(ROD_RE); if (!m) return;
+      const quando = new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+      const ultima = i === righe.length - 1;
+      const app = ultima && /PRESO APPUNTAMENTO|TRATTATIVA/i.test(status) && f.Datavisita;
+      chiamate.push({ id: r.id, quando, nome, agente, regione: f.Regione || '', tel: f['recapito telefonico'] || '',
+        ans: m[7].trim(), min: parseFloat(m[8]) || 0, sum: m[9] || '', status, app: app ? f.Datavisita : null });
+    });
+  });
+
+  const nel = chiamate.filter(c => c.quando >= da && c.quando < a).sort((x, y) => y.quando - x.quando);
+  const contatti = new Set(nel.map(c => c.id));
+  const risposte = nel.filter(c => String(c.ans).toLowerCase() === 'human').length;
+  const app = nel.filter(c => c.app).length;
+  $('rod-k-chiamate').textContent = nel.length;
+  $('rod-k-contatti').textContent = contatti.size;
+  $('rod-k-risposte').textContent = risposte;
+  $('rod-k-app').textContent = app;
+  $('rod-k-perc').textContent = nel.length ? Math.round(risposte / nel.length * 100) + '%' : '—';
+  $('rod-sub').textContent = `Telefonate di Rodolfo – ${etichetta}. Le chiamate compaiono quando la telefonata è finita.`;
+
+  if (!nel.length) {
+    $('rod-body').innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted)">Nessuna chiamata di Rodolfo ${esc(etichetta)}.</div>`;
+    return;
+  }
+  const fmtOra = d => d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const fmtApp = iso => new Date(iso).toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  $('rod-body').innerHTML = `<div class="rod-wrap"><table class="rod-tab"><thead><tr>
+      <th>Quando</th><th>Contatto</th><th>Agente</th><th>Esito</th><th>Durata</th><th>Riassunto della telefonata</th><th>Stato attuale</th>
+    </tr></thead><tbody>${nel.map(c => `<tr>
+      <td style="white-space:nowrap">${fmtOra(c.quando)}</td>
+      <td><b>${esc(c.nome)}</b><div style="color:var(--muted);font-size:11px">${esc(c.regione)}${c.tel ? ' · ' + esc(c.tel) : ''}</div></td>
+      <td>${esc(c.agente)}</td>
+      <td>${rodEsito(c.ans, c.app)}${c.app ? `<div class="rod-app">${esc(fmtApp(c.app))}</div>` : ''}</td>
+      <td style="white-space:nowrap">${c.min ? (c.min < 1 ? Math.round(c.min * 60) + ' s' : c.min.toFixed(1).replace('.', ',') + ' min') : '—'}</td>
+      <td class="sum">${esc(c.sum)}</td>
+      <td style="white-space:nowrap">${esc(c.status)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
 // Avvio unico: prima gli agenti, poi tutto il resto
 async function initAdmin() {
   await loadAgenti();
@@ -1593,6 +1733,7 @@ async function initAdmin() {
   loadConversione();
   loadConsulenze();
   loadAdminCal();
+  loadRodolfo();
 }
 
 
