@@ -930,6 +930,7 @@ function getListaByTipo(tipo) {
     case 'terzi':        return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('PASSATO A TERZI'); });
     case 'noncontattato': return allMiei.filter(r=>{ const s=(r.fields['Status']||'').toUpperCase(); return s.includes('NON INTER')||s.includes('NON VUOLE ESSERE RICONTATTATO')||s.includes('NO RECAPITO')||s.includes('NUMERO ERRATO'); });
     case 'statono':      return allMiei.filter(r=>{ const s=(r.fields['Status']||'').trim().toUpperCase(); return s==='NO'; });
+    case 'opc':          return allMiei.filter(r=>{ const s=(r.fields['Status']||'').trim().toUpperCase(); return s.includes('OPERATORE DEVE RICONTATTARE'); });
     default: return [];
   }
 }
@@ -1747,7 +1748,8 @@ async function loadData(utente) {
         'persi': getListaByTipo('persi').length,
         'scadenze': noleggiScad.length,
         'harbur': getListaByTipo('harbur').length,
-        'statono': getListaByTipo('statono').length
+        'statono': getListaByTipo('statono').length,
+        'opc': getListaByTipo('opc').length
       };
       Object.entries(tabCounts).forEach(([k,v]) => {
         const el = document.getElementById('tc-'+k);
@@ -1892,6 +1894,9 @@ async function loadData(utente) {
         </button>
         <button class="nav-tab" onclick="openDrawer('statono','Stato: NO','#e74c3c')" id="navtab-statono">
           ⛔ NO <span class="tab-count" id="tc-statono">0</span>
+        </button>
+        <button class="nav-tab" onclick="openDrawer('opc','OPC – Operatore deve ricontattare','#e67e22')" id="navtab-opc" title="Operatore deve ricontattare: Rodolfo ha finito i tentativi, ora chiami tu">
+          📞 OPC <span class="tab-count" id="tc-opc">0</span>
         </button>
       </div>
       <!-- LAYOUT SIDEBAR + DRAWER -->
