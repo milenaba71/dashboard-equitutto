@@ -1985,6 +1985,46 @@ const prodCat    = p => {
   return 'altro';
 };
 
+// ── PAYPAL: noleggio con rinnovo automatico ────────────────────
+// 'sandbox' = prove senza addebiti reali; 'live' = pagamenti veri
+const PAYPAL_ENV = 'sandbox';
+const PAYPAL_PAGE = 'https://milenaba71.github.io/dashboard-equitutto/noleggio-paypal.html';
+const prodPlanPayPal = p => String(p.fields['PayPal Plan ID'] || p.fields['flddBPOq8oJ3Neix1'] || '').trim();
+const prodGiorni = p => {
+  const m = /(\d+)\s*GG/i.exec(prodNome(p));
+  return m ? parseInt(m[1], 10) : 0;
+};
+
+// Link personale per il cliente: piano PayPal + contatto + prodotto
+function paypalUrl(p, recId) {
+  const rec = allMiei.find(r => r.id === recId);
+  const qs = new URLSearchParams({
+    plan: prodPlanPayPal(p), c: recId || '', p: p.id,
+    n: prodNome(p).trim(), cl: rec ? (rec.fields['Nome e cognome'] || '') : '',
+    prezzo: prodPrezzo(p).toFixed(2), gg: String(prodGiorni(p)), env: PAYPAL_ENV,
+  });
+  return (PAYPAL_PAGE + '?' + qs.toString()).replace(/'/g, '%27');
+}
+
+function paypalLinksHtml(selProds) {
+  return selProds
+    .filter(p => prodPlanPayPal(p) && prodGiorni(p) > 0)
+    .map(p => {
+      const url = paypalUrl(p, idxCartRecId);
+      const testo = 'Ecco il link per il noleggio ' + prodNome(p).trim() + ' con PayPal (si rinnova ogni ' +
+        prodGiorni(p) + ' giorni finché il dispositivo non viene restituito): ' + url;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,48,135,.05);border:1px solid rgba(0,48,135,.2);border-radius:8px;padding:10px 14px;margin-top:8px;gap:10px">
+        <div style="font-size:12px;font-weight:700;color:#003087;flex:1">🅿️ PayPal · ${esc(prodNome(p))} <span style="font-weight:400;color:var(--muted)">rinnovo ogni ${prodGiorni(p)} gg${PAYPAL_ENV === 'sandbox' ? ' · PROVA' : ''}</span></div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✅ Copiato!'))"
+            style="background:#003087;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copia</button>
+          <a href="https://wa.me/?text=${encodeURIComponent(testo)}" target="_blank"
+            style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none">📲 WA</a>
+        </div>
+      </div>`;
+    }).join('');
+}
+
 // ── CARRELLO CON TAB ───────────────────────────────────────────
 const STRIPE_LINKS_IDX = {
   'KITNOLO 10GG':              'https://buy.stripe.com/8x26oH6mW2higPacP1afS0h',
@@ -2208,7 +2248,7 @@ function buildIdxCart() {
             style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none">📲 WA</a>
         </div>
       </div>`;
-    }).join('');
+    }).join('') + paypalLinksHtml(selProds);
 
   const nSalvate = getProposteContatto(idxCartRecId).length;
   const dataHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;">' +

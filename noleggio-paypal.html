@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noleggio Equistasi · Pagamento</title>
+<style>
+  :root{
+    --bg:#f0f4f8; --surface:#fff; --border:#d0dae8; --accent:#003d7a;
+    --muted:#6b7f96; --text:#1a2a3a; --ok:#27ae60; --bad:#c0392b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;}
+  .top{background:var(--accent);color:#fff;padding:18px 20px;}
+  .top b{font-size:18px;letter-spacing:.3px;}
+  .top span{display:block;font-size:12px;opacity:.8;margin-top:2px;}
+  .wrap{max-width:520px;margin:24px auto;padding:0 16px;display:grid;gap:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
+  .label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
+  .prod{font-size:20px;font-weight:800;color:var(--accent);margin-top:4px;}
+  .cliente{font-size:13px;color:var(--muted);margin-top:4px;}
+  .prezzo{display:flex;align-items:baseline;gap:8px;margin-top:14px;}
+  .prezzo strong{font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;}
+  .prezzo span{font-size:14px;color:var(--muted);}
+  .steps{display:grid;gap:10px;margin-top:4px;}
+  .step{display:flex;gap:10px;font-size:14px;line-height:1.45;}
+  .step i{flex:none;width:22px;height:22px;border-radius:50%;background:#e8f0fe;color:var(--accent);font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;}
+  .consenso{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;cursor:pointer;}
+  .consenso input{width:18px;height:18px;margin-top:2px;flex:none;}
+  #paypal-button{margin-top:14px;min-height:50px;}
+  .msg{border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.5;}
+  .msg.ok{background:#e8f8ef;color:#1e7d46;}
+  .msg.err{background:#fdecea;color:var(--bad);}
+  .msg.warn{background:#fff6e0;color:#8a5a00;}
+  .small{font-size:12px;color:var(--muted);line-height:1.5;}
+  .test{background:#fff6e0;color:#8a5a00;font-size:12px;font-weight:700;text-align:center;padding:6px;}
+</style>
+</head>
+<body>
+<div class="top"><b>Equistasi®</b><span>Noleggio dispositivo con rinnovo automatico</span></div>
+<div id="test-banner" class="test" hidden>MODALITÀ DI PROVA (sandbox): nessun addebito reale</div>
+
+<div class="wrap">
+  <div id="errore" class="msg err" hidden></div>
+
+  <div class="card" id="riepilogo" hidden>
+    <div class="label">Noleggio</div>
+    <div class="prod" id="nome-prod"></div>
+    <div class="cliente" id="nome-cliente"></div>
+    <div class="prezzo"><strong id="prezzo"></strong><span id="periodo"></span></div>
+  </div>
+
+  <div class="card" id="come-funziona" hidden>
+    <div class="label" style="margin-bottom:10px">Come funziona</div>
+    <div class="steps">
+      <div class="step"><i>1</i><div>Paghi ora il primo periodo di <b id="gg1"></b> giorni con PayPal.</div></div>
+      <div class="step"><i>2</i><div>Se alla scadenza non hai restituito il dispositivo, il noleggio si rinnova da solo per altri <b id="gg2"></b> giorni e PayPal addebita <b id="prezzo2"></b>.</div></div>
+      <div class="step"><i>3</i><div>Quando restituisci il dispositivo e lo riceviamo, interrompiamo il rinnovo: non ci saranno altri addebiti.</div></div>
+    </div>
+  </div>
+
+  <div class="card" id="pagamento" hidden>
+    <label class="consenso" for="accetto">
+      <input type="checkbox" id="accetto">
+      <span id="testo-consenso"></span>
+    </label>
+    <div id="paypal-button"></div>
+    <p class="small" style="margin-top:10px">Puoi vedere o annullare l'abbonamento anche dal tuo conto PayPal, alla voce Pagamenti automatici.</p>
+  </div>
+
+  <div id="esito" hidden></div>
+</div>
+
+<script>
+// ── CONFIGURAZIONE ──────────────────────────────────────────────
+// Client ID dell'app PayPal (è pubblico, si può tenere qui). Il Secret NON va mai in questa pagina.
+const PAYPAL_CLIENT_ID = {
+  sandbox: '',
+  live:    '',
+};
+const PROXY = 'https://equitutto-proxy.equistasi.workers.dev';
+const TABLE_ABBONAMENTI = 'tblinf3fJJSA46Kky';
+const F = {
+  ID:       'fldVeN70A5I55118Q',
+  CONTATTO: 'flddFGaDq9T92Nv5Q',
+  PRODOTTO: 'fldN2v74nOyIfVMXf',
+  PIANO:    'flddCElrCmy8LrYYk',
+  STATO:    'fldhVjQxBOg54QkO4',
+  IMPORTO:  'fld0SPtDx7XMqzcHZ',
+  GIORNI:   'fldfO10wlJtO94UAG',
+  ATTIVAZ:  'fld7b0heQL3popVoL',
+};
+
+// ── PARAMETRI DEL LINK (li prepara la dashboard) ────────────────
+const q = new URLSearchParams(location.search);
+const par = {
+  plan:    (q.get('plan') || '').trim(),
+  contatto:(q.get('c') || '').trim(),
+  prodotto:(q.get('p') || '').trim(),
+  nome:    q.get('n') || 'Noleggio dispositivo',
+  cliente: q.get('cl') || '',
+  prezzo:  parseFloat(q.get('prezzo') || '0'),
+  giorni:  parseInt(q.get('gg') || '0', 10),
+  env:     q.get('env') === 'live' ? 'live' : 'sandbox',
+};
+
+const $ = (id) => document.getElementById(id);
+const euro = (n) => '€ ' + n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const mostra = (id) => { $(id).hidden = false; };
+
+function errore(testo) {
+  $('errore').textContent = testo;
+  mostra('errore');
+}
+
+function esito(classe, testo) {
+  const el = $('esito');
+  el.className = 'msg ' + classe;
+  el.textContent = testo;
+  el.hidden = false;
+}
+
+// Registra l'abbonamento in Airtable. Se non riesce, ci pensa comunque
+// l'automazione che riceve gli avvisi (webhook) da PayPal.
+async function registra(subscriptionID) {
+  const fields = {
+    [F.ID]: subscriptionID,
+    [F.PIANO]: par.plan,
+    [F.STATO]: 'ATTIVO',
+    [F.ATTIVAZ]: new Date().toISOString(),
+  };
+  if (/^rec[A-Za-z0-9]{14}$/.test(par.contatto)) fields[F.CONTATTO] = [par.contatto];
+  if (/^rec[A-Za-z0-9]{14}$/.test(par.prodotto)) fields[F.PRODOTTO] = [par.prodotto];
+  if (par.prezzo > 0) fields[F.IMPORTO] = par.prezzo;
+  if (par.giorni > 0) fields[F.GIORNI] = par.giorni;
+  try {
+    await fetch(`${PROXY}?table=${encodeURIComponent(TABLE_ABBONAMENTI)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    });
+  } catch (e) {
+    console.warn('Registrazione Airtable non riuscita:', e);
+  }
+}
+
+function avvia() {
+  const clientId = PAYPAL_CLIENT_ID[par.env];
+  if (!/^P-[A-Z0-9]+$/.test(par.plan) || !par.giorni || !par.prezzo) {
+    errore('Link di pagamento incompleto. Chiedi al tuo consulente Equistasi di inviartelo di nuovo.');
+    return;
+  }
+  if (!clientId) {
+    errore('Pagamento non ancora attivo: manca la configurazione PayPal. Contatta Equistasi.');
+    return;
+  }
+  if (par.env === 'sandbox') mostra('test-banner');
+
+  $('nome-prod').textContent = par.nome;
+  $('nome-cliente').textContent = par.cliente ? 'Per ' + par.cliente : '';
+  $('prezzo').textContent = euro(par.prezzo);
+  $('periodo').textContent = 'ogni ' + par.giorni + ' giorni';
+  $('gg1').textContent = par.giorni;
+  $('gg2').textContent = par.giorni;
+  $('prezzo2').textContent = euro(par.prezzo);
+  $('testo-consenso').textContent =
+    'Accetto che il noleggio si rinnovi automaticamente ogni ' + par.giorni + ' giorni al costo di ' +
+    euro(par.prezzo) + ' finché il dispositivo non viene restituito a Equistasi.';
+  mostra('riepilogo'); mostra('come-funziona'); mostra('pagamento');
+
+  const s = document.createElement('script');
+  s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(clientId) +
+          '&vault=true&intent=subscription&currency=EUR&locale=it_IT';
+  s.onload = disegnaPulsante;
+  s.onerror = () => errore('Impossibile caricare PayPal. Controlla la connessione e ricarica la pagina.');
+  document.head.appendChild(s);
+}
+
+function disegnaPulsante() {
+  paypal.Buttons({
+    style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+    onClick: (data, actions) => {
+      if ($('accetto').checked) return actions.resolve();
+      esito('warn', 'Per continuare spunta la casella con le condizioni del rinnovo automatico.');
+      return actions.reject();
+    },
+    createSubscription: (data, actions) => actions.subscription.create({
+      plan_id: par.plan,
+      // Collega il pagamento al contatto e al prodotto in Airtable (letto anche dal webhook)
+      custom_id: [par.contatto, par.prodotto].join('|').slice(0, 127),
+      application_context: { brand_name: 'Equistasi', locale: 'it-IT', shipping_preference: 'NO_SHIPPING' },
+    }),
+    onApprove: async (data) => {
+      $('pagamento').hidden = true;
+      esito('ok', 'Pagamento completato, grazie! Il noleggio è attivo. Codice abbonamento: ' + data.subscriptionID);
+      await registra(data.subscriptionID);
+    },
+    onCancel: () => esito('warn', 'Pagamento annullato. Puoi riprovare quando vuoi.'),
+    onError: (err) => {
+      console.error(err);
+      esito('err', 'Si è verificato un errore con PayPal. Riprova o contatta Equistasi.');
+    },
+  }).render('#paypal-button');
+}
+
+avvia();
+</script>
+</body>
+</html>
