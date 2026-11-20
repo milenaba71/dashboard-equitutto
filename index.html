@@ -1987,6 +1987,8 @@ const prodCat    = p => {
 
 // ── PAYPAL: noleggio con rinnovo automatico ────────────────────
 // 'sandbox' = prove senza addebiti reali; 'live' = pagamenti veri
+// Interruttore: false = nessun pulsante PayPal visibile ai commerciali
+const PAYPAL_ATTIVO = false;
 const PAYPAL_ENV = 'sandbox';
 const PAYPAL_PAGE = 'https://milenaba71.github.io/dashboard-equitutto/noleggio-paypal.html';
 const prodPlanPayPal = p => String(p.fields['PayPal Plan ID'] || p.fields['flddBPOq8oJ3Neix1'] || '').trim();
@@ -2007,6 +2009,7 @@ function paypalUrl(p, recId) {
 }
 
 function paypalLinksHtml(selProds) {
+  if (!PAYPAL_ATTIVO) return '';
   return selProds
     .filter(p => prodPlanPayPal(p) && prodGiorni(p) > 0)
     .map(p => {
