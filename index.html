@@ -2042,6 +2042,13 @@ const STRIPE_LINKS_IDX = {
   'CALIBRAZIONE':              'https://buy.stripe.com/dRm9ATbHg9JKdCY2anafS0o',
   'DISPOSITIVO NOLO SMARRITO': 'https://buy.stripe.com/5kQ5kD12C8FG2Yk02fafS0p',
 };
+
+// Aggiunge al link Stripe il codice del contatto Airtable (client_reference_id):
+// Stripe lo salva sul pagamento, così si sa chi ha pagato.
+function stripeUrlContatto(url, recId) {
+  if (!url || !/^rec[A-Za-z0-9]{14}$/.test(recId || '')) return url;
+  return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'client_reference_id=' + recId;
+}
 const NOLO_ORDER_IDX = {'KITNOLO 10GG':10,'KITNOLO 30GG':30,'KITNOLO 41GG':41,'KITNOLO 60GG':60,'KITNOLO 90GG':90};
 
 let idxCartRecId  = null;
@@ -2218,7 +2225,7 @@ function buildIdxCart() {
       const qta    = entry?.qta||1;
       const nome   = prodNome(p);
       const prezzo = prodPrezzo(p);
-      const stripe = STRIPE_LINKS_IDX[nome.trim().toUpperCase()]||null;
+      const stripe = stripeUrlContatto(STRIPE_LINKS_IDX[nome.trim().toUpperCase()], idxCartRecId)||null;
       return `<div onclick="toggleIdxItem('${p.id}',${prezzo})"
         style="background:${sel?'rgba(0,114,188,.08)':'var(--surface2)'};border:2px solid ${sel?'var(--accent)':'var(--border)'};border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;position:relative">
         ${sel?'<span style="position:absolute;top:6px;right:8px;color:var(--accent);font-weight:800;font-size:13px">✓</span>':''}
@@ -2241,7 +2248,7 @@ function buildIdxCart() {
   const linksHtml = selProds
     .filter(p=>STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()])
     .map(p=>{
-      const url = STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()];
+      const url = stripeUrlContatto(STRIPE_LINKS_IDX[(prodNome(p)).trim().toUpperCase()], idxCartRecId);
       return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(99,91,255,.05);border:1px solid rgba(99,91,255,.2);border-radius:8px;padding:10px 14px;margin-top:8px;gap:10px">
         <div style="font-size:12px;font-weight:700;color:#635bff;flex:1">${esc(prodNome(p))}</div>
         <div style="display:flex;gap:6px;flex-shrink:0">
